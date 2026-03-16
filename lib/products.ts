@@ -1,56 +1,112 @@
 import { supabase } from "./supabase";
 
+/**
+ * Busca productos genéricos para "Mi Lista".
+ * Consulta la tabla 'productos' donde están los nombres limpios (ej: Tomate, Leche).
+ */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
-  const { data } = await supabase.from('productos')
-    .select(`id, nombre_base, producto_detalles(ultimo_precio, ultimo_comercio, marca)`)
-    .ilike('nombre_base', `%${query}%`).limit(5);
-  return data || [];
+  try {
+    const { data, error } = await supabase.from('productos')
+      .select(`id, nombre_base`)
+      .ilike('nombre_base', `%${query}%`)
+      .limit(10);
+
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error("Error en búsqueda de productos:", e);
+    return [];
+  }
 };
 
-export const getPricesForList = async (nombres: string[]) => {
-  if (nombres.length === 0) return [];
-  const { data } = await supabase.from('productos')
-    .select(`nombre_base, producto_detalles (ultimo_precio, ultimo_comercio)`)
-    .in('nombre_base', nombres);
-  return data || [];
+/**
+ * Busca si un nombre del ticket ya tiene un alias genérico asignado en el sistema global.
+ */
+export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('producto_alias')
+      .select('productos(nombre_base)')
+      .eq('nombre_ticket', nombreTicket.toUpperCase())
+      .maybeSingle();
+    
+    if (error) return null;
+    // @ts-ignore
+    return data?.productos?.nombre_base || null;
+  } catch (e) {
+    return null;
+  }
 };
 
+/**
+ * Guarda o actualiza la relación entre un nombre de ticket y un nombre genérico.
+ * Esto alimenta la "inteligencia colectiva" de la app.
+ */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
-    const ticketUpper = nombreTicket.toUpperCase();
-    let { data: prod } = await supabase.from('productos').select('id').eq('nombre_base', nombreBase).maybeSingle();
+    const ticketUpper = nombreTicket.toUpperCase().trim();
+    const baseLimpia = nombreBase.trim();
+    
+    // 1. Buscamos el ID del genérico por su nombre (ej: 'Jugo')
+    let { data: prod, error: errorSearch } = await supabase
+      .from('productos')
+      .select('id')
+      .eq('nombre_base', baseLimpia)
+      .maybeSingle();
+
+    // 2. Si el genérico no existe (ej: usaste un nombre muy personal), lo creamos
     if (!prod) {
-      const { data: newP } = await supabase.from('productos').insert([{ nombre_base: nombreBase }]).select().single();
+      const { data: newP, error: errorInsert } = await supabase
+        .from('productos')
+        .insert([{ nombre_base: baseLimpia, categoria: 'otros' }])
+        .select()
+        .single();
+      
+      if (errorInsert) throw errorInsert;
       prod = newP;
     }
+
+    // 3. Creamos o actualizamos el alias en la tabla 'producto_alias'
     if (prod) {
-      await supabase.from('producto_alias').upsert({ producto_id: prod.id, nombre_ticket: ticketUpper }, { onConflict: 'nombre_ticket' });
+      const { error: errorAlias } = await supabase.from('producto_alias').upsert({ 
+        producto_id: prod.id, 
+        nombre_ticket: ticketUpper 
+      }, { onConflict: 'nombre_ticket' });
+      
+      if (errorAlias) throw errorAlias;
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error("Error al guardar alias inteligente:", e);
+  }
 };
 
+/**
+ * Sincronización final: guarda precios y asegura que los alias queden registrados.
+ */
 export const syncProductWithSupabase = async (itemIA: any, comercio: string) => {
   try {
-    const nombreTicket = (itemIA.nombre_ticket || "PRODUCTO").toUpperCase();
-    const { data: alias } = await supabase.from('producto_alias').select('producto_id').eq('nombre_ticket', nombreTicket).maybeSingle();
-    let pId = alias?.producto_id;
-    if (!pId) {
-      const { data: p } = await supabase.from('productos').select('id').ilike('nombre_base', `%${itemIA.nombre_base}%`).maybeSingle();
-      pId = p?.id;
+    // 1. Primero registramos el alias (Ticket -> Base)
+    await saveManualAlias(itemIA.nombre_ticket, itemIA.nombre_base);
+    
+    // 2. Buscamos el producto base para actualizar el precio histórico
+    const { data: prod } = await supabase
+      .from('productos')
+      .select('id')
+      .eq('nombre_base', itemIA.nombre_base)
+      .maybeSingle();
+
+    if (prod) {
+      await supabase.from('producto_detalles').upsert({
+        producto_id: prod.id,
+        marca: 'Genérico',
+        tamano: 'Único',
+        ultimo_precio: (Number(itemIA.subtotal) / Number(itemIA.cantidad || 1)) || 0,
+        ultimo_comercio: comercio,
+        fecha_actualizacion: new Date().toISOString()
+      }, { onConflict: 'producto_id, tamano' });
     }
-    if (!pId) {
-      const { data: n } = await supabase.from('productos').insert([{ nombre_base: itemIA.nombre_base }]).select().single();
-      pId = n?.id;
-      if (pId) await supabase.from('producto_alias').insert([{ producto_id: pId, nombre_ticket: nombreTicket }]);
-    }
-    if (!pId) return;
-    const sub = parseFloat(itemIA.subtotal) || 0;
-    const qty = parseFloat(itemIA.cantidad) || 1;
-    await supabase.from('producto_detalles').upsert({
-      producto_id: pId, tamano: 'Único', marca: 'Genérico',
-      ultimo_precio: sub / qty, ultimo_comercio: comercio || "Tienda",
-      fecha_actualizacion: new Date().toISOString()
-    }, { onConflict: 'producto_id, tamano' });
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error("Error en sincronización Supabase:", e);
+  }
 };

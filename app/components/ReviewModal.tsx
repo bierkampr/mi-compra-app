@@ -1,8 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
 import { Check, X, Store, Calendar, Euro, Link, Loader2, AlertCircle, Sparkles } from 'lucide-react';
-
-// CAMBIAMOS EL IMPORT A RUTA RELATIVA PARA EVITAR ERRORES DE VS CODE
 import { calculateMatchScore } from '../../lib/utils';
 
 interface ReviewModalProps {
@@ -18,19 +16,16 @@ interface ReviewModalProps {
 const ReviewModal: React.FC<ReviewModalProps> = ({ 
   pendingGasto, setPendingGasto, onSave, onCancel, loading, db, txt 
 }) => {
-  const [showComercioSuggestions, setShowComercioSuggestions] = useState(false);
   const [isManualExpanded, setIsManualExpanded] = useState(false);
   const [manualProd, setManualProd] = useState({ name: '', qty: 1, price: "" });
-  
   const [expandedIndices, setExpandedIndices] = useState<number[]>([]);
 
+  // Auto-expandir productos que no tienen un alias claro (cuando nombre_base === nombre_ticket)
   useEffect(() => {
     if (pendingGasto?.productos) {
       const autoExpand: number[] = [];
       pendingGasto.productos.forEach((p: any, i: number) => {
-        if (p.nombre_base === p.nombre_ticket) {
-          autoExpand.push(i);
-        }
+        if (p.nombre_base === p.nombre_ticket) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
     }
@@ -69,7 +64,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   return (
-    <div className="modal-content-full !pb-6 flex flex-col">
+    <div className="modal-content-full !pb-6 flex flex-col animate-in slide-in-from-bottom duration-500">
       <header className="flex justify-between items-center mb-6">
         <h2 className="text-fluid-lg font-black italic tracking-tighter text-brand-primary uppercase">
           REVISAR GASTO
@@ -79,7 +74,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto space-y-5 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-5 pr-1 no-scrollbar">
+        {/* CABECERA: TIENDA, FECHA Y TOTAL */}
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-12 relative">
             <label className="text-small-caps ml-1 mb-1.5 block opacity-60">Comercio</label>
@@ -113,9 +109,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
+        {/* LISTADO DE PRODUCTOS DETECTADOS */}
         <section className="space-y-2">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-small-caps">Productos detectados</h3>
+            <h3 className="text-small-caps">Productos</h3>
             <button 
               onClick={() => setIsManualExpanded(!isManualExpanded)}
               className="text-[9px] font-black uppercase text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10"
@@ -136,12 +133,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
           <div className="space-y-2">
             {pendingGasto.productos.map((p: any, i: number) => {
+              // Cálculo inteligente de coincidencias con la lista del usuario
               const smartSuggestions = db.lista
                 .filter(l => !l.confirmed)
                 .map(l => ({ ...l, matchScore: calculateMatchScore(p.nombre_ticket, l.name) }))
                 .sort((a, b) => b.matchScore - a.matchScore);
 
               const isExpanded = expandedIndices.includes(i);
+              const hasAlias = p.nombre_base !== p.nombre_ticket;
 
               return (
                 <div key={i} className={`flex flex-col transition-all duration-300 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-3' : 'bg-white/[0.02] border-white/[0.04] p-2.5'}`}>
@@ -150,13 +149,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     className="flex justify-between items-start gap-3 text-left w-full"
                   >
                     <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center gap-1.5 overflow-hidden">
-                        <p className={`text-[11px] font-black uppercase truncate leading-tight ${p.nombre_base !== p.nombre_ticket ? 'text-brand-accent' : 'text-white'}`}>
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        {/* PRIORIDAD VISUAL: EL ALIAS (NOMBRE GENÉRICO) */}
+                        <p className={`text-[12px] font-black uppercase truncate leading-tight ${hasAlias ? 'text-brand-accent' : 'text-white'}`}>
                           {p.nombre_base}
                         </p>
-                        {p.nombre_base !== p.nombre_ticket && <Sparkles size={10} className="text-brand-accent" />}
+                        {hasAlias && <Sparkles size={10} className="text-brand-accent" />}
                       </div>
-                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-0.5 opacity-40">
+                      {/* DETALLE SECUNDARIO: EL NOMBRE DEL TICKET */}
+                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-1 opacity-30">
                         {p.nombre_ticket}
                       </p>
                     </div>
@@ -166,15 +167,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         {Number(p.subtotal).toFixed(2)}€
                       </p>
                       <div className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-brand-primary text-white' : 'bg-white/5 text-brand-muted'}`}>
-                        <Link size={14} />
+                        <Link size={12} />
                       </div>
                     </div>
                   </button>
 
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-brand-primary/10 animate-in slide-in-from-top-2">
-                      <p className="text-[8px] font-black uppercase text-brand-primary mb-2 flex items-center gap-1">
-                        <AlertCircle size={10} /> Vincular con un ítem de tu lista:
+                      <p className="text-[8px] font-black uppercase text-brand-primary mb-2 flex items-center gap-1 opacity-60">
+                        <AlertCircle size={10} /> Vincular con tu lista:
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {smartSuggestions.map((item, lIdx) => (
@@ -183,7 +184,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                             onClick={() => setAlias(i, item.name)}
                             className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${
                                item.matchScore > 0 
-                               ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 border border-brand-primary/30' 
+                               ? 'bg-brand-primary text-white shadow-lg border border-brand-primary/30' 
                                : 'bg-white/5 text-brand-muted border border-white/5'
                             }`}
                           >
@@ -193,7 +194,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         ))}
                         <button 
                           onClick={() => {
-                            const n = prompt("Nombre personalizado para este producto:");
+                            const n = prompt("Nombre genérico personalizado:");
                             if (n) setAlias(i, n);
                           }}
                           className="px-3 py-1.5 bg-brand-secondary/40 border border-white/10 rounded-lg text-[9px] font-black uppercase text-brand-muted"
@@ -210,8 +211,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </section>
       </div>
 
+      {/* PIE DE MODAL */}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !lowercase !text-[10px] opacity-60">
+        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !lowercase !text-[10px] opacity-60 font-black">
           descartar
         </button>
         <button 

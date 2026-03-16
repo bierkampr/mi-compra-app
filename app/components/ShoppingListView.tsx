@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from 'react';
 import { Plus, Camera, Trash2, ListTodo, CheckCircle2, X, Check, Search, Loader2 } from 'lucide-react';
-import { searchLocalProducts } from '@/lib/products';
+import { searchLocalProducts } from '../../lib/products';
+import { supabase } from '../../lib/supabase';
 
 interface ShoppingListViewProps {
   db: { lista: any[] };
@@ -28,16 +29,28 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   };
 
   const addToList = async (name?: string) => {
-    const val = name || newItemName;
-    if (!val.trim()) return;
+    const val = (name || newItemName).trim();
+    if (!val) return;
 
+    // 1. Actualización Local (UX instantánea)
     const newDb = { 
       ...db, 
-      lista: [...(db.lista || []), { name: val.trim(), checked: false, confirmed: false }] 
+      lista: [...(db.lista || []), { name: val, checked: false, confirmed: false }] 
     };
     setNewItemName("");
     setSuggestions([]);
     await updateAndSync(newDb);
+
+    // 2. Registro en Supabase (Aprendizaje):
+    // Aseguramos que el nombre base exista en el catálogo maestro
+    try {
+        await supabase.from('productos').upsert(
+            { nombre_base: val, categoria: 'otros' },
+            { onConflict: 'nombre_base' }
+        );
+    } catch (e) {
+        console.error("Error al registrar producto en Supabase:", e);
+    }
   };
 
   const toggleCheck = async (item: any) => {
@@ -63,7 +76,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-10">
-      {/* BARRA DE BÚSQUEDA Y AGREGADO */}
+      {/* BUSCADOR */}
       <div className="relative group">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted group-focus-within:text-brand-primary transition-colors">
           {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
@@ -82,7 +95,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* SUGERENCIAS FLOTANTES */}
+        {/* SUGERENCIAS */}
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-50 border-brand-primary/30 shadow-2xl animate-in fade-in zoom-in-95">
             {suggestions.map((s, idx) => (
@@ -99,25 +112,19 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         )}
       </div>
 
-      {/* ACCIONES DE LISTA */}
+      {/* ACCIONES */}
       {db.lista.length > 0 && (
         <div className="flex gap-2.5">
-          <button 
-            onClick={() => setPurchaseMode('super')} 
-            className="btn-primary flex-1 py-3.5 !text-[10px] tracking-widest gap-2 shadow-none"
-          >
+          <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-1 py-3.5 !text-[10px] tracking-widest gap-2 shadow-none">
             <Camera size={18}/> {txt('list.scan_btn')}
           </button>
-          <button 
-            onClick={clearList} 
-            className="btn-secondary w-14 !p-0 bg-brand-danger/10 text-brand-danger border-none active:bg-brand-danger active:text-white"
-          >
+          <button onClick={clearList} className="btn-secondary w-14 !p-0 bg-brand-danger/10 text-brand-danger border-none active:bg-brand-danger active:text-white">
             <Trash2 size={20}/>
           </button>
         </div>
       )}
 
-      {/* SECCIÓN PENDIENTES */}
+      {/* PENDIENTES */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <ListTodo size={14} className="text-brand-primary" />
@@ -127,7 +134,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         <div className="space-y-2">
           {pendingItems.length > 0 ? (
             pendingItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 group">
+              <div key={i} className="flex items-center gap-2">
                 <button 
                   onClick={() => toggleCheck(item)}
                   className={`flex-1 flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
@@ -147,10 +154,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                     {item.name}
                   </span>
                 </button>
-                <button 
-                  onClick={() => removeItem(item)} 
-                  className="p-3 text-brand-muted/20 hover:text-brand-danger active:scale-90 transition-all"
-                >
+                <button onClick={() => removeItem(item)} className="p-3 text-brand-muted/20 hover:text-brand-danger transition-all">
                   <X size={18}/>
                 </button>
               </div>
@@ -163,14 +167,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         </div>
       </section>
 
-      {/* SECCIÓN COMPRADOS (DENSIDAD ALTA) */}
+      {/* COMPRADOS */}
       {boughtItems.length > 0 && (
         <section className="pt-6 border-t border-white/5">
           <div className="flex items-center gap-2 px-1 mb-4">
             <CheckCircle2 size={14} className="text-brand-success" />
             <h3 className="text-small-caps !text-brand-success opacity-80">{txt('list.bought')}</h3>
           </div>
-          
           <div className="grid grid-cols-2 gap-2">
             {boughtItems.map((item, i) => (
               <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-brand-success/[0.03] border border-brand-success/10">

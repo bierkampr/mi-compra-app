@@ -1,5 +1,5 @@
 === PROYECTO: MI COMPRA APP - FULL MODULAR ESTRUCTURE ===
-Fecha de exportación: 3/16/2026, 6:22:10 PM
+Fecha de exportación: 3/16/2026, 7:09:35 PM
 Descripción: App de gastos con IA, Modularizada, Alias Inteligentes y Diseño Denso.
 ================================================
 
@@ -290,7 +290,6 @@ try {
 :root {
   --background: 13, 15, 26; /* #0D0F1A */
   --foreground: 255, 255, 255;
-  /* Normalización del tamaño base para evitar escalas agresivas del sistema */
   font-size: 16px; 
 }
 
@@ -301,19 +300,17 @@ try {
     -webkit-tap-highlight-color: transparent;
   }
   
-  /* Evita el zoom automático en inputs de iOS */
   input, select, textarea {
     font-size: 16px !important;
   }
 }
 
 @layer components {
-  /* Estructura Principal con márgenes fluidos */
+  /* Estructura Principal: pb-44 asegura que el contenido no quede tras la nav bar */
   .app-layout {
-    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-[5vw] pb-32 pt-6;
+    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-[5vw] pb-44 pt-6;
   }
 
-  /* Tarjetas Premium: Densidad Ajustada */
   .card-premium {
     @apply bg-brand-card border border-white/[0.05] rounded-[1.75rem] p-5 shadow-2xl transition-all duration-300;
   }
@@ -322,7 +319,6 @@ try {
     @apply card-premium active:scale-[0.97] hover:border-white/10 cursor-pointer;
   }
 
-  /* Tipografía Fluida y Compacta */
   .heading-1 { 
     @apply text-fluid-2xl font-black italic tracking-tighter text-white uppercase leading-[0.85] mb-2; 
   }
@@ -335,7 +331,6 @@ try {
     @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted; 
   }
   
-  /* Botones Optimizados */
   .btn-primary {
     @apply w-full py-4 px-6 rounded-2xl bg-brand-primary text-white font-bold 
            transition-all duration-200 active:scale-[0.95] shadow-[0_10px_25px_-5px_rgba(93,46,239,0.4)]
@@ -353,14 +348,12 @@ try {
            transition-all active:scale-90 border border-white/5 flex items-center justify-center;
   }
 
-  /* Inputs Premium con padding denso */
   .input-premium {
     @apply w-full bg-brand-secondary/30 border border-white/10 rounded-xl p-3.5 
            text-white placeholder:text-brand-muted/40 outline-none transition-all
            focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 font-bold;
   }
 
-  /* Modales y Paneles con Densidad Alta */
   .modal-overlay {
     @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 
            animate-in fade-in duration-300;
@@ -371,7 +364,6 @@ try {
            animate-in slide-in-from-bottom duration-500 ease-out;
   }
 
-  /* Navegación Inferior Flotante Compacta */
   .nav-bottom {
     @apply fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm 
            bg-brand-card/90 backdrop-blur-2xl rounded-[2rem] px-2 py-2
@@ -379,7 +371,6 @@ try {
            border border-white/[0.05];
   }
 
-  /* Listas Densas (Más items por pantalla) */
   .list-row {
     @apply flex justify-between items-center py-3 border-b border-white/[0.03] transition-colors;
   }
@@ -387,13 +378,18 @@ try {
   .shop-row {
     @apply flex justify-between items-center p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.03];
   }
+
+  /* Utilidad para ocultar scrollbars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
-/* Ocultar scrollbar manteniendo funcionalidad */
-::-webkit-scrollbar { display: none; }
-* { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Fix para evitar el rebote elástico en iOS que rompe el diseño */
+/* Fix prevent elastic bounce on iOS */
 html, body {
   position: fixed;
   overflow: hidden;
@@ -459,12 +455,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { CLIENT_ID } from '@/lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '@/lib/gdrive';
 import { analyzeReceipt } from '@/lib/gemini';
-import { compressImage } from '@/lib/utils';
+import { compressImage, normalizeStoreName } from '@/lib/utils'; // <-- IMPORTANTE: Añadida normalización
 import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 
-// USAMOS RUTAS RELATIVAS PARA EVITAR ERRORES DE RUTA
 import Navigation from './components/Navigation';
 import AuthView from './components/AuthView';
 import DashboardView from './components/DashboardView';
@@ -586,6 +581,7 @@ export default function Home() {
         setActiveTab('home');
     };
 
+    // --- LÓGICA DE ESTADÍSTICAS ACTUALIZADA (FUSIÓN DE COMERCIOS) ---
     const stats = useMemo(() => {
         const y = currentViewDate.getFullYear();
         const m = currentViewDate.getMonth();
@@ -596,8 +592,16 @@ export default function Home() {
             const d = new Date(+yy, +mm - 1, +dd);
             return d >= first && d <= last;
         });
+
         const total = currentGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
-        const porComercio = currentGastos.reduce((acc: any, g) => { acc[g.comercio] = (acc[g.comercio] || 0) + Number(g.total); return acc; }, {});
+        
+        // Fusión inteligente: Mercadona S.A. + Mercadona = MERCADONA
+        const porComercio = currentGastos.reduce((acc: any, g) => { 
+            const nombreLimpio = normalizeStoreName(g.comercio); 
+            acc[nombreLimpio] = (acc[nombreLimpio] || 0) + Number(g.total); 
+            return acc; 
+        }, {});
+
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 
@@ -898,7 +902,7 @@ export default DashboardView;
 
 "use client";
 import React, { useState } from 'react';
-import { ChevronLeft, Trash2, Store, ImageIcon, X, Loader2, ArrowDown } from 'lucide-react';
+import { ChevronLeft, Trash2, Store, ImageIcon, X, Loader2, Check } from 'lucide-react';
 import { getDriveFileBlob } from '@/lib/gdrive';
 
 interface DetailViewProps {
@@ -919,113 +923,102 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
       const url = await getDriveFileBlob(token, id);
       if (url) setViewerUrl(url);
     } catch (e) {
-      alert("Error al cargar la imagen");
+      alert("Error al cargar imagen");
     } finally {
       setLoadingImg(false);
     }
   };
 
   return (
-    <div className="modal-content-full !pb-10 flex flex-col animate-in slide-in-from-right-4">
-      {/* HEADER ACCIONES */}
-      <div className="flex justify-between items-start mb-6">
-        <button onClick={onClose} className="btn-icon !p-3">
-          <ChevronLeft size={24} />
+    <div className="modal-content-full !p-5 flex flex-col animate-in slide-in-from-right-4">
+      {/* BARRA SUPERIOR - Más compacta */}
+      <div className="flex justify-between items-center mb-4">
+        <button onClick={onClose} className="btn-icon !p-2 bg-brand-secondary/20 border-none">
+          <ChevronLeft size={20} />
         </button>
-        <button 
-          onClick={() => onDelete(gasto)} 
-          className="btn-icon !p-3 text-brand-danger/40 bg-brand-danger/5 border-none active:bg-brand-danger active:text-white"
-        >
-          <Trash2 size={24} />
-        </button>
-      </div>
-
-      {/* CABECERA GASTO */}
-      <div className="mb-8">
-        <h2 className="heading-1 !text-fluid-xl !mb-1 text-brand-primary">{gasto.comercio}</h2>
-        <div className="flex items-center gap-2 text-small-caps opacity-60">
-          <Store size={10} />
-          <span>{gasto.fecha}</span>
+        <div className="text-center">
+            <h2 className="text-[14px] font-black italic text-brand-primary uppercase truncate max-w-[180px]">
+                {gasto.comercio}
+            </h2>
+            <p className="text-[8px] font-bold text-brand-muted uppercase tracking-[0.2em]">
+                {gasto.fecha}
+            </p>
         </div>
+        <button onClick={() => onDelete(gasto)} className="btn-icon !p-2 text-brand-danger/40 bg-brand-danger/5 border-none">
+          <Trash2 size={20} />
+        </button>
       </div>
 
-      {/* LISTA PRODUCTOS (DENSIDAD ALTA) */}
-      <div className="flex-1 space-y-1 overflow-y-auto pr-2">
-        <h3 className="text-small-caps mb-3 opacity-40">Productos detectados</h3>
+      {/* LISTADO DE PRODUCTOS - Ahora ocupa el 80% de la pantalla */}
+      <div className="flex-1 overflow-y-auto no-scrollbar mb-4 border-y border-white/[0.03]">
         {gasto.productos?.map((p: any, i: number) => (
-          <div key={i} className="flex justify-between items-center py-3 border-b border-white/[0.03]">
+          <div key={i} className="flex justify-between items-center py-3 border-b border-white/[0.02] last:border-none">
             <div className="flex-1 pr-4 overflow-hidden">
-              <p className="text-[10px] font-black uppercase text-white/80 truncate leading-tight">
+              <p className="text-[10px] font-black uppercase text-white/90 truncate leading-tight">
                 {p.nombre_base}
               </p>
-              <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-40">
-                Cant: {p.cantidad || 1}
+              <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-30 mt-0.5">
+                {p.nombre_ticket}
               </p>
             </div>
-            <span className="font-black italic text-brand-success tracking-tighter text-xs">
-              {Number(p.subtotal).toFixed(2)}€
-            </span>
+            <div className="text-right">
+                <span className="block font-black italic text-brand-success tracking-tighter text-[11px]">
+                    {Number(p.subtotal).toFixed(2)}€
+                </span>
+                <span className="text-[7px] font-bold text-brand-muted opacity-40 uppercase">x{p.cantidad || 1}</span>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* TOTAL Y TICKETS */}
-      <div className="mt-6 pt-6 border-t border-white/10">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <p className="text-small-caps mb-1">Inversión Total</p>
-            <div className="flex items-center gap-1 text-brand-success">
-              <ArrowDown size={14} strokeWidth={3} />
-              <span className="text-4xl font-black italic text-white leading-none">
-                {Number(gasto.total).toFixed(2)}€
-              </span>
+      {/* FOOTER - TOTAL Y TICKETS EN UNA SOLA LÍNEA */}
+      <div className="flex items-stretch gap-2 h-20">
+        
+        {/* TARJETA TOTAL PEQUEÑA (Izquierda) */}
+        <div className="flex-[1.2] bg-white/[0.03] p-3 rounded-2xl border border-white/[0.05] flex flex-col justify-center">
+            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-50">Total Gasto</p>
+            <div className="flex items-baseline gap-0.5">
+                <span className="text-2xl font-black italic text-white tracking-tighter">
+                    {Number(gasto.total).toFixed(2)}
+                </span>
+                <span className="text-xs font-black italic text-brand-success">€</span>
             </div>
-          </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-small-caps opacity-40">Evidencias Digitales</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+        {/* EVIDENCIAS (Derecha - Carrusel horizontal compacto) */}
+        <div className="flex-[2] overflow-x-auto no-scrollbar flex items-center gap-2">
             {gasto.photoIds && gasto.photoIds.length > 0 ? (
-              gasto.photoIds.map((id: string, idx: number) => (
-                <button 
-                  key={idx} 
-                  onClick={() => openTicket(id)}
-                  className="flex-none px-5 py-3.5 bg-brand-secondary/30 rounded-xl border border-white/5 flex items-center gap-2 active:scale-95 transition-all"
-                >
-                  <ImageIcon size={16} className="text-brand-primary" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white">Ticket {idx + 1}</span>
-                </button>
-              ))
+                gasto.photoIds.map((id: string, idx: number) => (
+                    <button 
+                        key={id} 
+                        onClick={() => openTicket(id)}
+                        className="h-full flex-none bg-brand-card border border-white/[0.1] px-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all"
+                    >
+                        <ImageIcon size={16} className="text-brand-primary" />
+                        <span className="text-[7px] font-black uppercase tracking-widest text-brand-muted">Ticket {idx + 1}</span>
+                    </button>
+                ))
             ) : (
-              <p className="text-[10px] font-bold text-brand-muted uppercase italic">Sin fotos adjuntas</p>
+                <div className="h-full flex-1 flex items-center justify-center border border-dashed border-white/5 rounded-2xl">
+                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">No fotos</p>
+                </div>
             )}
-          </div>
         </div>
       </div>
 
-      {/* VISOR DE IMAGEN (LIGHTBOX) */}
+      {/* LIGHTBOX */}
       {viewerUrl && (
-        <div className="modal-overlay !p-4 z-[2000] animate-in fade-in">
-          <button 
-            onClick={() => setViewerUrl(null)} 
-            className="absolute top-8 right-8 btn-icon !bg-white/10 backdrop-blur-2xl border-white/20 z-[600] !p-3"
-          >
-            <X size={32} className="text-white" />
+        <div className="modal-overlay !p-4 z-[2000] animate-in fade-in backdrop-blur-xl">
+          <button onClick={() => setViewerUrl(null)} className="absolute top-6 right-6 btn-icon !bg-white/10 border-white/20 z-[600] !p-3">
+            <X size={24} className="text-white" />
           </button>
-          <div className="w-full h-full flex items-center justify-center p-4">
-            <img 
-              src={viewerUrl} 
-              className="max-w-full max-h-full rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95 duration-300" 
-              alt="Ticket Original" 
-            />
-          </div>
+          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Ticket" />
         </div>
       )}
 
       {loadingImg && (
-        <div className="fixed inset-0 z-[2100] bg-brand-bg/60 backdrop-blur-md flex items-center justify-center">
-          <Loader2 className="animate-spin text-brand-primary" size={48} strokeWidth={3} />
+        <div className="fixed inset-0 z-[2100] bg-brand-bg/80 backdrop-blur-md flex items-center justify-center">
+            <Loader2 className="animate-spin text-brand-primary" size={40} strokeWidth={3} />
         </div>
       )}
     </div>
@@ -1381,8 +1374,8 @@ export default ReviewModal;
 
 "use client";
 import React from 'react';
-import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
-import { compressImage } from '@/lib/utils';
+import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon, Layout } from 'lucide-react';
+import { compressImage } from '../../lib/utils';
 
 interface ScannerViewProps {
   setPurchaseMode: (mode: 'super' | 'mini' | 'manual' | null) => void;
@@ -1437,75 +1430,81 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE DE CAPTURA DE FOTOS ---
+// --- SUB-COMPONENTE DE CAPTURA DE FOTOS (REDISEÑADO) ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt 
 }) => {
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     files.forEach(file => {
       const r = new FileReader();
       r.onloadend = async () => { 
-        // Normalización para OCR (700px, contraste mejorado)
-        const comp = await compressImage(r.result as string, 700, 0.5); 
+        // Comprimimos inmediatamente a 600px para evitar errores 429
+        const comp = await compressImage(r.result as string); 
         setTempPhotos((prev: string[]) => [...prev, comp]); 
       };
       r.readAsDataURL(file);
     });
   };
 
-  const removePhoto = (idx: number) => {
-    setTempPhotos((prev: string[]) => prev.filter((_, i) => i !== idx));
-  };
-
   return (
-    <div className="w-full flex flex-col gap-8 animate-in fade-in zoom-in-95">
+    <div className="w-full flex flex-col gap-6 animate-in fade-in zoom-in-95">
       <div className="text-center">
-        <h2 className="heading-1 !text-fluid-xl mb-2">{txt('scan.title')}</h2>
-        <p className="text-small-caps opacity-50">Captura o sube los tickets</p>
+        <h2 className="heading-1 !text-fluid-xl mb-1">CARGAR TICKET</h2>
+        <p className="text-small-caps opacity-40 italic">Para tickets largos, toma varias fotos</p>
       </div>
 
-      {/* ÁREA DE CAPTURA (DENSIDAD OPTIMIZADA) */}
-      <div className={`card-premium !p-2 border-dashed border-2 min-h-[300px] flex flex-col items-center justify-center relative transition-all ${
+      {/* ZONA DE CARGA CON DOBLE BOTÓN */}
+      <div className={`card-premium !p-2 border-dashed border-2 min-h-[250px] flex flex-col items-center justify-center relative ${
         tempPhotos.length > 0 ? 'border-brand-primary/30 bg-brand-primary/[0.02]' : 'border-brand-secondary/30 bg-brand-secondary/5'
       }`}>
         {tempPhotos.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 w-full h-full p-2">
+          <div className="grid grid-cols-2 gap-2 w-full p-2">
             {tempPhotos.map((p: string, i: number) => (
-              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-in scale-up">
+              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10 shadow-xl">
                 <img src={p} className="w-full h-full object-cover" alt="Ticket" />
                 <button 
-                  onClick={() => removePhoto(i)} 
-                  className="absolute top-1.5 right-1.5 p-1.5 bg-brand-danger rounded-lg text-white shadow-lg active:scale-90"
+                    onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: any) => idx !== i))} 
+                    className="absolute top-1.5 right-1.5 p-1.5 bg-brand-danger rounded-lg text-white shadow-lg active:scale-90"
                 >
                   <X size={12} strokeWidth={4}/>
                 </button>
               </div>
             ))}
-            <label className="relative aspect-[3/4] rounded-xl border-2 border-dashed border-brand-primary/20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-brand-primary/5 transition-colors">
-              <Plus size={24} className="text-brand-primary" />
-              <span className="text-[8px] font-black uppercase tracking-widest text-brand-primary">Añadir</span>
-              <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+            {/* Botón rápido para añadir más fotos una vez ya hay una */}
+            <label className="relative aspect-[3/4] rounded-xl border-2 border-dashed border-brand-primary/20 flex flex-col items-center justify-center gap-1 cursor-pointer bg-brand-primary/5 active:bg-brand-primary/10">
+                <Plus size={20} className="text-brand-primary" />
+                <span className="text-[7px] font-black uppercase text-brand-primary">Añadir más</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
             </label>
           </div>
         ) : (
-          <label className="flex flex-col items-center gap-6 cursor-pointer group">
-            <div className="w-20 h-20 bg-brand-primary/10 rounded-3xl flex items-center justify-center text-brand-primary group-active:scale-90 transition-all">
-              <Camera size={40} strokeWidth={2.5}/>
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-black uppercase tracking-widest mb-1">{txt('scan.add_photo')}</p>
-              <p className="text-[9px] font-bold text-brand-muted uppercase opacity-40">Soporta múltiples imágenes</p>
-            </div>
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
-          </label>
+          <div className="grid grid-cols-2 gap-4 w-full p-4">
+             {/* BOTÓN CÁMARA: Forzado con capture="environment" */}
+             <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
+                <div className="w-12 h-12 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-primary/20">
+                    <Camera size={24} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">Cámara</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+             </label>
+
+             {/* BOTÓN GALERÍA: Estándar */}
+             <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 active:scale-95 transition-all cursor-pointer">
+                <div className="w-12 h-12 bg-brand-secondary rounded-2xl flex items-center justify-center text-brand-muted">
+                    <ImageIcon size={24} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-muted">Galería</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
+             </label>
+          </div>
         )}
       </div>
 
-      {/* ACCIONES */}
-      <div className="space-y-3">
+      {/* ACCIÓN DE PROCESAMIENTO */}
+      <div className="space-y-3 pt-4">
         <button 
           onClick={() => {
             const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;
@@ -1513,22 +1512,27 @@ ScannerView.Capture = ({
             else startAnalysis(false);
           }} 
           disabled={tempPhotos.length === 0 || loading} 
-          className="btn-primary !py-5"
+          className="btn-primary !py-5 shadow-[0_15px_35px_rgba(16,185,129,0.2)] !bg-brand-success text-brand-bg hover:opacity-90 disabled:bg-brand-muted disabled:opacity-20"
         >
-          {loading ? <Loader2 className="animate-spin" /> : (
+          {loading ? (
             <div className="flex items-center gap-3">
-               <ImageIcon size={20} />
-               <span>{txt('scan.process')}</span>
+               <Loader2 className="animate-spin" size={20} />
+               <span>Analizando...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+               <Layout size={18}/> 
+               <span>PROCESAR COMPRA ⚡</span>
             </div>
           )}
         </button>
         
-        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !text-[10px] !lowercase opacity-60">
-          {txt('common.cancel')}
+        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !text-[10px] !lowercase opacity-60 font-black">
+          cancelar
         </button>
       </div>
 
-      {/* MODAL: CONFLICTO LISTA (VINCULAR ANTES DE ESCANEAR) */}
+      {/* MODAL: CONFLICTO LISTA */}
       {showListDialog && (
         <div className="modal-overlay z-[2000] !p-6">
           <div className="card-premium w-full text-center space-y-6 !p-8 border-brand-primary/20 animate-in zoom-in-95 duration-300">
@@ -1537,24 +1541,24 @@ ScannerView.Capture = ({
             </div>
             
             <div className="space-y-2">
-              <h2 className="heading-2 !text-sm tracking-widest">{txt('modals.link_list_title')}</h2>
+              <h2 className="heading-2 !text-sm tracking-widest">¿VINCULAR CON LISTA?</h2>
               <p className="text-[10px] font-bold text-brand-muted uppercase leading-relaxed px-2">
-                {txt('modals.link_list_msg')}
+                Detectamos que tienes una lista pendiente. La IA puede marcar los productos automáticamente.
               </p>
             </div>
 
             <div className="space-y-2 pt-2">
               <button onClick={() => startAnalysis(true)} className="btn-primary !py-4 !text-[10px]">
-                {txt('modals.yes_link')}
+                SÍ, VINCULAR AHORA
               </button>
               <button onClick={() => startAnalysis(false)} className="btn-secondary !py-4 !text-[10px]">
-                {txt('modals.no_link')}
+                NO, SOLO EL TICKET
               </button>
               <button 
                 onClick={() => setShowListDialog(false)} 
                 className="text-[9px] font-black text-brand-muted py-2 block mx-auto uppercase tracking-widest opacity-40"
               >
-                {txt('common.cancel')}
+                atrás
               </button>
             </div>
           </div>
@@ -2076,6 +2080,8 @@ export const saveDriveFile = async (token: string, content: any, fileId?: string
 
 /* --- INICIO ARCHIVO: lib/i18n.ts --- */
 
+/* --- ARCHIVO: lib/i18n.ts (Completo) --- */
+
 const translations: any = {
   es: {
     common: { save: "Guardar", cancel: "Cancelar", close: "Cerrar", delete: "Eliminar", loading: "Procesando...", offline: "Sin conexión", back: "Volver" },
@@ -2087,24 +2093,30 @@ const translations: any = {
     review: { title: "Revisar Gasto", shop: "Comercio", date: "Fecha", total: "Total (€)", add_manual: "Añadir producto manual", finish: "Finalizar Registro", discard: "Descartar" },
     settings: { title: "Ajustes", user: "Usuario", export: "Exportar CSV", logout: "Cerrar Sesión" },
     modals: {
-  delete_confirm: "¿Eliminar este registro?",
-  link_list_title: "¿VINCULAR CON LISTA?",
-  link_list_msg: "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
-  yes_link: "SÍ, VINCULAR", // <--- Faltaba esta
-  no_link: "NO, SOLO TICKET", // <--- Faltaba esta
-  clear_list_msg: "¿Limpiar toda la lista?",
-  finish_list_confirm: "¿Dar por finalizada la compra?"
-},
+      delete_confirm: "¿Eliminar este registro?",
+      link_list_title: "¿VINCULAR CON LISTA?",
+      link_list_msg: "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
+      yes_link: "SÍ, VINCULAR",
+      no_link: "NO, SOLO TICKET",
+      clear_list_msg: "¿Limpiar toda la lista?",
+      finish_list_confirm: "¿Dar por finalizada la compra?"
+    },
     ai: {
-      prompt: `Actúa como un experto extractor de datos de tickets.
+      prompt: `Actúa como un experto extractor de datos de tickets de compra.
+      
+      IMPORTANTE REGLA DE CONTINUIDAD:
+      Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET (un ticket largo fotografiado por trozos). 
+      - Une toda la información en un solo objeto JSON.
+      - NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.
+      - Suma los subtotales para verificar el total final.
+
       LISTA DE PRODUCTOS ESPERADOS: [{{lista}}].
       FECHA ACTUAL: {{fecha}}.
 
       REGLAS CRÍTICAS:
-      1. "comercio": Debe ser un STRING (texto plano), nunca un objeto. Ejemplo: "SPAR".
-      2. Si el ticket es un comprobante de tarjeta sin productos, devuelve "productos": [].
-      3. "nombre_base": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si coincide exactamente.
-      4. "total": Solo el número final pagado.
+      1. "comercio": Debe ser un STRING (ej: "MERCADONA"). No uses nombres de empresas legales largas, solo el nombre comercial conocido.
+      2. "total": El número final pagado en el ticket.
+      3. "nombre_base": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si el producto del ticket coincide semánticamente.
 
       FORMATO JSON ESTRICTO:
       {
@@ -2219,6 +2231,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Normaliza texto: minúsculas, quita acentos y carácteres especiales.
+ * Fundamental para el buscador de la lista de compras.
  */
 export const normalizeText = (text: string): string => {
   if (!text) return "";
@@ -2231,7 +2244,21 @@ export const normalizeText = (text: string): string => {
 };
 
 /**
+ * Normaliza nombres de comercios para fusionarlos en estadísticas.
+ * Ejemplo: "MERCADONA, S.A." -> "MERCADONA"
+ */
+export const normalizeStoreName = (name: string): string => {
+  if (!name) return "DESCONOCIDO";
+  return name
+    .toUpperCase()
+    .replace(/\s+(S\.A\.|S\.L\.|S\.L\.U\.|SA|SL|INC|CORP)$/g, "")
+    .replace(/[.,]/g, "")
+    .trim();
+};
+
+/**
  * Calcula la afinidad entre un nombre de ticket y un ítem de la lista.
+ * Devuelve una puntuación para ordenar las sugerencias.
  */
 export const calculateMatchScore = (ticketName: string, listName: string): number => {
   const tWords = normalizeText(ticketName).split(/\s+/);
@@ -2248,9 +2275,10 @@ export const calculateMatchScore = (ticketName: string, listName: string): numbe
 };
 
 /**
- * Comprime y optimiza imágenes de tickets para OCR.
+ * COMPRESIÓN EXTREMA PARA OCR (600px / Calidad 0.3)
+ * Diseñada para enviar 2-3 fotos a Mistral sin superar límites de tokens (Error 429).
  */
-export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.5): Promise<string> => {
+export const compressImage = (base64Str: string, maxWidth = 600, quality = 0.3): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
@@ -2258,36 +2286,65 @@ export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.5):
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
+
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
       }
       canvas.width = width;
       canvas.height = height;
+
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return resolve(base64Str);
+
       ctx.drawImage(img, 0, 0, width, height);
+
+      // --- FILTRO OCR DE ALTO CONTRASTE (OPTIMIZADO PARA BAJA RESOLUCIÓN) ---
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
+
       for (let i = 0; i < data.length; i += 4) {
+        // Escala de grises por luminancia
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        let val = gray < 128 ? gray * 0.8 : gray * 1.2;
-        const finalVal = Math.min(255, Math.max(0, val));
+        
+        // Umbral de contraste agresivo: los grises se vuelven negros o blancos
+        let contrastValue = gray;
+        if (gray < 120) {
+          contrastValue = gray * 0.5; // Forzar a negro
+        } else {
+          contrastValue = gray * 1.5; // Forzar a blanco
+        }
+
+        const finalVal = Math.min(255, Math.max(0, contrastValue));
         data[i] = data[i+1] = data[i+2] = finalVal;
       }
+
       ctx.putImageData(imageData, 0, 0);
+
+      // JPEG a 0.3 genera archivos de aprox 70-100KB, permitiendo enviar varias fotos
       resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    
+    img.onerror = () => {
+      console.error("Error cargando la imagen");
+      resolve(base64Str);
     };
   });
 };
 
 /**
- * Exporta a CSV
+ * Exporta los gastos a formato CSV descargable.
  */
 export const exportToCSV = (gastos: any[]) => {
   if (!gastos || gastos.length === 0) return;
   const headers = ["Fecha", "Comercio", "Total", "Productos"];
-  const rows = gastos.map(g => [g.fecha, `"${g.comercio}"`, g.total, `"${g.productos?.map((p: any) => p.nombre_base).join(" | ")}"`]);
+  const rows = gastos.map(g => [
+    g.fecha, 
+    `"${g.comercio}"`, 
+    g.total, 
+    `"${g.productos?.map((p: any) => p.nombre_base).join(" | ")}"`
+  ]);
+  
   const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -2295,6 +2352,7 @@ export const exportToCSV = (gastos: any[]) => {
   link.setAttribute("href", url);
   link.setAttribute("download", `mis_gastos_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
+  URL.revokeObjectURL(url);
 };
 
 /* --- FIN ARCHIVO: lib/utils.ts --- */

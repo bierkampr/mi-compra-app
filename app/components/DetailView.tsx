@@ -29,12 +29,12 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
 
   return (
     <div className="modal-content-full !p-5 flex flex-col animate-in slide-in-from-right-4">
-      {/* BARRA SUPERIOR - Más compacta */}
+      {/* HEADER COMPACTO */}
       <div className="flex justify-between items-center mb-4">
         <button onClick={onClose} className="btn-icon !p-2 bg-brand-secondary/20 border-none">
           <ChevronLeft size={20} />
         </button>
-        <div className="text-center">
+        <div className="text-center overflow-hidden">
             <h2 className="text-[14px] font-black italic text-brand-primary uppercase truncate max-w-[180px]">
                 {gasto.comercio}
             </h2>
@@ -47,15 +47,17 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
         </button>
       </div>
 
-      {/* LISTADO DE PRODUCTOS - Ahora ocupa el 80% de la pantalla */}
+      {/* LISTADO DE PRODUCTOS: Alias arriba, Ticket abajo */}
       <div className="flex-1 overflow-y-auto no-scrollbar mb-4 border-y border-white/[0.03]">
         {gasto.productos?.map((p: any, i: number) => (
           <div key={i} className="flex justify-between items-center py-3 border-b border-white/[0.02] last:border-none">
             <div className="flex-1 pr-4 overflow-hidden">
-              <p className="text-[10px] font-black uppercase text-white/90 truncate leading-tight">
+              {/* ALIAS GENÉRICO: PRIORIDAD VISUAL */}
+              <p className="text-[11px] font-black uppercase text-white leading-tight">
                 {p.nombre_base}
               </p>
-              <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-30 mt-0.5">
+              {/* NOMBRE REAL TICKET: REFERENCIA SECUNDARIA */}
+              <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-20 mt-0.5">
                 {p.nombre_ticket}
               </p>
             </div>
@@ -69,12 +71,10 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
         ))}
       </div>
 
-      {/* FOOTER - TOTAL Y TICKETS EN UNA SOLA LÍNEA */}
+      {/* FOOTER: TOTAL Y TICKETS EN UNA FILA */}
       <div className="flex items-stretch gap-2 h-20">
-        
-        {/* TARJETA TOTAL PEQUEÑA (Izquierda) */}
         <div className="flex-[1.2] bg-white/[0.03] p-3 rounded-2xl border border-white/[0.05] flex flex-col justify-center">
-            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-50">Total Gasto</p>
+            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-30">Inversión</p>
             <div className="flex items-baseline gap-0.5">
                 <span className="text-2xl font-black italic text-white tracking-tighter">
                     {Number(gasto.total).toFixed(2)}
@@ -83,7 +83,6 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
             </div>
         </div>
 
-        {/* EVIDENCIAS (Derecha - Carrusel horizontal compacto) */}
         <div className="flex-[2] overflow-x-auto no-scrollbar flex items-center gap-2">
             {gasto.photoIds && gasto.photoIds.length > 0 ? (
                 gasto.photoIds.map((id: string, idx: number) => (
@@ -98,19 +97,19 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
                 ))
             ) : (
                 <div className="h-full flex-1 flex items-center justify-center border border-dashed border-white/5 rounded-2xl">
-                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">No fotos</p>
+                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">Sin fotos</p>
                 </div>
             )}
         </div>
       </div>
 
-      {/* LIGHTBOX */}
+      {/* LIGHTBOX VISOR */}
       {viewerUrl && (
-        <div className="modal-overlay !p-4 z-[2000] animate-in fade-in backdrop-blur-xl">
-          <button onClick={() => setViewerUrl(null)} className="absolute top-6 right-6 btn-icon !bg-white/10 border-white/20 z-[600] !p-3">
+        <div className="modal-overlay !p-4 z-[2000] animate-in fade-in backdrop-blur-xl" onClick={() => setViewerUrl(null)}>
+          <button className="absolute top-6 right-6 btn-icon !bg-white/10 border-white/20 z-[600] !p-3">
             <X size={24} className="text-white" />
           </button>
-          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Ticket" />
+          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Evidencia" />
         </div>
       )}
 
