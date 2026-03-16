@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from 'react';
+
 import { CLIENT_ID } from '../lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '../lib/gdrive';
 import { analyzeReceipt } from '../lib/gemini';
@@ -13,6 +14,7 @@ import {
     ShoppingBag, ListTodo, User, CheckCircle2
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic'; 
 export default function Home() {
     // --- 1. ESTADOS ---
     const [lang, setLang] = useState('es');
