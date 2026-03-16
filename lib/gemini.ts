@@ -2,6 +2,10 @@ import { MISTRAL_API_KEY } from "./config";
 
 export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string) => {
   try {
+    if (!MISTRAL_API_KEY) {
+      throw new Error("La llave de Mistral no está configurada en Vercel.");
+    }
+
     if (mode === 'manual') {
       return { comercio: "SIN NOMBRE", fecha: new Date().toLocaleDateString('es-ES'), total: 0, productos: [] };
     }
@@ -20,12 +24,21 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       })
     });
 
+    // --- NUEVO: ESCUDO CONTRA ERRORES ---
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Mistral API Error ${response.status}: ${errorData.error?.message || 'Error desconocido'}`);
+    }
+
     const data = await response.json();
+    
+    if (!data.choices || !data.choices[0]) {
+      throw new Error("La IA no devolvió resultados. Revisa tu cuota en Mistral.");
+    }
+
     const result = JSON.parse(data.choices[0].message.content);
 
-    // --- LÓGICA DE LIMPIEZA DE NOMBRE ---
-    let finalComercio = "SIN NOMBRE"; // Valor por defecto solicitado
-    
+    let finalComercio = "SIN NOMBRE";
     if (result.comercio) {
       if (typeof result.comercio === 'string' && result.comercio.trim() !== "") {
         finalComercio = result.comercio;
@@ -47,6 +60,7 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       }))
     };
   } catch (error: any) {
-    throw new Error("Error en la IA: " + error.message);
+    console.error("DEBUG IA:", error);
+    throw new Error(error.message);
   }
 };
