@@ -5,83 +5,119 @@
 :root {
   --background: 13, 15, 26; /* #0D0F1A */
   --foreground: 255, 255, 255;
+  /* Normalización del tamaño base para evitar escalas agresivas del sistema */
+  font-size: 16px; 
 }
 
 @layer base {
   body {
-    @apply bg-brand-bg text-white antialiased;
+    @apply bg-brand-bg text-white antialiased overflow-x-hidden select-none;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Evita el zoom automático en inputs de iOS */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
 
 @layer components {
-  /* Estructura Principal */
+  /* Estructura Principal con márgenes fluidos */
   .app-layout {
-    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-6 pb-32 pt-8 overflow-x-hidden;
+    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-[5vw] pb-32 pt-6;
   }
 
-  /* Tarjetas Premium (Estilo de las fotos) */
+  /* Tarjetas Premium: Densidad Ajustada */
   .card-premium {
-    @apply bg-brand-card border border-white/[0.05] rounded-[2.5rem] p-6 shadow-2xl transition-all duration-300;
+    @apply bg-brand-card border border-white/[0.05] rounded-[1.75rem] p-5 shadow-2xl transition-all duration-300;
   }
 
   .card-clickable {
     @apply card-premium active:scale-[0.97] hover:border-white/10 cursor-pointer;
   }
 
-  /* Tipografía Estándar */
-  .heading-1 { @apply text-3xl font-black italic tracking-tighter text-white uppercase; }
-  .heading-2 { @apply text-xl font-bold tracking-tight text-white uppercase; }
-  .text-small-caps { @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted; }
+  /* Tipografía Fluida y Compacta */
+  .heading-1 { 
+    @apply text-fluid-2xl font-black italic tracking-tighter text-white uppercase leading-[0.85] mb-2; 
+  }
   
-  /* Botones (Inspirados en Juta/Credify) */
+  .heading-2 { 
+    @apply text-fluid-lg font-bold tracking-tight text-white uppercase leading-tight; 
+  }
+
+  .text-small-caps { 
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted; 
+  }
+  
+  /* Botones Optimizados */
   .btn-primary {
     @apply w-full py-4 px-6 rounded-2xl bg-brand-primary text-white font-bold 
            transition-all duration-200 active:scale-[0.95] shadow-[0_10px_25px_-5px_rgba(93,46,239,0.4)]
-           flex items-center justify-center gap-3 disabled:opacity-50;
+           flex items-center justify-center gap-3 disabled:opacity-50 text-sm tracking-widest uppercase;
   }
 
   .btn-secondary {
     @apply w-full py-4 px-6 rounded-2xl bg-brand-secondary text-white font-semibold 
            transition-all duration-200 active:scale-[0.95] border border-white/5
-           flex items-center justify-center gap-3;
+           flex items-center justify-center gap-3 text-xs tracking-wider uppercase;
   }
 
   .btn-icon {
-    @apply p-3 rounded-xl bg-brand-secondary/50 text-brand-muted hover:text-white 
+    @apply p-2.5 rounded-xl bg-brand-secondary/50 text-brand-muted hover:text-white 
            transition-all active:scale-90 border border-white/5 flex items-center justify-center;
   }
 
-  /* Inputs Premium */
+  /* Inputs Premium con padding denso */
   .input-premium {
-    @apply w-full bg-brand-secondary/30 border border-white/10 rounded-2xl p-4 
+    @apply w-full bg-brand-secondary/30 border border-white/10 rounded-xl p-3.5 
            text-white placeholder:text-brand-muted/40 outline-none transition-all
-           focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10;
+           focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 font-bold;
   }
 
-  /* Modales y Paneles */
+  /* Modales y Paneles con Densidad Alta */
   .modal-overlay {
-    @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 
+    @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 
            animate-in fade-in duration-300;
   }
 
   .modal-content-full {
-    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-8 overflow-y-auto 
+    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-[6vw] overflow-y-auto 
            animate-in slide-in-from-bottom duration-500 ease-out;
   }
 
-  /* Navegación Inferior Flotante */
+  /* Navegación Inferior Flotante Compacta */
   .nav-bottom {
-    @apply fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm 
-           bg-brand-card/90 backdrop-blur-2xl rounded-[2.5rem] px-4 py-3 
-           flex justify-between items-center z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)];
+    @apply fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm 
+           bg-brand-card/90 backdrop-blur-2xl rounded-[2rem] px-2 py-2
+           flex justify-between items-center z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)]
+           border border-white/[0.05];
   }
 
-  /* Ranking de Comercios */
+  /* Listas Densas (Más items por pantalla) */
+  .list-row {
+    @apply flex justify-between items-center py-3 border-b border-white/[0.03] transition-colors;
+  }
+
   .shop-row {
-    @apply flex justify-between items-center p-4 bg-white/[0.02] rounded-3xl border border-white/[0.03];
+    @apply flex justify-between items-center p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.03];
   }
 }
 
-/* Ocultar scrollbar */
+/* Ocultar scrollbar manteniendo funcionalidad */
 ::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Fix para evitar el rebote elástico en iOS que rompe el diseño */
+html, body {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+main {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

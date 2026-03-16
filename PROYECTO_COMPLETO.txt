@@ -1,5 +1,5 @@
 === PROYECTO: MI COMPRA APP - FULL ESTRUCTURE ===
-Fecha de exportación: 3/16/2026, 3:44:07 PM
+Fecha de exportación: 3/16/2026, 4:15:44 PM
 Descripción: App de gastos con IA, Modo Offline (PWA), Navegación Mensual y Sync Google Drive.
 ================================================
 
@@ -385,9 +385,10 @@ export default function RootLayout({
 
 /* --- INICIO ARCHIVO: app/page.tsx --- */
 
+/* --- INICIO ARCHIVO: app/page.tsx --- */
+
 "use client";
 import { useState, useEffect, useMemo } from 'react';
-
 import { CLIENT_ID } from '../lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '../lib/gdrive';
 import { analyzeReceipt } from '../lib/gemini';
@@ -402,6 +403,7 @@ import {
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic'; 
+
 export default function Home() {
     // --- 1. ESTADOS ---
     const [lang, setLang] = useState('es');
@@ -466,28 +468,39 @@ export default function Home() {
         if (navigator.onLine && user.token) await saveDriveFile(user.token, newDb, fileId);
     };
 
-    // --- 3. LÓGICA DE PROCESAMIENTO ---
+    // --- 3. LÓGICA DE PROCESAMIENTO (CON ESCUDO ANTI-DUPLICADOS) ---
     const startAnalysis = async (useList: boolean) => {
-        if (isOffline) return alert(txt('common.offline'));
-        setShowListDialog(false); setLoading(true);
+        // ESCUDO: Si ya estamos cargando o estamos offline, bloqueamos cualquier intento extra
+        if (isOffline || loading) return;
+
+        setLoading(true);
+        setShowListDialog(false);
+
         try {
             const listItems = useList ? db.lista.filter(l => !l.confirmed).map(l => l.name) : [];
             const promptFinal = txt('ai.prompt')
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
 
+            // Llamada a la IA (lib/gemini.ts ya tiene la protección de headers)
             const res = await analyzeReceipt(tempPhotos, purchaseMode || 'super', promptFinal);
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
-        } catch (err: any) { alert(err.message); }
-        finally { setLoading(false); }
+        } catch (err: any) { 
+            alert(err.message); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const saveConfirmedGasto = async () => {
+        if (loading) return;
         setLoading(true);
         try {
             let pIds = [];
             if (pendingGasto.tempImages && !isOffline) {
-                for (let img of pendingGasto.tempImages) pIds.push(await uploadImageToDrive(user.token, img));
+                for (let img of pendingGasto.tempImages) {
+                    pIds.push(await uploadImageToDrive(user.token, img));
+                }
             }
             const updatedL = db.lista.map(li => {
                 if (!pendingGasto.usedList) return li;
@@ -498,8 +511,11 @@ export default function Home() {
             delete final.tempImages; delete final.usedList;
             await updateAndSync({ ...db, gastos: [final, ...db.gastos], lista: updatedL });
             resetFlow();
-        } catch (e) { alert("Error"); }
-        finally { setLoading(false); }
+        } catch (e) { 
+            alert("Error al guardar en Google Drive"); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const resetFlow = () => {
@@ -518,7 +534,7 @@ export default function Home() {
         setSelectedGasto(null);
     };
 
-    // --- 4. LOGICA DE COMERCIOS (PROTECCIÓN CONTRA OBJECT OBJECT) ---
+    // --- 4. LOGICA DE COMERCIOS ---
     const comerciosAnteriores = useMemo(() => 
         Array.from(new Set((db.gastos || []).map(g => {
             const val = g.comercio;
@@ -767,12 +783,20 @@ export default function Home() {
                             const files = Array.from(e.target.files || []);
                             files.forEach(file => {
                                 const r = new FileReader();
-                                r.onloadend = async () => { const comp = await compressImage(r.result as string, 800, 0.6); setTempPhotos(prev => [...prev, comp]); };
+                                r.onloadend = async () => { 
+                                    // Normalizamos a 700px con calidad 0.5 para garantizar compatibilidad universal
+                                    const comp = await compressImage(r.result as string, 700, 0.5); 
+                                    setTempPhotos(prev => [...prev, comp]); 
+                                };
                                 r.readAsDataURL(file);
                             });
                         }}/>
                     </div>
-                    <button onClick={() => isVincularFlow ? startAnalysis(true) : (db.lista.filter(l => !l.confirmed).length > 0 ? setShowListDialog(true) : startAnalysis(false))} disabled={tempPhotos.length === 0 || loading} className="btn-primary py-5 uppercase tracking-widest text-xs">
+                    <button 
+                        onClick={() => isVincularFlow ? startAnalysis(true) : (db.lista.filter(l => !l.confirmed).length > 0 ? setShowListDialog(true) : startAnalysis(false))} 
+                        disabled={tempPhotos.length === 0 || loading} 
+                        className="btn-primary py-5 uppercase tracking-widest text-xs"
+                    >
                         {loading ? <Loader2 className="animate-spin" /> : txt('scan.process')}
                     </button>
                     <button onClick={() => {setPurchaseMode(null); setIsVincularFlow(false); setTempPhotos([]); setActiveTab('home');}} className="btn-secondary border-none bg-transparent text-brand-danger font-black">{txt('common.cancel')}</button>
@@ -830,7 +854,11 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="mt-12 space-y-4">
-                        <button onClick={saveConfirmedGasto} className="btn-primary py-6 text-sm bg-brand-success text-brand-bg shadow-2xl tracking-widest uppercase">
+                        <button 
+                            onClick={saveConfirmedGasto} 
+                            disabled={loading}
+                            className="btn-primary py-6 text-sm bg-brand-success text-brand-bg shadow-2xl tracking-widest uppercase"
+                        >
                             {loading ? <Loader2 className="animate-spin mx-auto" /> : <div className="flex items-center justify-center gap-3"><Check size={24} strokeWidth={4} /> {txt('review.finish')}</div>}
                         </button>
                         <button onClick={resetFlow} className="btn-secondary border-none text-brand-danger font-black uppercase text-[10px] tracking-widest">{txt('review.discard')}</button>
@@ -839,35 +867,32 @@ export default function Home() {
             )}
 
             {/* MODAL: CONFLICTO LISTA */}
-{/* MODAL: CONFLICTO LISTA */}
-{showListDialog && (
-    /* Añadimos z-[2000] para que flote sobre la carga de fotos */
-    <div className="modal-overlay z-[2000]">
-        <div className="card-premium w-full text-center space-y-8 p-10 border-brand-primary/20">
-            <div className="w-20 h-20 bg-brand-primary/10 rounded-3xl mx-auto flex items-center justify-center text-brand-primary">
-                <AlertTriangle size={40} strokeWidth={2.5}/>
-            </div>
-            
-            <h2 className="heading-2 tracking-widest">{txt('modals.link_list_title')}</h2>
-            <p className="text-xs font-bold text-brand-muted uppercase leading-relaxed px-4">
-                {txt('modals.link_list_msg')}
-            </p>
+            {showListDialog && (
+                <div className="modal-overlay z-[2000]">
+                    <div className="card-premium w-full text-center space-y-8 p-10 border-brand-primary/20">
+                        <div className="w-20 h-20 bg-brand-primary/10 rounded-3xl mx-auto flex items-center justify-center text-brand-primary">
+                            <AlertTriangle size={40} strokeWidth={2.5}/>
+                        </div>
+                        
+                        <h2 className="heading-2 tracking-widest">{txt('modals.link_list_title')}</h2>
+                        <p className="text-xs font-bold text-brand-muted uppercase leading-relaxed px-4">
+                            {txt('modals.link_list_msg')}
+                        </p>
 
-            <div className="space-y-3">
-                {/* Verifica que las llaves aquí coincidan con i18n.ts (minúsculas) */}
-                <button onClick={() => startAnalysis(true)} className="btn-primary py-5 text-[10px]">
-                    {txt('modals.yes_link')}
-                </button>
-                <button onClick={() => startAnalysis(false)} className="btn-secondary py-5 text-[10px]">
-                    {txt('modals.no_link')}
-                </button>
-                <button onClick={() => setShowListDialog(false)} className="text-[10px] font-black text-brand-muted py-4 block mx-auto uppercase tracking-widest">
-                    {txt('common.cancel')}
-                </button>
-            </div>
-        </div>
-    </div>
-)}
+                        <div className="space-y-3">
+                            <button onClick={() => startAnalysis(true)} className="btn-primary py-5 text-[10px]">
+                                {txt('modals.yes_link')}
+                            </button>
+                            <button onClick={() => startAnalysis(false)} className="btn-secondary py-5 text-[10px]">
+                                {txt('modals.no_link')}
+                            </button>
+                            <button onClick={() => setShowListDialog(false)} className="text-[10px] font-black text-brand-muted py-4 block mx-auto uppercase tracking-widest">
+                                {txt('common.cancel')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* DETALLE GASTO HISTORIAL */}
             {selectedGasto && (
@@ -920,6 +945,8 @@ export default function Home() {
 
 /* --- FIN ARCHIVO: app/page.tsx --- */
 
+/* --- FIN ARCHIVO: app/page.tsx --- */
+
 
 /* --- INICIO ARCHIVO: lib/config.ts --- */
 
@@ -934,45 +961,105 @@ export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
 /* --- INICIO ARCHIVO: lib/gemini.ts --- */
 
+/* --- INICIO ARCHIVO: lib/gemini.ts --- */
+
 import { MISTRAL_API_KEY } from "./config";
 
+/**
+ * Envía las imágenes de los tickets a Mistral AI (Pixtral) para su análisis.
+ * Incluye gestión de errores robusta para evitar bloqueos en iOS/Android.
+ */
 export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string) => {
   try {
+    if (!MISTRAL_API_KEY) {
+      throw new Error("La llave de API de Mistral no está configurada.");
+    }
+
+    // El modo manual no requiere procesamiento de IA
     if (mode === 'manual') {
-      return { comercio: "SIN NOMBRE", fecha: new Date().toLocaleDateString('es-ES'), total: 0, productos: [] };
+      return { 
+        comercio: "INGRESO MANUAL", 
+        fecha: new Date().toLocaleDateString('es-ES'), 
+        total: 0, 
+        productos: [] 
+      };
     }
 
     const url = "https://api.mistral.ai/v1/chat/completions";
-    const imageContent = base64Images.map(img => ({ type: "image_url", image_url: img }));
+
+    // Preparamos el contenido multimedia siguiendo el esquema oficial de Mistral
+    const imageContent = base64Images.map(img => ({
+      type: "image_url",
+      image_url: { url: img } // Formato de objeto anidado para mayor compatibilidad
+    }));
 
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${MISTRAL_API_KEY}`, "Content-Type": "application/json" },
+      headers: { 
+        "Authorization": `Bearer ${MISTRAL_API_KEY}`, 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
       body: JSON.stringify({
         "model": "pixtral-12b-2409",
-        "messages": [{ "role": "user", "content": [{ "type": "text", "text": customPrompt }, ...imageContent] }],
+        "messages": [
+          { 
+            "role": "user", 
+            "content": [
+              { "type": "text", "text": customPrompt }, 
+              ...imageContent
+            ] 
+          }
+        ],
         "response_format": { "type": "json_object" },
         "temperature": 0
-      })
+      }),
+      // Evita que navegadores móviles (iOS) mantengan conexiones latentes que causen 429 falsos
+      keepalive: false 
     });
 
+    // --- MANEJO DE ERRORES DETALLADO ---
+    if (!response.ok) {
+      let errorMessage = `Error ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        // Si es un 429, especificamos que es por límite de velocidad/cuota
+        if (response.status === 429) {
+          errorMessage = "Límite de velocidad excedido (429). Por favor, espera un momento antes de reintentar.";
+        } else {
+          errorMessage = errorJson.error?.message || errorMessage;
+        }
+      } catch (e) {
+        errorMessage = "Error de conexión con la IA. Verifica tu internet.";
+      }
+      throw new Error(errorMessage);
+    }
+
     const data = await response.json();
+
+    // Verificamos que la respuesta contenga los datos esperados antes de procesar
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
+      throw new Error("La IA devolvió una respuesta vacía o incompleta.");
+    }
+
     const result = JSON.parse(data.choices[0].message.content);
 
-    // --- LÓGICA DE LIMPIEZA DE NOMBRE ---
-    let finalComercio = "SIN NOMBRE"; // Valor por defecto solicitado
+    // --- LÓGICA DE LIMPIEZA DE COMERCIO (Evita el error [object Object]) ---
+    let finalComercio = "SIN NOMBRE";
     
     if (result.comercio) {
       if (typeof result.comercio === 'string' && result.comercio.trim() !== "") {
         finalComercio = result.comercio;
       } else if (typeof result.comercio === 'object') {
+        // Si la IA devuelve un objeto, buscamos cualquier string dentro de sus valores
         const found = Object.values(result.comercio).find(v => typeof v === 'string' && v.length > 0);
         if (found) finalComercio = found as string;
       }
     }
 
+    // Retornamos el objeto estructurado y limpio
     return {
-      comercio: finalComercio.toUpperCase(),
+      comercio: finalComercio.toUpperCase().trim(),
       fecha: result.fecha || new Date().toLocaleDateString('es-ES'),
       total: Number(result.total) || 0,
       productos: (result.productos || []).map((p: any) => ({
@@ -983,9 +1070,13 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       }))
     };
   } catch (error: any) {
-    throw new Error("Error en la IA: " + error.message);
+    console.error("DEBUG IA ERROR:", error);
+    // Propagamos el error con un mensaje limpio para el usuario
+    throw new Error(error.message || "Error desconocido al procesar el ticket.");
   }
 };
+
+/* --- FIN ARCHIVO: lib/gemini.ts --- */
 
 /* --- FIN ARCHIVO: lib/gemini.ts --- */
 
@@ -1135,7 +1226,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /* --- INICIO ARCHIVO: lib/utils.ts --- */
 
-export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.6): Promise<string> => {
+/* --- INICIO ARCHIVO: lib/utils.ts --- */
+
+/**
+ * Comprime y optimiza imágenes de tickets para OCR.
+ * Funciona de forma idéntica en iOS, Android y Web.
+ */
+export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.5): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
@@ -1143,42 +1240,85 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.6):
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
+
+      // Cálculo de proporciones
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
       }
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return resolve(base64Str);
+
+      // Dibujamos la imagen original en el canvas redimensionado
       ctx.drawImage(img, 0, 0, width, height);
+
+      // --- PROCESAMIENTO DE IMAGEN PARA OCR (Mejora compatibilidad iOS/Android) ---
+      // Obtenemos los datos de la imagen para aplicar filtros manuales
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
-      const contrast = 1.3; 
-      const intercept = 128 * (1 - contrast);
+
       for (let i = 0; i < data.length; i += 4) {
-        const gray = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
-        let val = gray * contrast + intercept;
-        val = val > 255 ? 255 : (val < 0 ? 0 : val);
-        data[i] = val; data[i + 1] = val; data[i + 2] = val;
+        // 1. Convertir a Escala de Grises (Luminancia)
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        
+        // 2. Aumentar Contraste (Algoritmo de umbral suave)
+        // Esto ayuda a que el texto negro sobre papel blanco sea mucho más nítido para la IA
+        let contrastValue = gray;
+        if (gray < 128) {
+          contrastValue = gray * 0.8; // Oscurecer más los grises oscuros
+        } else {
+          contrastValue = gray * 1.2; // Aclarar más los grises claros
+        }
+
+        // Limitar valores entre 0 y 255
+        const finalVal = Math.min(255, Math.max(0, contrastValue));
+
+        data[i] = finalVal;     // Rojo
+        data[i + 1] = finalVal; // Verde
+        data[i + 2] = finalVal; // Azul
       }
+
+      // Ponemos los datos procesados de vuelta en el canvas
       ctx.putImageData(imageData, 0, 0);
+
+      // Exportamos a JPEG con calidad controlada
+      // JPEG es más ligero que PNG para Base64
       resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    
+    img.onerror = () => {
+      console.error("Error cargando la imagen para compresión");
+      resolve(base64Str);
     };
   });
 };
 
+/**
+ * Exporta los gastos a formato CSV descargable.
+ */
 export const exportToCSV = (gastos: any[]) => {
   if (!gastos || gastos.length === 0) return;
   const headers = ["Fecha", "Comercio", "Total", "Productos"];
-  const rows = gastos.map(g => [g.fecha, g.comercio, g.total, g.productos?.map((p: any) => p.nombre_base).join(" | ")]);
+  const rows = gastos.map(g => [
+    g.fecha, 
+    `"${g.comercio}"`, 
+    g.total, 
+    `"${g.productos?.map((p: any) => p.nombre_base).join(" | ")}"`
+  ]);
+  
   const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.setAttribute("href", url);
-  link.setAttribute("download", `mis_gastos.csv`);
+  link.setAttribute("download", `mis_gastos_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
+  URL.revokeObjectURL(url);
 };
+
+/* --- FIN ARCHIVO: lib/utils.ts --- */
 
 /* --- FIN ARCHIVO: lib/utils.ts --- */
