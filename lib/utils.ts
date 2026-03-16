@@ -1,5 +1,6 @@
 /**
  * Normaliza texto: minúsculas, quita acentos y carácteres especiales.
+ * Fundamental para el buscador de la lista de compras.
  */
 export const normalizeText = (text: string): string => {
   if (!text) return "";
@@ -26,6 +27,7 @@ export const normalizeStoreName = (name: string): string => {
 
 /**
  * Calcula la afinidad entre un nombre de ticket y un ítem de la lista.
+ * Devuelve una puntuación para ordenar las sugerencias.
  */
 export const calculateMatchScore = (ticketName: string, listName: string): number => {
   const tWords = normalizeText(ticketName).split(/\s+/);
@@ -42,10 +44,10 @@ export const calculateMatchScore = (ticketName: string, listName: string): numbe
 };
 
 /**
- * Comprime y optimiza imágenes de tickets para OCR.
- * Ajustado para que 2 fotos pesen menos que 1 original.
+ * COMPRESIÓN EXTREMA PARA OCR (600px / Calidad 0.3)
+ * Diseñada para enviar 2-3 fotos a Mistral sin superar límites de tokens (Error 429).
  */
-export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.4): Promise<string> => {
+export const compressImage = (base64Str: string, maxWidth = 600, quality = 0.3): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
@@ -66,20 +68,20 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.4):
 
       ctx.drawImage(img, 0, 0, width, height);
 
-      // --- FILTRO OCR AVANZADO (ALTO CONTRASTE) ---
+      // --- FILTRO OCR DE ALTO CONTRASTE (OPTIMIZADO PARA BAJA RESOLUCIÓN) ---
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
-        // Luminancia (Escala de grises)
+        // Escala de grises por luminancia
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
         
-        // Umbral suave de contraste para que el texto resalte sobre el papel
+        // Umbral de contraste agresivo: los grises se vuelven negros o blancos
         let contrastValue = gray;
-        if (gray < 128) {
-          contrastValue = gray * 0.7; // Oscurecer negros
+        if (gray < 120) {
+          contrastValue = gray * 0.5; // Forzar a negro
         } else {
-          contrastValue = gray * 1.3; // Aclarar blancos
+          contrastValue = gray * 1.5; // Forzar a blanco
         }
 
         const finalVal = Math.min(255, Math.max(0, contrastValue));
@@ -87,16 +89,20 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.4):
       }
 
       ctx.putImageData(imageData, 0, 0);
-      // JPEG a 0.4 es el equilibrio perfecto para Mistral
+
+      // JPEG a 0.3 genera archivos de aprox 70-100KB, permitiendo enviar varias fotos
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
     
-    img.onerror = () => resolve(base64Str);
+    img.onerror = () => {
+      console.error("Error cargando la imagen");
+      resolve(base64Str);
+    };
   });
 };
 
 /**
- * Exporta los gastos a formato CSV.
+ * Exporta los gastos a formato CSV descargable.
  */
 export const exportToCSV = (gastos: any[]) => {
   if (!gastos || gastos.length === 0) return;
@@ -115,4 +121,5 @@ export const exportToCSV = (gastos: any[]) => {
   link.setAttribute("href", url);
   link.setAttribute("download", `mis_gastos_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
+  URL.revokeObjectURL(url);
 };

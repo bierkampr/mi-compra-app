@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon, Layout } from 'lucide-react';
 import { compressImage } from '../../lib/utils';
 
 interface ScannerViewProps {
@@ -56,74 +56,81 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE DE CAPTURA DE FOTOS ---
+// --- SUB-COMPONENTE DE CAPTURA DE FOTOS (REDISEÑADO) ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt 
 }) => {
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     files.forEach(file => {
       const r = new FileReader();
       r.onloadend = async () => { 
-        // Usamos nuestra nueva compresión agresiva (maxWidth 800, quality 0.4)
-        const comp = await compressImage(r.result as string, 800, 0.4); 
+        // Comprimimos inmediatamente a 600px para evitar errores 429
+        const comp = await compressImage(r.result as string); 
         setTempPhotos((prev: string[]) => [...prev, comp]); 
       };
       r.readAsDataURL(file);
     });
   };
 
-  const removePhoto = (idx: number) => {
-    setTempPhotos((prev: string[]) => prev.filter((_, i) => i !== idx));
-  };
-
   return (
-    <div className="w-full flex flex-col gap-8 animate-in fade-in zoom-in-95">
+    <div className="w-full flex flex-col gap-6 animate-in fade-in zoom-in-95">
       <div className="text-center">
-        <h2 className="heading-1 !text-fluid-xl mb-2">{txt('scan.title')}</h2>
-        <p className="text-small-caps opacity-50">Captura o sube los tickets</p>
+        <h2 className="heading-1 !text-fluid-xl mb-1">CARGAR TICKET</h2>
+        <p className="text-small-caps opacity-40 italic">Para tickets largos, toma varias fotos</p>
       </div>
 
-      <div className={`card-premium !p-2 border-dashed border-2 min-h-[300px] flex flex-col items-center justify-center relative transition-all ${
+      {/* ZONA DE CARGA CON DOBLE BOTÓN */}
+      <div className={`card-premium !p-2 border-dashed border-2 min-h-[250px] flex flex-col items-center justify-center relative ${
         tempPhotos.length > 0 ? 'border-brand-primary/30 bg-brand-primary/[0.02]' : 'border-brand-secondary/30 bg-brand-secondary/5'
       }`}>
         {tempPhotos.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 w-full h-full p-2">
+          <div className="grid grid-cols-2 gap-2 w-full p-2">
             {tempPhotos.map((p: string, i: number) => (
-              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-in scale-up">
+              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10 shadow-xl">
                 <img src={p} className="w-full h-full object-cover" alt="Ticket" />
                 <button 
-                  onClick={() => removePhoto(i)} 
-                  className="absolute top-1.5 right-1.5 p-1.5 bg-brand-danger rounded-lg text-white shadow-lg active:scale-90"
+                    onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: any) => idx !== i))} 
+                    className="absolute top-1.5 right-1.5 p-1.5 bg-brand-danger rounded-lg text-white shadow-lg active:scale-90"
                 >
                   <X size={12} strokeWidth={4}/>
                 </button>
               </div>
             ))}
-            <label className="relative aspect-[3/4] rounded-xl border-2 border-dashed border-brand-primary/20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-brand-primary/5 transition-colors">
-              <Plus size={24} className="text-brand-primary" />
-              <span className="text-[8px] font-black uppercase tracking-widest text-brand-primary">Añadir</span>
-              <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+            {/* Botón rápido para añadir más fotos una vez ya hay una */}
+            <label className="relative aspect-[3/4] rounded-xl border-2 border-dashed border-brand-primary/20 flex flex-col items-center justify-center gap-1 cursor-pointer bg-brand-primary/5 active:bg-brand-primary/10">
+                <Plus size={20} className="text-brand-primary" />
+                <span className="text-[7px] font-black uppercase text-brand-primary">Añadir más</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
             </label>
           </div>
         ) : (
-          <label className="flex flex-col items-center gap-6 cursor-pointer group">
-            <div className="w-20 h-20 bg-brand-primary/10 rounded-3xl flex items-center justify-center text-brand-primary group-active:scale-90 transition-all">
-              <Camera size={40} strokeWidth={2.5}/>
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-black uppercase tracking-widest mb-1">{txt('scan.add_photo')}</p>
-              <p className="text-[9px] font-bold text-brand-muted uppercase opacity-40">Cámara o Galería</p>
-            </div>
-            {/* INPUT UNIVERSAL: Sin atributo capture permite elegir origen en Android/iOS */}
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
-          </label>
+          <div className="grid grid-cols-2 gap-4 w-full p-4">
+             {/* BOTÓN CÁMARA: Forzado con capture="environment" */}
+             <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
+                <div className="w-12 h-12 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-primary/20">
+                    <Camera size={24} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">Cámara</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+             </label>
+
+             {/* BOTÓN GALERÍA: Estándar */}
+             <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 active:scale-95 transition-all cursor-pointer">
+                <div className="w-12 h-12 bg-brand-secondary rounded-2xl flex items-center justify-center text-brand-muted">
+                    <ImageIcon size={24} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-muted">Galería</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
+             </label>
+          </div>
         )}
       </div>
 
-      <div className="space-y-3">
+      {/* ACCIÓN DE PROCESAMIENTO */}
+      <div className="space-y-3 pt-4">
         <button 
           onClick={() => {
             const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;
@@ -131,21 +138,27 @@ ScannerView.Capture = ({
             else startAnalysis(false);
           }} 
           disabled={tempPhotos.length === 0 || loading} 
-          className="btn-primary !py-5"
+          className="btn-primary !py-5 shadow-[0_15px_35px_rgba(16,185,129,0.2)] !bg-brand-success text-brand-bg hover:opacity-90 disabled:bg-brand-muted disabled:opacity-20"
         >
-          {loading ? <Loader2 className="animate-spin" /> : (
+          {loading ? (
             <div className="flex items-center gap-3">
-               <ImageIcon size={20} />
-               <span>{txt('scan.process')}</span>
+               <Loader2 className="animate-spin" size={20} />
+               <span>Analizando...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+               <Layout size={18}/> 
+               <span>PROCESAR COMPRA ⚡</span>
             </div>
           )}
         </button>
         
-        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !text-[10px] !lowercase opacity-60">
-          {txt('common.cancel')}
+        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !text-[10px] !lowercase opacity-60 font-black">
+          cancelar
         </button>
       </div>
 
+      {/* MODAL: CONFLICTO LISTA */}
       {showListDialog && (
         <div className="modal-overlay z-[2000] !p-6">
           <div className="card-premium w-full text-center space-y-6 !p-8 border-brand-primary/20 animate-in zoom-in-95 duration-300">
@@ -154,24 +167,24 @@ ScannerView.Capture = ({
             </div>
             
             <div className="space-y-2">
-              <h2 className="heading-2 !text-sm tracking-widest">{txt('modals.link_list_title')}</h2>
+              <h2 className="heading-2 !text-sm tracking-widest">¿VINCULAR CON LISTA?</h2>
               <p className="text-[10px] font-bold text-brand-muted uppercase leading-relaxed px-2">
-                {txt('modals.link_list_msg')}
+                Detectamos que tienes una lista pendiente. La IA puede marcar los productos automáticamente.
               </p>
             </div>
 
             <div className="space-y-2 pt-2">
               <button onClick={() => startAnalysis(true)} className="btn-primary !py-4 !text-[10px]">
-                {txt('modals.yes_link')}
+                SÍ, VINCULAR AHORA
               </button>
               <button onClick={() => startAnalysis(false)} className="btn-secondary !py-4 !text-[10px]">
-                {txt('modals.no_link')}
+                NO, SOLO EL TICKET
               </button>
               <button 
                 onClick={() => setShowListDialog(false)} 
                 className="text-[9px] font-black text-brand-muted py-2 block mx-auto uppercase tracking-widest opacity-40"
               >
-                {txt('common.cancel')}
+                atrás
               </button>
             </div>
           </div>
