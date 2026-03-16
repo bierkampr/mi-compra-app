@@ -42,7 +42,6 @@ export const calculateMatchScore = (ticketName: string, listName: string): numbe
 
 /**
  * AGRUPACIÓN DE PRODUCTOS REPETIDOS
- * Si un ticket tiene el mismo producto en varias líneas, los une en una sola.
  */
 export const groupRepeatedProducts = (products: any[]) => {
   const map = new Map();
@@ -62,9 +61,10 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * COMPRESIÓN DE ALTA DEFINICIÓN OPTIMIZADA (1000px / 0.7)
+ * COMPRESIÓN BALANCEADA (800px / 0.5)
+ * Volvemos a la configuración estable para evitar errores 429.
  */
-export const compressImage = (base64Str: string, maxWidth = 1000, quality = 0.7): Promise<string> => {
+export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.5): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
@@ -83,22 +83,21 @@ export const compressImage = (base64Str: string, maxWidth = 1000, quality = 0.7)
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return resolve(base64Str);
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
-        const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
-        let val = gray;
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        let contrastValue = gray;
         if (gray < 128) {
-            val = gray * 0.85; 
+          contrastValue = gray * 0.8; 
         } else {
-            val = Math.min(255, gray * 1.1);
+          contrastValue = gray * 1.2; 
         }
-        data[i] = data[i+1] = data[i+2] = val;
+        const finalVal = Math.min(255, Math.max(0, contrastValue));
+        data[i] = data[i+1] = data[i+2] = finalVal;
       }
 
       ctx.putImageData(imageData, 0, 0);

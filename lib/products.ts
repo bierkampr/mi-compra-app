@@ -1,8 +1,8 @@
 import { supabase } from "./supabase";
 
 /**
- * Busca productos genéricos para "Mi Lista".
- * Consulta la tabla 'productos' donde están los nombres limpios (ej: Tomate, Leche).
+ * BUSCADOR PARA "MI LISTA"
+ * Consulta la tabla 'productos' para sugerir nombres genéricos.
  */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
@@ -21,14 +21,15 @@ export const searchLocalProducts = async (query: string) => {
 };
 
 /**
- * Busca si un nombre del ticket ya tiene un alias genérico asignado en el sistema global.
+ * BUSCADOR DE ALIAS (Diccionario Inteligente)
+ * Mira si un texto de ticket ya fue vinculado antes a un nombre base.
  */
 export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string | null> => {
   try {
     const { data, error } = await supabase
       .from('producto_alias')
       .select('productos(nombre_base)')
-      .eq('nombre_ticket', nombreTicket.toUpperCase())
+      .eq('nombre_ticket', nombreTicket.toUpperCase().trim())
       .maybeSingle();
     
     if (error) return null;
@@ -40,22 +41,23 @@ export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string
 };
 
 /**
- * Guarda o actualiza la relación entre un nombre de ticket y un nombre genérico.
- * Esto alimenta la "inteligencia colectiva" de la app.
+ * REGISTRO DE APRENDIZAJE (Vínculo Ticket -> Lista)
+ * Si el nombre genérico no existe, lo crea. Luego crea el alias.
  */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
     const ticketUpper = nombreTicket.toUpperCase().trim();
     const baseLimpia = nombreBase.trim();
+    if (!ticketUpper || !baseLimpia) return;
     
-    // 1. Buscamos el ID del genérico por su nombre (ej: 'Jugo')
-    let { data: prod, error: errorSearch } = await supabase
+    // 1. Buscamos el ID del nombre base (ej: 'Jugo')
+    let { data: prod } = await supabase
       .from('productos')
       .select('id')
       .eq('nombre_base', baseLimpia)
       .maybeSingle();
 
-    // 2. Si el genérico no existe (ej: usaste un nombre muy personal), lo creamos
+    // 2. Si el nombre base no existe en el catálogo, lo insertamos
     if (!prod) {
       const { data: newP, error: errorInsert } = await supabase
         .from('productos')
@@ -67,29 +69,28 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
       prod = newP;
     }
 
-    // 3. Creamos o actualizamos el alias en la tabla 'producto_alias'
+    // 3. Creamos la relación en la tabla de alias
     if (prod) {
-      const { error: errorAlias } = await supabase.from('producto_alias').upsert({ 
+      await supabase.from('producto_alias').upsert({ 
         producto_id: prod.id, 
         nombre_ticket: ticketUpper 
       }, { onConflict: 'nombre_ticket' });
-      
-      if (errorAlias) throw errorAlias;
     }
   } catch (e) {
-    console.error("Error al guardar alias inteligente:", e);
+    console.error("Error en saveManualAlias:", e);
   }
 };
 
 /**
- * Sincronización final: guarda precios y asegura que los alias queden registrados.
+ * SINCRONIZACIÓN POST-COMPRA
+ * Actualiza alias y precios históricos.
  */
 export const syncProductWithSupabase = async (itemIA: any, comercio: string) => {
   try {
-    // 1. Primero registramos el alias (Ticket -> Base)
+    // 1. Registrar el vínculo para que la App aprenda
     await saveManualAlias(itemIA.nombre_ticket, itemIA.nombre_base);
     
-    // 2. Buscamos el producto base para actualizar el precio histórico
+    // 2. Actualizar precio en la tabla de detalles
     const { data: prod } = await supabase
       .from('productos')
       .select('id')
@@ -97,16 +98,19 @@ export const syncProductWithSupabase = async (itemIA: any, comercio: string) => 
       .maybeSingle();
 
     if (prod) {
+      const subtotal = Number(itemIA.subtotal) || 0;
+      const cantidad = Number(itemIA.cantidad) || 1;
+      
       await supabase.from('producto_detalles').upsert({
         producto_id: prod.id,
         marca: 'Genérico',
         tamano: 'Único',
-        ultimo_precio: (Number(itemIA.subtotal) / Number(itemIA.cantidad || 1)) || 0,
+        ultimo_precio: subtotal / cantidad,
         ultimo_comercio: comercio,
         fecha_actualizacion: new Date().toISOString()
       }, { onConflict: 'producto_id, tamano' });
     }
   } catch (e) {
-    console.error("Error en sincronización Supabase:", e);
+    console.error("Error en syncProductWithSupabase:", e);
   }
 };
