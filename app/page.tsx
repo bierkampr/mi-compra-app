@@ -1,6 +1,7 @@
+/* --- INICIO ARCHIVO: app/page.tsx --- */
+
 "use client";
 import { useState, useEffect, useMemo } from 'react';
-
 import { CLIENT_ID } from '../lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '../lib/gdrive';
 import { analyzeReceipt } from '../lib/gemini';
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic'; 
+
 export default function Home() {
     // --- 1. ESTADOS ---
     const [lang, setLang] = useState('es');
@@ -79,28 +81,39 @@ export default function Home() {
         if (navigator.onLine && user.token) await saveDriveFile(user.token, newDb, fileId);
     };
 
-    // --- 3. LÓGICA DE PROCESAMIENTO ---
+    // --- 3. LÓGICA DE PROCESAMIENTO (CON ESCUDO ANTI-DUPLICADOS) ---
     const startAnalysis = async (useList: boolean) => {
-        if (isOffline) return alert(txt('common.offline'));
-        setShowListDialog(false); setLoading(true);
+        // ESCUDO: Si ya estamos cargando o estamos offline, bloqueamos cualquier intento extra
+        if (isOffline || loading) return;
+
+        setLoading(true);
+        setShowListDialog(false);
+
         try {
             const listItems = useList ? db.lista.filter(l => !l.confirmed).map(l => l.name) : [];
             const promptFinal = txt('ai.prompt')
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
 
+            // Llamada a la IA (lib/gemini.ts ya tiene la protección de headers)
             const res = await analyzeReceipt(tempPhotos, purchaseMode || 'super', promptFinal);
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
-        } catch (err: any) { alert(err.message); }
-        finally { setLoading(false); }
+        } catch (err: any) { 
+            alert(err.message); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const saveConfirmedGasto = async () => {
+        if (loading) return;
         setLoading(true);
         try {
             let pIds = [];
             if (pendingGasto.tempImages && !isOffline) {
-                for (let img of pendingGasto.tempImages) pIds.push(await uploadImageToDrive(user.token, img));
+                for (let img of pendingGasto.tempImages) {
+                    pIds.push(await uploadImageToDrive(user.token, img));
+                }
             }
             const updatedL = db.lista.map(li => {
                 if (!pendingGasto.usedList) return li;
@@ -111,8 +124,11 @@ export default function Home() {
             delete final.tempImages; delete final.usedList;
             await updateAndSync({ ...db, gastos: [final, ...db.gastos], lista: updatedL });
             resetFlow();
-        } catch (e) { alert("Error"); }
-        finally { setLoading(false); }
+        } catch (e) { 
+            alert("Error al guardar en Google Drive"); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const resetFlow = () => {
@@ -131,7 +147,7 @@ export default function Home() {
         setSelectedGasto(null);
     };
 
-    // --- 4. LOGICA DE COMERCIOS (PROTECCIÓN CONTRA OBJECT OBJECT) ---
+    // --- 4. LOGICA DE COMERCIOS ---
     const comerciosAnteriores = useMemo(() => 
         Array.from(new Set((db.gastos || []).map(g => {
             const val = g.comercio;
@@ -380,12 +396,20 @@ export default function Home() {
                             const files = Array.from(e.target.files || []);
                             files.forEach(file => {
                                 const r = new FileReader();
-                                r.onloadend = async () => { const comp = await compressImage(r.result as string, 800, 0.6); setTempPhotos(prev => [...prev, comp]); };
+                                r.onloadend = async () => { 
+                                    // Normalizamos a 700px con calidad 0.5 para garantizar compatibilidad universal
+                                    const comp = await compressImage(r.result as string, 700, 0.5); 
+                                    setTempPhotos(prev => [...prev, comp]); 
+                                };
                                 r.readAsDataURL(file);
                             });
                         }}/>
                     </div>
-                    <button onClick={() => isVincularFlow ? startAnalysis(true) : (db.lista.filter(l => !l.confirmed).length > 0 ? setShowListDialog(true) : startAnalysis(false))} disabled={tempPhotos.length === 0 || loading} className="btn-primary py-5 uppercase tracking-widest text-xs">
+                    <button 
+                        onClick={() => isVincularFlow ? startAnalysis(true) : (db.lista.filter(l => !l.confirmed).length > 0 ? setShowListDialog(true) : startAnalysis(false))} 
+                        disabled={tempPhotos.length === 0 || loading} 
+                        className="btn-primary py-5 uppercase tracking-widest text-xs"
+                    >
                         {loading ? <Loader2 className="animate-spin" /> : txt('scan.process')}
                     </button>
                     <button onClick={() => {setPurchaseMode(null); setIsVincularFlow(false); setTempPhotos([]); setActiveTab('home');}} className="btn-secondary border-none bg-transparent text-brand-danger font-black">{txt('common.cancel')}</button>
@@ -443,7 +467,11 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="mt-12 space-y-4">
-                        <button onClick={saveConfirmedGasto} className="btn-primary py-6 text-sm bg-brand-success text-brand-bg shadow-2xl tracking-widest uppercase">
+                        <button 
+                            onClick={saveConfirmedGasto} 
+                            disabled={loading}
+                            className="btn-primary py-6 text-sm bg-brand-success text-brand-bg shadow-2xl tracking-widest uppercase"
+                        >
                             {loading ? <Loader2 className="animate-spin mx-auto" /> : <div className="flex items-center justify-center gap-3"><Check size={24} strokeWidth={4} /> {txt('review.finish')}</div>}
                         </button>
                         <button onClick={resetFlow} className="btn-secondary border-none text-brand-danger font-black uppercase text-[10px] tracking-widest">{txt('review.discard')}</button>
@@ -452,35 +480,32 @@ export default function Home() {
             )}
 
             {/* MODAL: CONFLICTO LISTA */}
-{/* MODAL: CONFLICTO LISTA */}
-{showListDialog && (
-    /* Añadimos z-[2000] para que flote sobre la carga de fotos */
-    <div className="modal-overlay z-[2000]">
-        <div className="card-premium w-full text-center space-y-8 p-10 border-brand-primary/20">
-            <div className="w-20 h-20 bg-brand-primary/10 rounded-3xl mx-auto flex items-center justify-center text-brand-primary">
-                <AlertTriangle size={40} strokeWidth={2.5}/>
-            </div>
-            
-            <h2 className="heading-2 tracking-widest">{txt('modals.link_list_title')}</h2>
-            <p className="text-xs font-bold text-brand-muted uppercase leading-relaxed px-4">
-                {txt('modals.link_list_msg')}
-            </p>
+            {showListDialog && (
+                <div className="modal-overlay z-[2000]">
+                    <div className="card-premium w-full text-center space-y-8 p-10 border-brand-primary/20">
+                        <div className="w-20 h-20 bg-brand-primary/10 rounded-3xl mx-auto flex items-center justify-center text-brand-primary">
+                            <AlertTriangle size={40} strokeWidth={2.5}/>
+                        </div>
+                        
+                        <h2 className="heading-2 tracking-widest">{txt('modals.link_list_title')}</h2>
+                        <p className="text-xs font-bold text-brand-muted uppercase leading-relaxed px-4">
+                            {txt('modals.link_list_msg')}
+                        </p>
 
-            <div className="space-y-3">
-                {/* Verifica que las llaves aquí coincidan con i18n.ts (minúsculas) */}
-                <button onClick={() => startAnalysis(true)} className="btn-primary py-5 text-[10px]">
-                    {txt('modals.yes_link')}
-                </button>
-                <button onClick={() => startAnalysis(false)} className="btn-secondary py-5 text-[10px]">
-                    {txt('modals.no_link')}
-                </button>
-                <button onClick={() => setShowListDialog(false)} className="text-[10px] font-black text-brand-muted py-4 block mx-auto uppercase tracking-widest">
-                    {txt('common.cancel')}
-                </button>
-            </div>
-        </div>
-    </div>
-)}
+                        <div className="space-y-3">
+                            <button onClick={() => startAnalysis(true)} className="btn-primary py-5 text-[10px]">
+                                {txt('modals.yes_link')}
+                            </button>
+                            <button onClick={() => startAnalysis(false)} className="btn-secondary py-5 text-[10px]">
+                                {txt('modals.no_link')}
+                            </button>
+                            <button onClick={() => setShowListDialog(false)} className="text-[10px] font-black text-brand-muted py-4 block mx-auto uppercase tracking-widest">
+                                {txt('common.cancel')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* DETALLE GASTO HISTORIAL */}
             {selectedGasto && (
@@ -530,3 +555,5 @@ export default function Home() {
         </main>
     );
 }
+
+/* --- FIN ARCHIVO: app/page.tsx --- */
