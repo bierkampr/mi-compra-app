@@ -12,7 +12,7 @@ export const normalizeText = (text: string): string => {
 };
 
 /**
- * Normaliza nombres de comercios para fusionarlos en estadísticas.
+ * Normaliza nombres de comercios para fusionarlos.
  */
 export const normalizeStoreName = (name: string): string => {
   if (!name) return "DESCONOCIDO";
@@ -45,7 +45,6 @@ export const calculateMatchScore = (ticketName: string, listName: string): numbe
  */
 export const groupRepeatedProducts = (products: any[]) => {
   const map = new Map();
-
   products.forEach(p => {
     const key = p.nombre_ticket.toUpperCase().trim();
     if (map.has(key)) {
@@ -56,15 +55,14 @@ export const groupRepeatedProducts = (products: any[]) => {
       map.set(key, { ...p, cantidad: p.cantidad || 1 });
     }
   });
-
   return Array.from(map.values());
 };
 
 /**
- * COMPRESIÓN BALANCEADA (800px / 0.5)
- * Volvemos a la configuración estable para evitar errores 429.
+ * COMPRESIÓN ULTRA-LIGERA (700px / 0.4)
+ * Optimizada para fotos de cerca. Permite múltiples imágenes sin error 429.
  */
-export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.5): Promise<string> => {
+export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.4): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
@@ -83,6 +81,8 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.5):
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return resolve(base64Str);
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
       const imageData = ctx.getImageData(0, 0, width, height);
@@ -90,20 +90,14 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.5):
 
       for (let i = 0; i < data.length; i += 4) {
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        let contrastValue = gray;
-        if (gray < 128) {
-          contrastValue = gray * 0.8; 
-        } else {
-          contrastValue = gray * 1.2; 
-        }
-        const finalVal = Math.min(255, Math.max(0, contrastValue));
-        data[i] = data[i+1] = data[i+2] = finalVal;
+        // Contraste para texto: aclara fondo, oscurece letras
+        let contrastValue = gray < 130 ? gray * 0.7 : Math.min(255, gray * 1.2);
+        data[i] = data[i+1] = data[i+2] = contrastValue;
       }
 
       ctx.putImageData(imageData, 0, 0);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    
     img.onerror = () => resolve(base64Str);
   });
 };
@@ -114,13 +108,7 @@ export const compressImage = (base64Str: string, maxWidth = 800, quality = 0.5):
 export const exportToCSV = (gastos: any[]) => {
   if (!gastos || gastos.length === 0) return;
   const headers = ["Fecha", "Comercio", "Total", "Productos"];
-  const rows = gastos.map(g => [
-    g.fecha, 
-    `"${g.comercio}"`, 
-    g.total, 
-    `"${g.productos?.map((p: any) => p.nombre_base).join(" | ")}"`
-  ]);
-  
+  const rows = gastos.map(g => [g.fecha, `"${g.comercio}"`, g.total, `"${g.productos?.map((p: any) => p.nombre_base).join(" | ")}"`]);
   const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -128,5 +116,4 @@ export const exportToCSV = (gastos: any[]) => {
   link.setAttribute("href", url);
   link.setAttribute("download", `mis_gastos_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
-  URL.revokeObjectURL(url);
 };

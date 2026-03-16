@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon, Layout } from 'lucide-react';
+import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon, Layout, Info, Sparkles, CheckCircle2 } from 'lucide-react';
 import { compressImage } from '../../lib/utils';
 
 interface ScannerViewProps {
@@ -56,7 +56,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE DE CAPTURA DE FOTOS (ICONOS SIEMPRE VISIBLES) ---
+// --- SUB-COMPONENTE DE CAPTURA CON INSTRUCCIONES ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt 
@@ -67,6 +67,7 @@ ScannerView.Capture = ({
     files.forEach(file => {
       const r = new FileReader();
       r.onloadend = async () => { 
+        // Comprimimos a 700px (Muy ligero para IA)
         const comp = await compressImage(r.result as string); 
         setTempPhotos((prev: string[]) => [...prev, comp]); 
       };
@@ -75,54 +76,62 @@ ScannerView.Capture = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-4 animate-in fade-in zoom-in-95">
-      <div className="text-center mb-2">
-        <h2 className="heading-1 !text-fluid-xl mb-1">CARGAR TICKET</h2>
-        <p className="text-small-caps opacity-40 italic">Puedes añadir varias fotos si el ticket es largo</p>
+    <div className="w-full flex flex-col gap-5 animate-in fade-in zoom-in-95 no-scrollbar">
+      <div className="text-center">
+        <h2 className="heading-1 !text-fluid-xl mb-1 tracking-tighter">CARGAR TICKET</h2>
       </div>
 
-      {/* ÁREA DE PREVISUALIZACIÓN (Solo si hay fotos) */}
-      {tempPhotos.length > 0 && (
-        <div className="card-premium !p-2 bg-white/[0.02] border-white/5 max-h-60 overflow-y-auto no-scrollbar">
-          <div className="grid grid-cols-2 gap-2">
-            {tempPhotos.map((p: string, i: number) => (
-              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10 shadow-xl">
-                <img src={p} className="w-full h-full object-cover" alt="Ticket" />
-                <button 
-                    onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: any) => idx !== i))} 
-                    className="absolute top-1.5 right-1.5 p-1.5 bg-brand-danger rounded-lg text-white shadow-lg active:scale-90"
-                >
-                  <X size={12} strokeWidth={4}/>
-                </button>
-              </div>
-            ))}
+      {/* BLOQUE DE INSTRUCCIONES: Cerca es mejor */}
+      <div className="card-premium !p-4 bg-brand-primary/5 border-brand-primary/20 flex items-center gap-4">
+          <div className="w-10 h-10 bg-brand-primary/20 rounded-full flex items-center justify-center text-brand-primary shrink-0">
+              <Sparkles size={20} />
           </div>
+          <div>
+              <p className="text-[10px] font-black uppercase text-white tracking-widest">Cerca es mejor</p>
+              <p className="text-[8px] font-bold text-brand-muted uppercase leading-relaxed mt-0.5">
+                  Si el ticket es largo, toma 2 o 3 fotos de cerca por partes. La IA las unirá.
+              </p>
+          </div>
+      </div>
+
+      {/* ÁREA DE FOTOS CARGADAS */}
+      {tempPhotos.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar px-1">
+          {tempPhotos.map((p: string, i: number) => (
+            <div key={i} className="relative aspect-[3/4] flex-none w-24 rounded-xl overflow-hidden border border-white/20 shadow-2xl animate-in scale-up">
+              <img src={p} className="w-full h-full object-cover" alt="Ticket parte" />
+              <button 
+                  onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: any) => idx !== i))} 
+                  className="absolute top-1 right-1 p-1 bg-brand-danger rounded-lg text-white shadow-lg"
+              >
+                <X size={10} strokeWidth={4}/>
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* SELECTOR PERSISTENTE (ICONOS SIEMPRE VISIBLES) */}
-      <div className="grid grid-cols-2 gap-3">
-          {/* BOTÓN CÁMARA SIEMPRE DISPONIBLE */}
-          <label className="flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
-            <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                <Camera size={20} />
+      {/* SELECTORES SIEMPRE VISIBLES */}
+      <div className="grid grid-cols-2 gap-4">
+          <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
+            <div className="w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-primary/20">
+                <Camera size={32} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary">Cámara</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-primary">Tomar Foto</span>
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
           </label>
 
-          {/* BOTÓN GALERÍA SIEMPRE DISPONIBLE */}
-          <label className="flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] bg-white/[0.03] border border-white/5 active:scale-95 transition-all cursor-pointer">
-            <div className="w-10 h-10 bg-brand-secondary rounded-xl flex items-center justify-center text-brand-muted">
-                <ImageIcon size={20} />
+          <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 active:scale-95 transition-all cursor-pointer">
+            <div className="w-14 h-14 bg-brand-secondary rounded-2xl flex items-center justify-center text-brand-muted">
+                <ImageIcon size={32} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-brand-muted">Galería</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-muted">Galería</span>
             <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
           </label>
       </div>
 
-      {/* ACCIÓN DE PROCESAMIENTO */}
-      <div className="space-y-3 pt-6">
+      {/* ACCIÓN FINAL */}
+      <div className="space-y-3 mt-4">
         <button 
           onClick={() => {
             const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;
@@ -130,23 +139,18 @@ ScannerView.Capture = ({
             else startAnalysis(false);
           }} 
           disabled={tempPhotos.length === 0 || loading} 
-          className="btn-primary !py-5 shadow-[0_15px_35px_rgba(16,185,129,0.2)] !bg-brand-success text-brand-bg hover:opacity-90 disabled:bg-brand-muted disabled:opacity-20"
+          className="btn-primary !py-5 shadow-[0_15px_35px_rgba(16,185,129,0.2)] !bg-brand-success text-brand-bg disabled:opacity-10"
         >
-          {loading ? (
+          {loading ? <Loader2 className="animate-spin" /> : (
             <div className="flex items-center gap-3">
-               <Loader2 className="animate-spin" size={20} />
-               <span>Analizando...</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-               <Layout size={18}/> 
+               <CheckCircle2 size={20} />
                <span>PROCESAR COMPRA ⚡</span>
             </div>
           )}
         </button>
         
         <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !text-[10px] !lowercase opacity-60 font-black">
-          cancelar
+          cancelar carga
         </button>
       </div>
 
@@ -157,27 +161,15 @@ ScannerView.Capture = ({
             <div className="w-16 h-16 bg-brand-primary/10 rounded-2xl mx-auto flex items-center justify-center text-brand-primary">
               <AlertTriangle size={32} strokeWidth={2.5}/>
             </div>
-            
             <div className="space-y-2">
               <h2 className="heading-2 !text-sm tracking-widest">¿VINCULAR CON LISTA?</h2>
-              <p className="text-[10px] font-bold text-brand-muted uppercase leading-relaxed px-2">
-                Detectamos que tienes una lista pendiente. La IA puede marcar los productos automáticamente.
+              <p className="text-[10px] font-bold text-brand-muted uppercase leading-relaxed">
+                Detectamos una lista activa. La IA marcará los productos automáticamente.
               </p>
             </div>
-
-            <div className="space-y-2 pt-2">
-              <button onClick={() => startAnalysis(true)} className="btn-primary !py-4 !text-[10px]">
-                SÍ, VINCULAR AHORA
-              </button>
-              <button onClick={() => startAnalysis(false)} className="btn-secondary !py-4 !text-[10px]">
-                NO, SOLO EL TICKET
-              </button>
-              <button 
-                onClick={() => setShowListDialog(false)} 
-                className="text-[9px] font-black text-brand-muted py-2 block mx-auto uppercase tracking-widest opacity-40"
-              >
-                atrás
-              </button>
+            <div className="space-y-2">
+              <button onClick={() => startAnalysis(true)} className="btn-primary !py-4 !text-[10px]">SÍ, VINCULAR</button>
+              <button onClick={() => startAnalysis(false)} className="btn-secondary !py-4 !text-[10px]">NO, SOLO TICKET</button>
             </div>
           </div>
         </div>
