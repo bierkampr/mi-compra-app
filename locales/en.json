@@ -1,0 +1,30 @@
+{
+  "ui": {
+    "title": "My Purchase",
+    "monthly_spend": "Monthly Spend",
+    "records": "Records",
+    "supermarket": "Supermarket",
+    "mini_market": "Mini Market",
+    "manual": "Manual",
+    "process_ticket": "PROCESS RECEIPT ⚡",
+    "add_photo": "+ Photo",
+    "export_csv": "Export CSV",
+    "logout": "Logout",
+    "what_need": "What do you need?",
+    "add_manual_item": "+ Add manual item",
+    "finish_registration": "FINISH REGISTRATION",
+    "discard": "DISCARD",
+    "total_paid": "Total Paid"
+  },
+  "modals": {
+    "list_conflict_title": "Link with list?",
+    "list_conflict_desc": "You have a pending shopping list. Do you want the AI to check off the items found?",
+    "yes_link": "YES, LINK IT",
+    "no_only_ticket": "NO, JUST RECEIPT",
+    "cancel": "CANCEL",
+    "delete_confirm": "Delete this record?"
+  },
+  "ai": {
+    "prompt_template": "Act as an expert shopping receipt extractor.\nWISH LIST: [{{lista}}]\nTODAY'S DATE: {{hoy}}\n\nSTRICT RULES:\n1. If it is a card-only slip without details, products is [].\n2. 'nombre_ticket': EXACT name on paper.\n3. 'nombre_base': use name from WISH LIST if it matches, otherwise simplify.\n4. 'fecha': DD/MM/AAAA. If not found, use {{hoy}}.\n5. 'comercio': store name.\n\nJSON format:\n{\n  \"comercio\": \"string\",\n  \"fecha\": \"DD/MM/AAAA\",\n  \"total\": number,\n  \"forma_pago\": \"string\",\n  \"productos\": [{ \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }]\n}"
+  }
+}

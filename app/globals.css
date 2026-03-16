@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 13, 15, 26; /* #0D0F1A */
+  --foreground: 255, 255, 255;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-white antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer components {
+  /* Estructura Principal */
+  .app-layout {
+    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-6 pb-32 pt-8 overflow-x-hidden;
+  }
+
+  /* Tarjetas Premium (Estilo de las fotos) */
+  .card-premium {
+    @apply bg-brand-card border border-white/[0.05] rounded-[2.5rem] p-6 shadow-2xl transition-all duration-300;
+  }
+
+  .card-clickable {
+    @apply card-premium active:scale-[0.97] hover:border-white/10 cursor-pointer;
+  }
+
+  /* Tipografía Estándar */
+  .heading-1 { @apply text-3xl font-black italic tracking-tighter text-white uppercase; }
+  .heading-2 { @apply text-xl font-bold tracking-tight text-white uppercase; }
+  .text-small-caps { @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted; }
+  
+  /* Botones (Inspirados en Juta/Credify) */
+  .btn-primary {
+    @apply w-full py-4 px-6 rounded-2xl bg-brand-primary text-white font-bold 
+           transition-all duration-200 active:scale-[0.95] shadow-[0_10px_25px_-5px_rgba(93,46,239,0.4)]
+           flex items-center justify-center gap-3 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply w-full py-4 px-6 rounded-2xl bg-brand-secondary text-white font-semibold 
+           transition-all duration-200 active:scale-[0.95] border border-white/5
+           flex items-center justify-center gap-3;
+  }
+
+  .btn-icon {
+    @apply p-3 rounded-xl bg-brand-secondary/50 text-brand-muted hover:text-white 
+           transition-all active:scale-90 border border-white/5 flex items-center justify-center;
+  }
+
+  /* Inputs Premium */
+  .input-premium {
+    @apply w-full bg-brand-secondary/30 border border-white/10 rounded-2xl p-4 
+           text-white placeholder:text-brand-muted/40 outline-none transition-all
+           focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10;
+  }
+
+  /* Modales y Paneles */
+  .modal-overlay {
+    @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 
+           animate-in fade-in duration-300;
+  }
+
+  .modal-content-full {
+    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-8 overflow-y-auto 
+           animate-in slide-in-from-bottom duration-500 ease-out;
+  }
+
+  /* Navegación Inferior Flotante */
+  .nav-bottom {
+    @apply fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm 
+           bg-brand-card/90 backdrop-blur-2xl rounded-[2.5rem] px-4 py-3 
+           flex justify-between items-center z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)];
+  }
+
+  /* Ranking de Comercios */
+  .shop-row {
+    @apply flex justify-between items-center p-4 bg-white/[0.02] rounded-3xl border border-white/[0.03];
+  }
+}
+
+/* Ocultar scrollbar */
+::-webkit-scrollbar { display: none; }

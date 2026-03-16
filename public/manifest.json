@@ -1,0 +1,17 @@
+{
+  "name": "Mi Compra App",
+  "short_name": "Mi Compra",
+  "description": "Gestor de gastos con IA y modo offline",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0F1A",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2331/2331970.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

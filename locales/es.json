@@ -1,0 +1,44 @@
+{
+  "ui": {
+    "title": "MI COMPRA",
+    "monthly_spend": "GASTO MENSUAL",
+    "records": "REGISTROS",
+    "analysis": "ANÁLISIS",
+    "daily_spend": "GASTO DIARIO",
+    "settings": "AJUSTES",
+    "export_csv": "EXPORTAR CSV",
+    "logout": "SALIR",
+    "close": "CERRAR",
+    "what_need": "¿QUÉ NECESITAS?",
+    "supermarket": "SUPERMERCADO",
+    "mini_market": "MINI MARKET",
+    "manual": "MANUAL",
+    "add_photo": "+ FOTO",
+    "process_ticket": "PROCESAR TICKET ⚡",
+    "shop": "COMERCIO",
+    "date": "FECHA",
+    "total_euro": "TOTAL (€)",
+    "add_manual_item": "AÑADIR MANUAL",
+    "finish_registration": "FINALIZAR REGISTRO",
+    "discard": "DESCARTAR",
+    "view_ticket": "VER TICKET",
+    "total_paid": "TOTAL PAGADO",
+    "offline": "SIN CONEXIÓN",
+    "scan_list": "ESCANEAR TICKET",
+    "clear_list": "LIMPIAR LISTA",
+    "pending": "PENDIENTES",
+    "bought": "COMPRADO"
+  },
+  "modals": {
+    "list_conflict_title": "¿VINCULAR CON LISTA?",
+    "list_conflict_desc": "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
+    "yes_link": "SÍ, VINCULAR",
+    "no_only_ticket": "NO, SOLO TICKET",
+    "cancel": "CANCELAR",
+    "delete_confirm": "¿ELIMINAR ESTE REGISTRO?",
+    "finish_list_confirm": "¿LIMPIAR TODA LA LISTA? SE PERDERÁN LOS PRODUCTOS ACTUALES."
+  },
+  "ai": {
+    "prompt_template": "Extrae datos de este ticket. LISTA DE PRODUCTOS ESPERADOS: [{{lista}}]. IDIOMA DE SALIDA: {{lang}}. REGLAS: 1. Si es solo un comprobante de tarjeta, devuelve productos: []. 2. 'nombre_ticket' literal. 3. 'nombre_base' debe ser igual al de la lista si coincide. NUNCA nombres vacíos. Formato JSON: { \"comercio\": \"string\", \"fecha\": \"DD/MM/AAAA\", \"total\": number, \"productos\": [{\"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number}] }"
+  }
+}
