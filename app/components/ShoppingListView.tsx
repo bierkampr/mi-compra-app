@@ -20,9 +20,16 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     setNewItemName(val);
     if (val.length > 1) {
       setIsSearching(true);
-      const res = await searchLocalProducts(val);
-      setSuggestions(res);
-      setIsSearching(false);
+      try {
+        const res = await searchLocalProducts(val);
+        // Filtramos duplicados por nombre antes de mostrar
+        const uniqueRes = Array.from(new Map(res.map(item => [item.nombre_base.toUpperCase(), item])).values());
+        setSuggestions(uniqueRes);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsSearching(false);
+      }
     } else {
       setSuggestions([]);
     }
@@ -32,7 +39,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     const val = (name || newItemName).trim();
     if (!val) return;
 
-    // 1. Actualización Local (UX instantánea - Offline First)
+    // 1. Actualización Local inmediata
     const newDb = { 
       ...db, 
       lista: [...(db.lista || []), { name: val, checked: false, confirmed: false }] 
@@ -41,8 +48,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     setSuggestions([]);
     await updateAndSync(newDb);
 
-    // 2. Registro en Supabase (Sin activar el error 400)
-    // Primero verificamos si existe para evitar enviar un comando inválido
+    // 2. Registro seguro en Supabase
     try {
         const { data: existing } = await supabase
             .from('productos')
@@ -51,19 +57,15 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
             .maybeSingle();
 
         if (!existing) {
-            await supabase.from('productos').insert([
-                { nombre_base: val, categoria: 'otros' }
-            ]);
+            await supabase.from('productos').insert([{ nombre_base: val, categoria: 'otros' }]);
         }
     } catch (e) {
-        console.warn("Sincronización de catálogo en segundo plano falló.");
+        console.warn("Sincronización silenciosa falló.");
     }
   };
 
   const toggleCheck = async (item: any) => {
-    const newList = db.lista.map(li => 
-      li === item ? { ...li, checked: !li.checked } : li
-    );
+    const newList = db.lista.map(li => li === item ? { ...li, checked: !li.checked } : li);
     await updateAndSync({ ...db, lista: newList });
   };
 
@@ -78,9 +80,8 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     }
   };
 
-  // FUNCIÓN PARA LIMPIAR SOLO PENDIENTES
   const clearPending = async () => {
-    if (confirm("¿Quieres borrar todos los productos que no se compraron?")) {
+    if (confirm("¿Borrar productos no comprados?")) {
       const onlyBought = db.lista.filter(li => li.confirmed);
       await updateAndSync({ ...db, lista: onlyBought });
     }
@@ -90,70 +91,61 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   const boughtItems = db.lista.filter(li => li.confirmed);
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-10">
-      {/* BARRA DE BÚSQUEDA */}
-      <div className="relative group">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted group-focus-within:text-brand-primary transition-colors">
-          {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+    <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-20">
+      {/* BARRA DE BÚSQUEDA CON SUGERENCIAS SCROLLABLES */}
+      <div className="relative group z-[100]">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">
+          {isSearching ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <Search size={18} />}
         </div>
         <input 
           value={newItemName} 
           onChange={(e) => handleSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addToList()}
           placeholder={txt('list.placeholder')} 
-          className="input-premium pl-12 pr-14 !rounded-2xl" 
+          className="input-premium pl-12 pr-14 !rounded-2xl shadow-xl" 
         />
-        <button 
-          onClick={() => addToList()} 
-          className="absolute right-2 top-2 p-2.5 bg-brand-primary rounded-xl text-white shadow-lg active:scale-90 transition-all"
-        >
+        <button onClick={() => addToList()} className="absolute right-2 top-2 p-2.5 bg-brand-primary rounded-xl text-white shadow-lg active:scale-90 transition-all">
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* SUGERENCIAS */}
+        {/* CONTENEDOR DE SUGERENCIAS CON SCROLL */}
         {suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-50 border-brand-primary/30 shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-[200] border-brand-primary/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 max-h-[300px] overflow-y-auto no-scrollbar">
             {suggestions.map((s, idx) => (
               <button 
                 key={idx} 
                 onClick={() => addToList(s.nombre_base)} 
-                className="w-full text-left p-3.5 hover:bg-brand-primary/10 rounded-xl text-[10px] font-black uppercase border-b border-white/[0.03] last:border-none flex justify-between items-center"
+                className="w-full text-left p-4 hover:bg-brand-primary/10 rounded-xl text-[10px] font-black uppercase border-b border-white/[0.03] last:border-none flex justify-between items-center transition-colors"
               >
-                {s.nombre_base}
-                <Plus size={14} className="text-brand-primary opacity-40" />
+                <span className="truncate">{s.nombre_base}</span>
+                <Plus size={14} className="text-brand-primary opacity-40 shrink-0" />
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* ACCIONES DE LISTA */}
+      {/* ACCIONES RÁPIDAS */}
       {db.lista.length > 0 && (
         <div className="flex gap-2.5">
-          <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-[2] py-4 !text-[10px] tracking-widest gap-2 shadow-none">
+          <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-[2.5] py-4 !text-[10px] tracking-widest gap-2 shadow-none">
             <Camera size={18}/> {txt('list.scan_btn')}
           </button>
           
           {pendingItems.length > 0 && (
-            <button 
-                onClick={clearPending}
-                className="btn-secondary flex-1 !p-0 bg-brand-primary/5 border-brand-primary/10 text-brand-primary active:bg-brand-primary active:text-white transition-all"
-            >
+            <button onClick={clearPending} className="btn-secondary flex-1 !p-0 bg-brand-primary/5 border-brand-primary/10 text-brand-primary active:bg-brand-primary active:text-white transition-all">
                 <Eraser size={18}/>
-                <span className="text-[8px] font-black uppercase">Limpiar</span>
+                <span className="text-[7px] font-black uppercase">Limpiar</span>
             </button>
           )}
 
-          <button 
-            onClick={clearAll} 
-            className="btn-secondary w-12 !p-0 bg-brand-danger/10 text-brand-danger border-none active:bg-brand-danger active:text-white"
-          >
+          <button onClick={clearAll} className="btn-secondary w-12 !p-0 bg-brand-danger/10 text-brand-danger border-none active:bg-brand-danger active:text-white">
             <Trash2 size={20}/>
           </button>
         </div>
       )}
 
-      {/* PENDIENTES */}
+      {/* LISTA PENDIENTES */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <ListTodo size={14} className="text-brand-primary" />
@@ -163,7 +155,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         <div className="space-y-2">
           {pendingItems.length > 0 ? (
             pendingItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex items-center gap-2 group animate-in slide-in-from-left-2" style={{ animationDelay: `${i * 50}ms` }}>
                 <button 
                   onClick={() => toggleCheck(item)}
                   className={`flex-1 flex items-center gap-3 p-4 rounded-2xl border transition-all ${
@@ -183,20 +175,20 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                     {item.name}
                   </span>
                 </button>
-                <button onClick={() => removeItem(item)} className="p-3 text-brand-muted/20 hover:text-brand-danger transition-all">
+                <button onClick={() => removeItem(item)} className="p-3 text-brand-muted/10 hover:text-brand-danger hover:bg-brand-danger/5 rounded-xl transition-all">
                   <X size={18}/>
                 </button>
               </div>
             ))
           ) : (
-            <p className="text-center py-10 text-[10px] font-bold text-brand-muted uppercase tracking-[0.2em] opacity-20">
-              No hay productos pendientes
-            </p>
+            <div className="py-12 text-center border-2 border-dashed border-white/[0.02] rounded-[2.5rem]">
+                <p className="text-[9px] font-black text-brand-muted uppercase tracking-[0.3em] opacity-20">Nada pendiente</p>
+            </div>
           )}
         </div>
       </section>
 
-      {/* COMPRADOS */}
+      {/* LISTA COMPRADOS */}
       {boughtItems.length > 0 && (
         <section className="pt-6 border-t border-white/5">
           <div className="flex items-center gap-2 px-1 mb-4">
@@ -205,11 +197,9 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           </div>
           <div className="grid grid-cols-2 gap-2">
             {boughtItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-brand-success/[0.03] border border-brand-success/10">
+              <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-brand-success/[0.03] border border-brand-success/10 animate-in fade-in">
                 <Check size={12} className="text-brand-success flex-shrink-0" strokeWidth={4}/>
-                <span className="text-[9px] font-black uppercase tracking-tight text-brand-muted truncate">
-                  {item.name}
-                </span>
+                <span className="text-[9px] font-black uppercase tracking-tight text-brand-muted truncate">{item.name}</span>
               </div>
             ))}
           </div>

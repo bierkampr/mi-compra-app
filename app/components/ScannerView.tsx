@@ -5,10 +5,16 @@ import { compressImage } from '../../lib/utils';
 
 interface ScannerViewProps {
   setPurchaseMode: (mode: 'super' | 'mini' | 'manual' | null) => void;
+  startAnalysis: (useList: boolean) => void; // <-- Agregado para el modo manual
   txt: (key: string) => string;
 }
 
-const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ setPurchaseMode, txt }) => {
+// Definimos el tipo para que soporte el sub-componente Capture
+interface ScannerViewComponent extends React.FC<ScannerViewProps> {
+  Capture: React.FC<any>;
+}
+
+const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt }) => {
   return (
     <div className="space-y-4 py-4 animate-in slide-in-from-bottom-8 duration-500">
       <div className="px-1 mb-2">
@@ -46,7 +52,10 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
       </button>
 
       <button 
-        onClick={() => setPurchaseMode('manual')} 
+        onClick={() => {
+            setPurchaseMode('manual');
+            startAnalysis(false); // Entra directo a edición
+        }} 
         className="btn-secondary !py-5 !bg-transparent border-dashed border-white/10 text-brand-muted hover:border-brand-primary hover:text-white"
       >
         <Edit3 size={18}/> 
@@ -56,7 +65,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE DE CAPTURA CON INSTRUCCIONES ---
+// --- SUB-COMPONENTE DE CAPTURA ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt 
@@ -67,7 +76,6 @@ ScannerView.Capture = ({
     files.forEach(file => {
       const r = new FileReader();
       r.onloadend = async () => { 
-        // Comprimimos a 700px (Muy ligero para IA)
         const comp = await compressImage(r.result as string); 
         setTempPhotos((prev: string[]) => [...prev, comp]); 
       };
@@ -81,7 +89,6 @@ ScannerView.Capture = ({
         <h2 className="heading-1 !text-fluid-xl mb-1 tracking-tighter">CARGAR TICKET</h2>
       </div>
 
-      {/* BLOQUE DE INSTRUCCIONES: Cerca es mejor */}
       <div className="card-premium !p-4 bg-brand-primary/5 border-brand-primary/20 flex items-center gap-4">
           <div className="w-10 h-10 bg-brand-primary/20 rounded-full flex items-center justify-center text-brand-primary shrink-0">
               <Sparkles size={20} />
@@ -94,7 +101,6 @@ ScannerView.Capture = ({
           </div>
       </div>
 
-      {/* ÁREA DE FOTOS CARGADAS */}
       {tempPhotos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar px-1">
           {tempPhotos.map((p: string, i: number) => (
@@ -111,7 +117,6 @@ ScannerView.Capture = ({
         </div>
       )}
 
-      {/* SELECTORES SIEMPRE VISIBLES */}
       <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
             <div className="w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-primary/20">
@@ -130,7 +135,6 @@ ScannerView.Capture = ({
           </label>
       </div>
 
-      {/* ACCIÓN FINAL */}
       <div className="space-y-3 mt-4">
         <button 
           onClick={() => {
@@ -154,7 +158,6 @@ ScannerView.Capture = ({
         </button>
       </div>
 
-      {/* MODAL: CONFLICTO LISTA */}
       {showListDialog && (
         <div className="modal-overlay z-[2000] !p-6">
           <div className="card-premium w-full text-center space-y-6 !p-8 border-brand-primary/20 animate-in zoom-in-95 duration-300">

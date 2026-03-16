@@ -8,7 +8,7 @@ import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 
-// RUTAS RELATIVAS PARA MÁXIMA COMPATIBILIDAD
+// RUTAS CORREGIDAS
 import Navigation from './components/Navigation';
 import AuthView from './components/AuthView';
 import DashboardView from './components/DashboardView';
@@ -76,6 +76,18 @@ export default function Home() {
 
     const startAnalysis = async (useList: boolean) => {
         if (isOffline || loading) return;
+
+        if (purchaseMode === 'manual') {
+            setPendingGasto({
+                comercio: "NUEVA COMPRA",
+                fecha: new Date().toLocaleDateString('es-ES'),
+                total: 0,
+                productos: [],
+                usedList: useList
+            });
+            return;
+        }
+
         setLoading(true);
         setShowListDialog(false);
 
@@ -89,6 +101,7 @@ export default function Home() {
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
         } catch (err: any) { 
             alert(err.message); 
+            setPurchaseMode(null);
         } finally { 
             setLoading(false); 
         }
@@ -110,7 +123,6 @@ export default function Home() {
                 }
             }
 
-            // Marcar productos en la lista
             const updatedL = db.lista.map(li => {
                 if (!finalGasto.usedList) return li;
                 const matched = finalGasto.productos?.some((p: any) => 
@@ -120,8 +132,6 @@ export default function Home() {
             });
 
             const record = { ...finalGasto, photoIds: pIds, total: Number(finalGasto.total) || 0 };
-            
-            // Guardamos el origen para saber a dónde volver
             const returnToList = finalGasto.usedList;
 
             delete record.tempImages; 
@@ -129,8 +139,6 @@ export default function Home() {
             delete record._isGrouped;
             
             await updateAndSync({ ...db, gastos: [record, ...db.gastos], lista: updatedL });
-            
-            // NAVEGACIÓN INTELIGENTE: Si venía de la lista, vuelve a la lista
             resetFlow(returnToList ? 'list' : 'home');
 
         } catch (e) { 
@@ -172,7 +180,7 @@ export default function Home() {
         <main className="app-layout">
             <Navigation user={user} activeTab={activeTab} setActiveTab={setActiveTab} isOffline={isOffline} txt={txt} />
 
-            <div className="flex-1 overflow-y-auto pt-4">
+            <div className="flex-1 overflow-y-auto pt-4 no-scrollbar">
                 {activeTab === 'home' && !purchaseMode && (
                     <DashboardView stats={stats} currentViewDate={currentViewDate} setCurrentViewDate={setCurrentViewDate} setSelectedGasto={setSelectedGasto} setActiveTab={setActiveTab} txt={txt} lang={lang} />
                 )}
@@ -180,7 +188,7 @@ export default function Home() {
                     <ShoppingListView db={db} updateAndSync={updateAndSync} setPurchaseMode={setPurchaseMode} txt={txt} />
                 )}
                 {activeTab === 'add' && !purchaseMode && (
-                    <ScannerView setPurchaseMode={setPurchaseMode} txt={txt} />
+                    <ScannerView setPurchaseMode={setPurchaseMode} startAnalysis={startAnalysis} txt={txt} />
                 )}
                 {activeTab === 'settings' && (
                     <SettingsView user={user} db={db} setActiveTab={setActiveTab} txt={txt} />
