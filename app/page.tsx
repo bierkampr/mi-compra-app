@@ -3,12 +3,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { CLIENT_ID } from '@/lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '@/lib/gdrive';
 import { analyzeReceipt } from '@/lib/gemini';
-import { compressImage } from '@/lib/utils';
+import { compressImage, normalizeStoreName } from '@/lib/utils'; // <-- IMPORTANTE: Añadida normalización
 import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 
-// USAMOS RUTAS RELATIVAS PARA EVITAR ERRORES DE RUTA
 import Navigation from './components/Navigation';
 import AuthView from './components/AuthView';
 import DashboardView from './components/DashboardView';
@@ -130,6 +129,7 @@ export default function Home() {
         setActiveTab('home');
     };
 
+    // --- LÓGICA DE ESTADÍSTICAS ACTUALIZADA (FUSIÓN DE COMERCIOS) ---
     const stats = useMemo(() => {
         const y = currentViewDate.getFullYear();
         const m = currentViewDate.getMonth();
@@ -140,8 +140,16 @@ export default function Home() {
             const d = new Date(+yy, +mm - 1, +dd);
             return d >= first && d <= last;
         });
+
         const total = currentGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
-        const porComercio = currentGastos.reduce((acc: any, g) => { acc[g.comercio] = (acc[g.comercio] || 0) + Number(g.total); return acc; }, {});
+        
+        // Fusión inteligente: Mercadona S.A. + Mercadona = MERCADONA
+        const porComercio = currentGastos.reduce((acc: any, g) => { 
+            const nombreLimpio = normalizeStoreName(g.comercio); 
+            acc[nombreLimpio] = (acc[nombreLimpio] || 0) + Number(g.total); 
+            return acc; 
+        }, {});
+
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 

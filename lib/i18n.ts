@@ -1,3 +1,5 @@
+/* --- ARCHIVO: lib/i18n.ts (Completo) --- */
+
 const translations: any = {
   es: {
     common: { save: "Guardar", cancel: "Cancelar", close: "Cerrar", delete: "Eliminar", loading: "Procesando...", offline: "Sin conexión", back: "Volver" },
@@ -9,24 +11,30 @@ const translations: any = {
     review: { title: "Revisar Gasto", shop: "Comercio", date: "Fecha", total: "Total (€)", add_manual: "Añadir producto manual", finish: "Finalizar Registro", discard: "Descartar" },
     settings: { title: "Ajustes", user: "Usuario", export: "Exportar CSV", logout: "Cerrar Sesión" },
     modals: {
-  delete_confirm: "¿Eliminar este registro?",
-  link_list_title: "¿VINCULAR CON LISTA?",
-  link_list_msg: "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
-  yes_link: "SÍ, VINCULAR", // <--- Faltaba esta
-  no_link: "NO, SOLO TICKET", // <--- Faltaba esta
-  clear_list_msg: "¿Limpiar toda la lista?",
-  finish_list_confirm: "¿Dar por finalizada la compra?"
-},
+      delete_confirm: "¿Eliminar este registro?",
+      link_list_title: "¿VINCULAR CON LISTA?",
+      link_list_msg: "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
+      yes_link: "SÍ, VINCULAR",
+      no_link: "NO, SOLO TICKET",
+      clear_list_msg: "¿Limpiar toda la lista?",
+      finish_list_confirm: "¿Dar por finalizada la compra?"
+    },
     ai: {
-      prompt: `Actúa como un experto extractor de datos de tickets.
+      prompt: `Actúa como un experto extractor de datos de tickets de compra.
+      
+      IMPORTANTE REGLA DE CONTINUIDAD:
+      Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET (un ticket largo fotografiado por trozos). 
+      - Une toda la información en un solo objeto JSON.
+      - NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.
+      - Suma los subtotales para verificar el total final.
+
       LISTA DE PRODUCTOS ESPERADOS: [{{lista}}].
       FECHA ACTUAL: {{fecha}}.
 
       REGLAS CRÍTICAS:
-      1. "comercio": Debe ser un STRING (texto plano), nunca un objeto. Ejemplo: "SPAR".
-      2. Si el ticket es un comprobante de tarjeta sin productos, devuelve "productos": [].
-      3. "nombre_base": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si coincide exactamente.
-      4. "total": Solo el número final pagado.
+      1. "comercio": Debe ser un STRING (ej: "MERCADONA"). No uses nombres de empresas legales largas, solo el nombre comercial conocido.
+      2. "total": El número final pagado en el ticket.
+      3. "nombre_base": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si el producto del ticket coincide semánticamente.
 
       FORMATO JSON ESTRICTO:
       {

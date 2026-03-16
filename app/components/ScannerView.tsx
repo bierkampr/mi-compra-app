@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Camera, ShoppingCart, Store, Edit3, X, Plus, Loader2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
-import { compressImage } from '@/lib/utils';
+import { compressImage } from '../../lib/utils';
 
 interface ScannerViewProps {
   setPurchaseMode: (mode: 'super' | 'mini' | 'manual' | null) => void;
@@ -67,8 +67,8 @@ ScannerView.Capture = ({
     files.forEach(file => {
       const r = new FileReader();
       r.onloadend = async () => { 
-        // Normalización para OCR (700px, contraste mejorado)
-        const comp = await compressImage(r.result as string, 700, 0.5); 
+        // Usamos nuestra nueva compresión agresiva (maxWidth 800, quality 0.4)
+        const comp = await compressImage(r.result as string, 800, 0.4); 
         setTempPhotos((prev: string[]) => [...prev, comp]); 
       };
       r.readAsDataURL(file);
@@ -86,7 +86,6 @@ ScannerView.Capture = ({
         <p className="text-small-caps opacity-50">Captura o sube los tickets</p>
       </div>
 
-      {/* ÁREA DE CAPTURA (DENSIDAD OPTIMIZADA) */}
       <div className={`card-premium !p-2 border-dashed border-2 min-h-[300px] flex flex-col items-center justify-center relative transition-all ${
         tempPhotos.length > 0 ? 'border-brand-primary/30 bg-brand-primary/[0.02]' : 'border-brand-secondary/30 bg-brand-secondary/5'
       }`}>
@@ -116,14 +115,14 @@ ScannerView.Capture = ({
             </div>
             <div className="text-center">
               <p className="text-xs font-black uppercase tracking-widest mb-1">{txt('scan.add_photo')}</p>
-              <p className="text-[9px] font-bold text-brand-muted uppercase opacity-40">Soporta múltiples imágenes</p>
+              <p className="text-[9px] font-bold text-brand-muted uppercase opacity-40">Cámara o Galería</p>
             </div>
+            {/* INPUT UNIVERSAL: Sin atributo capture permite elegir origen en Android/iOS */}
             <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
           </label>
         )}
       </div>
 
-      {/* ACCIONES */}
       <div className="space-y-3">
         <button 
           onClick={() => {
@@ -147,7 +146,6 @@ ScannerView.Capture = ({
         </button>
       </div>
 
-      {/* MODAL: CONFLICTO LISTA (VINCULAR ANTES DE ESCANEAR) */}
       {showListDialog && (
         <div className="modal-overlay z-[2000] !p-6">
           <div className="card-premium w-full text-center space-y-6 !p-8 border-brand-primary/20 animate-in zoom-in-95 duration-300">

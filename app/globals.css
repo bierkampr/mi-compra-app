@@ -5,7 +5,6 @@
 :root {
   --background: 13, 15, 26; /* #0D0F1A */
   --foreground: 255, 255, 255;
-  /* Normalización del tamaño base para evitar escalas agresivas del sistema */
   font-size: 16px; 
 }
 
@@ -16,19 +15,17 @@
     -webkit-tap-highlight-color: transparent;
   }
   
-  /* Evita el zoom automático en inputs de iOS */
   input, select, textarea {
     font-size: 16px !important;
   }
 }
 
 @layer components {
-  /* Estructura Principal con márgenes fluidos */
+  /* Estructura Principal: pb-44 asegura que el contenido no quede tras la nav bar */
   .app-layout {
-    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-[5vw] pb-32 pt-6;
+    @apply max-w-md mx-auto min-h-screen flex flex-col relative bg-brand-bg px-[5vw] pb-44 pt-6;
   }
 
-  /* Tarjetas Premium: Densidad Ajustada */
   .card-premium {
     @apply bg-brand-card border border-white/[0.05] rounded-[1.75rem] p-5 shadow-2xl transition-all duration-300;
   }
@@ -37,7 +34,6 @@
     @apply card-premium active:scale-[0.97] hover:border-white/10 cursor-pointer;
   }
 
-  /* Tipografía Fluida y Compacta */
   .heading-1 { 
     @apply text-fluid-2xl font-black italic tracking-tighter text-white uppercase leading-[0.85] mb-2; 
   }
@@ -50,7 +46,6 @@
     @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted; 
   }
   
-  /* Botones Optimizados */
   .btn-primary {
     @apply w-full py-4 px-6 rounded-2xl bg-brand-primary text-white font-bold 
            transition-all duration-200 active:scale-[0.95] shadow-[0_10px_25px_-5px_rgba(93,46,239,0.4)]
@@ -68,14 +63,12 @@
            transition-all active:scale-90 border border-white/5 flex items-center justify-center;
   }
 
-  /* Inputs Premium con padding denso */
   .input-premium {
     @apply w-full bg-brand-secondary/30 border border-white/10 rounded-xl p-3.5 
            text-white placeholder:text-brand-muted/40 outline-none transition-all
            focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 font-bold;
   }
 
-  /* Modales y Paneles con Densidad Alta */
   .modal-overlay {
     @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 
            animate-in fade-in duration-300;
@@ -86,7 +79,6 @@
            animate-in slide-in-from-bottom duration-500 ease-out;
   }
 
-  /* Navegación Inferior Flotante Compacta */
   .nav-bottom {
     @apply fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm 
            bg-brand-card/90 backdrop-blur-2xl rounded-[2rem] px-2 py-2
@@ -94,7 +86,6 @@
            border border-white/[0.05];
   }
 
-  /* Listas Densas (Más items por pantalla) */
   .list-row {
     @apply flex justify-between items-center py-3 border-b border-white/[0.03] transition-colors;
   }
@@ -102,13 +93,18 @@
   .shop-row {
     @apply flex justify-between items-center p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.03];
   }
+
+  /* Utilidad para ocultar scrollbars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
-/* Ocultar scrollbar manteniendo funcionalidad */
-::-webkit-scrollbar { display: none; }
-* { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Fix para evitar el rebote elástico en iOS que rompe el diseño */
+/* Fix prevent elastic bounce on iOS */
 html, body {
   position: fixed;
   overflow: hidden;

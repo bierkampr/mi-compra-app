@@ -1,9 +1,9 @@
-/* --- ARCHIVO: components/ReviewModal.tsx (Actualizado) --- */
-
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
 import { Check, X, Store, Calendar, Euro, Link, Loader2, AlertCircle, Sparkles } from 'lucide-react';
-import { calculateMatchScore } from '@/lib/utils';
+
+// CAMBIAMOS EL IMPORT A RUTA RELATIVA PARA EVITAR ERRORES DE VS CODE
+import { calculateMatchScore } from '../../lib/utils';
 
 interface ReviewModalProps {
   pendingGasto: any;
@@ -22,23 +22,19 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isManualExpanded, setIsManualExpanded] = useState(false);
   const [manualProd, setManualProd] = useState({ name: '', qty: 1, price: "" });
   
-  // Guardamos qué productos tienen el panel de vinculación abierto
   const [expandedIndices, setExpandedIndices] = useState<number[]>([]);
 
-  // Efecto inicial: Auto-expandir si el producto no tiene un alias claro
   useEffect(() => {
     if (pendingGasto?.productos) {
       const autoExpand: number[] = [];
       pendingGasto.productos.forEach((p: any, i: number) => {
-        // Si el nombre base es igual al del ticket, es que no encontró alias previo
-        // O si no hay productos en la lista que coincidan mucho
         if (p.nombre_base === p.nombre_ticket) {
           autoExpand.push(i);
         }
       });
       setExpandedIndices(autoExpand);
     }
-  }, []);
+  }, [pendingGasto?.productos]);
 
   const toggleExpand = (idx: number) => {
     setExpandedIndices(prev => 
@@ -50,7 +46,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     const newProds = [...pendingGasto.productos];
     newProds[productIndex].nombre_base = listName;
     setPendingGasto({ ...pendingGasto, productos: newProds });
-    // Al seleccionar uno, cerramos ese panel
     setExpandedIndices(prev => prev.filter(i => i !== productIndex));
   };
 
@@ -85,7 +80,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       </header>
 
       <div className="flex-1 overflow-y-auto space-y-5 pr-1">
-        {/* INFO COMERCIO Y TOTAL */}
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-12 relative">
             <label className="text-small-caps ml-1 mb-1.5 block opacity-60">Comercio</label>
@@ -119,7 +113,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
-        {/* LISTA DE PRODUCTOS */}
         <section className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <h3 className="text-small-caps">Productos detectados</h3>
@@ -143,7 +136,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
           <div className="space-y-2">
             {pendingGasto.productos.map((p: any, i: number) => {
-              // Lógica de Inteligencia: Ordenar sugerencias por coincidencia de palabras
               const smartSuggestions = db.lista
                 .filter(l => !l.confirmed)
                 .map(l => ({ ...l, matchScore: calculateMatchScore(p.nombre_ticket, l.name) }))
@@ -153,7 +145,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
               return (
                 <div key={i} className={`flex flex-col transition-all duration-300 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-3' : 'bg-white/[0.02] border-white/[0.04] p-2.5'}`}>
-                  {/* FILA CLICKABLE COMPLETA */}
                   <button 
                     onClick={() => toggleExpand(i)}
                     className="flex justify-between items-start gap-3 text-left w-full"
@@ -180,7 +171,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     </div>
                   </button>
 
-                  {/* PANEL DE VINCULACIÓN INTELIGENTE */}
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-brand-primary/10 animate-in slide-in-from-top-2">
                       <p className="text-[8px] font-black uppercase text-brand-primary mb-2 flex items-center gap-1">
@@ -220,7 +210,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </section>
       </div>
 
-      {/* FOOTER ACCIONES */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !lowercase !text-[10px] opacity-60">
           descartar
