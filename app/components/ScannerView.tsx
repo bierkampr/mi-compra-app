@@ -56,7 +56,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE DE CAPTURA DE FOTOS (REDISEÑADO) ---
+// --- SUB-COMPONENTE DE CAPTURA DE FOTOS (ICONOS SIEMPRE VISIBLES) ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt 
@@ -67,7 +67,6 @@ ScannerView.Capture = ({
     files.forEach(file => {
       const r = new FileReader();
       r.onloadend = async () => { 
-        // Comprimimos inmediatamente a 600px para evitar errores 429
         const comp = await compressImage(r.result as string); 
         setTempPhotos((prev: string[]) => [...prev, comp]); 
       };
@@ -76,18 +75,16 @@ ScannerView.Capture = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 animate-in fade-in zoom-in-95">
-      <div className="text-center">
+    <div className="w-full flex flex-col gap-4 animate-in fade-in zoom-in-95">
+      <div className="text-center mb-2">
         <h2 className="heading-1 !text-fluid-xl mb-1">CARGAR TICKET</h2>
-        <p className="text-small-caps opacity-40 italic">Para tickets largos, toma varias fotos</p>
+        <p className="text-small-caps opacity-40 italic">Puedes añadir varias fotos si el ticket es largo</p>
       </div>
 
-      {/* ZONA DE CARGA CON DOBLE BOTÓN */}
-      <div className={`card-premium !p-2 border-dashed border-2 min-h-[250px] flex flex-col items-center justify-center relative ${
-        tempPhotos.length > 0 ? 'border-brand-primary/30 bg-brand-primary/[0.02]' : 'border-brand-secondary/30 bg-brand-secondary/5'
-      }`}>
-        {tempPhotos.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 w-full p-2">
+      {/* ÁREA DE PREVISUALIZACIÓN (Solo si hay fotos) */}
+      {tempPhotos.length > 0 && (
+        <div className="card-premium !p-2 bg-white/[0.02] border-white/5 max-h-60 overflow-y-auto no-scrollbar">
+          <div className="grid grid-cols-2 gap-2">
             {tempPhotos.map((p: string, i: number) => (
               <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10 shadow-xl">
                 <img src={p} className="w-full h-full object-cover" alt="Ticket" />
@@ -99,38 +96,33 @@ ScannerView.Capture = ({
                 </button>
               </div>
             ))}
-            {/* Botón rápido para añadir más fotos una vez ya hay una */}
-            <label className="relative aspect-[3/4] rounded-xl border-2 border-dashed border-brand-primary/20 flex flex-col items-center justify-center gap-1 cursor-pointer bg-brand-primary/5 active:bg-brand-primary/10">
-                <Plus size={20} className="text-brand-primary" />
-                <span className="text-[7px] font-black uppercase text-brand-primary">Añadir más</span>
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
-            </label>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4 w-full p-4">
-             {/* BOTÓN CÁMARA: Forzado con capture="environment" */}
-             <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
-                <div className="w-12 h-12 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-primary/20">
-                    <Camera size={24} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">Cámara</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
-             </label>
+        </div>
+      )}
 
-             {/* BOTÓN GALERÍA: Estándar */}
-             <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 active:scale-95 transition-all cursor-pointer">
-                <div className="w-12 h-12 bg-brand-secondary rounded-2xl flex items-center justify-center text-brand-muted">
-                    <ImageIcon size={24} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-brand-muted">Galería</span>
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
-             </label>
-          </div>
-        )}
+      {/* SELECTOR PERSISTENTE (ICONOS SIEMPRE VISIBLES) */}
+      <div className="grid grid-cols-2 gap-3">
+          {/* BOTÓN CÁMARA SIEMPRE DISPONIBLE */}
+          <label className="flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
+            <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                <Camera size={20} />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary">Cámara</span>
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+          </label>
+
+          {/* BOTÓN GALERÍA SIEMPRE DISPONIBLE */}
+          <label className="flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] bg-white/[0.03] border border-white/5 active:scale-95 transition-all cursor-pointer">
+            <div className="w-10 h-10 bg-brand-secondary rounded-xl flex items-center justify-center text-brand-muted">
+                <ImageIcon size={20} />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-brand-muted">Galería</span>
+            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
+          </label>
       </div>
 
       {/* ACCIÓN DE PROCESAMIENTO */}
-      <div className="space-y-3 pt-4">
+      <div className="space-y-3 pt-6">
         <button 
           onClick={() => {
             const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;

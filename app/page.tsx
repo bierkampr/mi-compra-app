@@ -3,11 +3,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { CLIENT_ID } from '@/lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '@/lib/gdrive';
 import { analyzeReceipt } from '@/lib/gemini';
-import { compressImage, normalizeStoreName } from '@/lib/utils'; // <-- IMPORTANTE: Añadida normalización
+import { compressImage, normalizeStoreName } from '@/lib/utils';
 import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 
+// RUTAS RELATIVAS PARA MÁXIMA COMPATIBILIDAD
 import Navigation from './components/Navigation';
 import AuthView from './components/AuthView';
 import DashboardView from './components/DashboardView';
@@ -108,28 +109,44 @@ export default function Home() {
                     await syncProductWithSupabase(prod, finalGasto.comercio);
                 }
             }
+
+            // Marcar productos en la lista
             const updatedL = db.lista.map(li => {
                 if (!finalGasto.usedList) return li;
-                const matched = finalGasto.productos?.some((p: any) => (p.nombre_base || "").toLowerCase() === li.name.toLowerCase());
+                const matched = finalGasto.productos?.some((p: any) => 
+                    (p.nombre_base || "").toLowerCase() === li.name.toLowerCase()
+                );
                 return matched ? { ...li, confirmed: true, checked: true } : li;
             });
 
             const record = { ...finalGasto, photoIds: pIds, total: Number(finalGasto.total) || 0 };
-            delete record.tempImages; delete record.usedList;
+            
+            // Guardamos el origen para saber a dónde volver
+            const returnToList = finalGasto.usedList;
+
+            delete record.tempImages; 
+            delete record.usedList; 
+            delete record._isGrouped;
             
             await updateAndSync({ ...db, gastos: [record, ...db.gastos], lista: updatedL });
-            resetFlow();
-        } catch (e) { alert("Error al sincronizar"); } finally { setLoading(false); }
+            
+            // NAVEGACIÓN INTELIGENTE: Si venía de la lista, vuelve a la lista
+            resetFlow(returnToList ? 'list' : 'home');
+
+        } catch (e) { 
+            alert("Error al sincronizar"); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
-    const resetFlow = () => {
+    const resetFlow = (tab: string = 'home') => {
         setPendingGasto(null);
         setPurchaseMode(null);
         setTempPhotos([]);
-        setActiveTab('home');
+        setActiveTab(tab);
     };
 
-    // --- LÓGICA DE ESTADÍSTICAS ACTUALIZADA (FUSIÓN DE COMERCIOS) ---
     const stats = useMemo(() => {
         const y = currentViewDate.getFullYear();
         const m = currentViewDate.getMonth();
@@ -140,16 +157,12 @@ export default function Home() {
             const d = new Date(+yy, +mm - 1, +dd);
             return d >= first && d <= last;
         });
-
         const total = currentGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
-        
-        // Fusión inteligente: Mercadona S.A. + Mercadona = MERCADONA
         const porComercio = currentGastos.reduce((acc: any, g) => { 
-            const nombreLimpio = normalizeStoreName(g.comercio); 
+            const nombreLimpio = normalizeStoreName(g.comercio);
             acc[nombreLimpio] = (acc[nombreLimpio] || 0) + Number(g.total); 
             return acc; 
         }, {});
-
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 
@@ -180,12 +193,22 @@ export default function Home() {
                         tempPhotos={tempPhotos} setTempPhotos={setTempPhotos} 
                         loading={loading} startAnalysis={startAnalysis} 
                         db={db} setShowListDialog={setShowListDialog} 
-                        showListDialog={showListDialog} onCancel={resetFlow} txt={txt} 
+                        showListDialog={showListDialog} onCancel={() => resetFlow('home')} txt={txt} 
                     />
                 </div>
             )}
 
-            {pendingGasto && <ReviewModal pendingGasto={pendingGasto} setPendingGasto={setPendingGasto} onSave={saveConfirmedGasto} onCancel={resetFlow} loading={loading} db={db} txt={txt} />}
+            {pendingGasto && (
+                <ReviewModal 
+                    pendingGasto={pendingGasto} 
+                    setPendingGasto={setPendingGasto} 
+                    onSave={saveConfirmedGasto} 
+                    onCancel={() => resetFlow('home')} 
+                    loading={loading} 
+                    db={db} 
+                    txt={txt} 
+                />
+            )}
             
             {selectedGasto && (
                 <DetailView 

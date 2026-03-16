@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
-import { Check, X, Store, Calendar, Euro, Link, Loader2, AlertCircle, Sparkles } from 'lucide-react';
-import { calculateMatchScore } from '../../lib/utils';
+import { Check, X, Store, Calendar, Euro, Link, Loader2, AlertCircle, Sparkles, Hash } from 'lucide-react';
+import { calculateMatchScore, groupRepeatedProducts } from '../../lib/utils';
 
 interface ReviewModalProps {
   pendingGasto: any;
@@ -20,16 +20,20 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [manualProd, setManualProd] = useState({ name: '', qty: 1, price: "" });
   const [expandedIndices, setExpandedIndices] = useState<number[]>([]);
 
-  // Auto-expandir productos que no tienen un alias claro (cuando nombre_base === nombre_ticket)
+  // 1. AGRUPACIÓN AL INICIO: Si el ticket viene de la IA, lo agrupamos automáticamente
   useEffect(() => {
-    if (pendingGasto?.productos) {
+    if (pendingGasto?.productos && !pendingGasto._isGrouped) {
+      const grouped = groupRepeatedProducts(pendingGasto.productos);
+      setPendingGasto({ ...pendingGasto, productos: grouped, _isGrouped: true });
+      
+      // Auto-expandir los que no tienen alias (donde nombre_base es igual al nombre_ticket)
       const autoExpand: number[] = [];
-      pendingGasto.productos.forEach((p: any, i: number) => {
+      grouped.forEach((p: any, i: number) => {
         if (p.nombre_base === p.nombre_ticket) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
     }
-  }, [pendingGasto?.productos]);
+  }, [pendingGasto, setPendingGasto]);
 
   const toggleExpand = (idx: number) => {
     setExpandedIndices(prev => 
@@ -47,27 +51,26 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const addManualItem = () => {
     if (!manualProd.name) return;
     const p = parseFloat(manualProd.price) || 0;
+    const newProduct = { 
+      nombre_ticket: manualProd.name.toUpperCase(), 
+      nombre_base: manualProd.name, 
+      cantidad: manualProd.qty, 
+      subtotal: p * manualProd.qty 
+    };
+    
     setPendingGasto({
       ...pendingGasto,
-      productos: [
-        ...pendingGasto.productos, 
-        { 
-          nombre_ticket: manualProd.name.toUpperCase(), 
-          nombre_base: manualProd.name, 
-          cantidad: manualProd.qty, 
-          subtotal: p * manualProd.qty 
-        }
-      ]
+      productos: groupRepeatedProducts([...pendingGasto.productos, newProduct])
     });
     setManualProd({ name: '', qty: 1, price: "" });
     setIsManualExpanded(false);
   };
 
   return (
-    <div className="modal-content-full !pb-6 flex flex-col animate-in slide-in-from-bottom duration-500">
+    <div className="modal-content-full !pb-6 flex flex-col animate-in slide-in-from-bottom duration-500 no-scrollbar">
       <header className="flex justify-between items-center mb-6">
         <h2 className="text-fluid-lg font-black italic tracking-tighter text-brand-primary uppercase">
-          REVISAR GASTO
+          REVISAR COMPRA
         </h2>
         <button onClick={onCancel} className="btn-icon !bg-transparent border-none">
           <X size={24} />
@@ -109,10 +112,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
-        {/* LISTADO DE PRODUCTOS DETECTADOS */}
+        {/* LISTADO DE PRODUCTOS */}
         <section className="space-y-2">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-small-caps">Productos</h3>
+          <div className="flex justify-between items-center px-1 mb-2">
+            <h3 className="text-small-caps">Ítems detectados</h3>
             <button 
               onClick={() => setIsManualExpanded(!isManualExpanded)}
               className="text-[9px] font-black uppercase text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10"
@@ -127,13 +130,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 <input placeholder="Producto..." className="bg-brand-bg/50 p-2.5 rounded-lg text-xs flex-1 outline-none border border-white/5 uppercase" value={manualProd.name} onChange={e => setManualProd({...manualProd, name: e.target.value})} />
                 <input placeholder="0.00" type="number" className="bg-brand-bg/50 p-2.5 rounded-lg text-xs w-20 text-right outline-none border border-white/5 font-black text-brand-success" value={manualProd.price} onChange={e => setManualProd({...manualProd, price: e.target.value})} />
               </div>
-              <button onClick={addManualItem} className="btn-primary !py-2 !text-[9px]">Aceptar</button>
+              <button onClick={addManualItem} className="btn-primary !py-2 !text-[9px]">Aceptar e Intercambiar</button>
             </div>
           )}
 
-          <div className="space-y-2">
-            {pendingGasto.productos.map((p: any, i: number) => {
-              // Cálculo inteligente de coincidencias con la lista del usuario
+          <div className="space-y-2 pb-10">
+            {pendingGasto.productos?.map((p: any, i: number) => {
               const smartSuggestions = db.lista
                 .filter(l => !l.confirmed)
                 .map(l => ({ ...l, matchScore: calculateMatchScore(p.nombre_ticket, l.name) }))
@@ -143,21 +145,24 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               const hasAlias = p.nombre_base !== p.nombre_ticket;
 
               return (
-                <div key={i} className={`flex flex-col transition-all duration-300 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-3' : 'bg-white/[0.02] border-white/[0.04] p-2.5'}`}>
+                <div key={i} className={`flex flex-col transition-all duration-300 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-3' : 'bg-white/[0.02] border-white/[0.04] p-2'}`}>
                   <button 
                     onClick={() => toggleExpand(i)}
-                    className="flex justify-between items-start gap-3 text-left w-full"
+                    className="flex items-center gap-3 text-left w-full"
                   >
+                    {/* CONTADOR DE CANTIDAD A LA IZQUIERDA */}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+                        <span className="text-[10px] font-black text-brand-primary">{p.cantidad || 1}x</span>
+                    </div>
+
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-center gap-2 overflow-hidden">
-                        {/* PRIORIDAD VISUAL: EL ALIAS (NOMBRE GENÉRICO) */}
-                        <p className={`text-[12px] font-black uppercase truncate leading-tight ${hasAlias ? 'text-brand-accent' : 'text-white'}`}>
+                        <p className={`text-[11px] font-black uppercase truncate leading-tight ${hasAlias ? 'text-brand-accent' : 'text-white'}`}>
                           {p.nombre_base}
                         </p>
-                        {hasAlias && <Sparkles size={10} className="text-brand-accent" />}
+                        {hasAlias && <Sparkles size={10} className="text-brand-accent flex-shrink-0" />}
                       </div>
-                      {/* DETALLE SECUNDARIO: EL NOMBRE DEL TICKET */}
-                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-1 opacity-30">
+                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-0.5 opacity-30 tracking-wider">
                         {p.nombre_ticket}
                       </p>
                     </div>
@@ -172,6 +177,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     </div>
                   </button>
 
+                  {/* PANEL DE VINCULACIÓN */}
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-brand-primary/10 animate-in slide-in-from-top-2">
                       <p className="text-[8px] font-black uppercase text-brand-primary mb-2 flex items-center gap-1 opacity-60">
@@ -211,10 +217,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </section>
       </div>
 
-      {/* PIE DE MODAL */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !lowercase !text-[10px] opacity-60 font-black">
-          descartar
+          descartar registro
         </button>
         <button 
           onClick={() => onSave(pendingGasto)} 
@@ -224,7 +229,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           {loading ? <Loader2 className="animate-spin" /> : (
             <div className="flex items-center gap-2">
               <Check size={20} strokeWidth={4} />
-              <span className="text-[11px] font-black tracking-widest uppercase">Finalizar Registro</span>
+              <span className="text-[11px] font-black tracking-widest uppercase">Guardar Compra</span>
             </div>
           )}
         </button>

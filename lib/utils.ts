@@ -1,20 +1,18 @@
 /**
  * Normaliza texto: minúsculas, quita acentos y carácteres especiales.
- * Fundamental para el buscador de la lista de compras.
  */
 export const normalizeText = (text: string): string => {
   if (!text) return "";
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Quita acentos
-    .replace(/[^a-z0-9 ]/g, " ")    // Quita símbolos
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ")
     .trim();
 };
 
 /**
  * Normaliza nombres de comercios para fusionarlos en estadísticas.
- * Ejemplo: "MERCADONA, S.A." -> "MERCADONA"
  */
 export const normalizeStoreName = (name: string): string => {
   if (!name) return "DESCONOCIDO";
@@ -27,7 +25,6 @@ export const normalizeStoreName = (name: string): string => {
 
 /**
  * Calcula la afinidad entre un nombre de ticket y un ítem de la lista.
- * Devuelve una puntuación para ordenar las sugerencias.
  */
 export const calculateMatchScore = (ticketName: string, listName: string): number => {
   const tWords = normalizeText(ticketName).split(/\s+/);
@@ -44,10 +41,30 @@ export const calculateMatchScore = (ticketName: string, listName: string): numbe
 };
 
 /**
- * COMPRESIÓN EXTREMA PARA OCR (600px / Calidad 0.3)
- * Diseñada para enviar 2-3 fotos a Mistral sin superar límites de tokens (Error 429).
+ * AGRUPACIÓN DE PRODUCTOS REPETIDOS
+ * Si un ticket tiene el mismo producto en varias líneas, los une en una sola.
  */
-export const compressImage = (base64Str: string, maxWidth = 600, quality = 0.3): Promise<string> => {
+export const groupRepeatedProducts = (products: any[]) => {
+  const map = new Map();
+
+  products.forEach(p => {
+    const key = p.nombre_ticket.toUpperCase().trim();
+    if (map.has(key)) {
+      const existing = map.get(key);
+      existing.cantidad = (existing.cantidad || 1) + (p.cantidad || 1);
+      existing.subtotal = Number(existing.subtotal) + Number(p.subtotal);
+    } else {
+      map.set(key, { ...p, cantidad: p.cantidad || 1 });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
+/**
+ * COMPRESIÓN DE ALTA DEFINICIÓN OPTIMIZADA (1000px / 0.7)
+ */
+export const compressImage = (base64Str: string, maxWidth = 1000, quality = 0.7): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
@@ -66,38 +83,29 @@ export const compressImage = (base64Str: string, maxWidth = 600, quality = 0.3):
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return resolve(base64Str);
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
-      // --- FILTRO OCR DE ALTO CONTRASTE (OPTIMIZADO PARA BAJA RESOLUCIÓN) ---
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
-        // Escala de grises por luminancia
-        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        
-        // Umbral de contraste agresivo: los grises se vuelven negros o blancos
-        let contrastValue = gray;
-        if (gray < 120) {
-          contrastValue = gray * 0.5; // Forzar a negro
+        const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+        let val = gray;
+        if (gray < 128) {
+            val = gray * 0.85; 
         } else {
-          contrastValue = gray * 1.5; // Forzar a blanco
+            val = Math.min(255, gray * 1.1);
         }
-
-        const finalVal = Math.min(255, Math.max(0, contrastValue));
-        data[i] = data[i+1] = data[i+2] = finalVal;
+        data[i] = data[i+1] = data[i+2] = val;
       }
 
       ctx.putImageData(imageData, 0, 0);
-
-      // JPEG a 0.3 genera archivos de aprox 70-100KB, permitiendo enviar varias fotos
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
     
-    img.onerror = () => {
-      console.error("Error cargando la imagen");
-      resolve(base64Str);
-    };
+    img.onerror = () => resolve(base64Str);
   });
 };
 

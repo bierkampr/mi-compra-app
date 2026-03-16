@@ -1,5 +1,5 @@
 === PROYECTO: MI COMPRA APP - FULL MODULAR ESTRUCTURE ===
-Fecha de exportación: 3/16/2026, 7:09:35 PM
+Fecha de exportación: 3/16/2026, 9:13:49 PM
 Descripción: App de gastos con IA, Modularizada, Alias Inteligentes y Diseño Denso.
 ================================================
 
@@ -931,12 +931,12 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
 
   return (
     <div className="modal-content-full !p-5 flex flex-col animate-in slide-in-from-right-4">
-      {/* BARRA SUPERIOR - Más compacta */}
+      {/* HEADER COMPACTO */}
       <div className="flex justify-between items-center mb-4">
         <button onClick={onClose} className="btn-icon !p-2 bg-brand-secondary/20 border-none">
           <ChevronLeft size={20} />
         </button>
-        <div className="text-center">
+        <div className="text-center overflow-hidden">
             <h2 className="text-[14px] font-black italic text-brand-primary uppercase truncate max-w-[180px]">
                 {gasto.comercio}
             </h2>
@@ -949,15 +949,17 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
         </button>
       </div>
 
-      {/* LISTADO DE PRODUCTOS - Ahora ocupa el 80% de la pantalla */}
+      {/* LISTADO DE PRODUCTOS: Alias arriba, Ticket abajo */}
       <div className="flex-1 overflow-y-auto no-scrollbar mb-4 border-y border-white/[0.03]">
         {gasto.productos?.map((p: any, i: number) => (
           <div key={i} className="flex justify-between items-center py-3 border-b border-white/[0.02] last:border-none">
             <div className="flex-1 pr-4 overflow-hidden">
-              <p className="text-[10px] font-black uppercase text-white/90 truncate leading-tight">
+              {/* ALIAS GENÉRICO: PRIORIDAD VISUAL */}
+              <p className="text-[11px] font-black uppercase text-white leading-tight">
                 {p.nombre_base}
               </p>
-              <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-30 mt-0.5">
+              {/* NOMBRE REAL TICKET: REFERENCIA SECUNDARIA */}
+              <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-20 mt-0.5">
                 {p.nombre_ticket}
               </p>
             </div>
@@ -971,12 +973,10 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
         ))}
       </div>
 
-      {/* FOOTER - TOTAL Y TICKETS EN UNA SOLA LÍNEA */}
+      {/* FOOTER: TOTAL Y TICKETS EN UNA FILA */}
       <div className="flex items-stretch gap-2 h-20">
-        
-        {/* TARJETA TOTAL PEQUEÑA (Izquierda) */}
         <div className="flex-[1.2] bg-white/[0.03] p-3 rounded-2xl border border-white/[0.05] flex flex-col justify-center">
-            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-50">Total Gasto</p>
+            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-30">Inversión</p>
             <div className="flex items-baseline gap-0.5">
                 <span className="text-2xl font-black italic text-white tracking-tighter">
                     {Number(gasto.total).toFixed(2)}
@@ -985,7 +985,6 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
             </div>
         </div>
 
-        {/* EVIDENCIAS (Derecha - Carrusel horizontal compacto) */}
         <div className="flex-[2] overflow-x-auto no-scrollbar flex items-center gap-2">
             {gasto.photoIds && gasto.photoIds.length > 0 ? (
                 gasto.photoIds.map((id: string, idx: number) => (
@@ -1000,19 +999,19 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
                 ))
             ) : (
                 <div className="h-full flex-1 flex items-center justify-center border border-dashed border-white/5 rounded-2xl">
-                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">No fotos</p>
+                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">Sin fotos</p>
                 </div>
             )}
         </div>
       </div>
 
-      {/* LIGHTBOX */}
+      {/* LIGHTBOX VISOR */}
       {viewerUrl && (
-        <div className="modal-overlay !p-4 z-[2000] animate-in fade-in backdrop-blur-xl">
-          <button onClick={() => setViewerUrl(null)} className="absolute top-6 right-6 btn-icon !bg-white/10 border-white/20 z-[600] !p-3">
+        <div className="modal-overlay !p-4 z-[2000] animate-in fade-in backdrop-blur-xl" onClick={() => setViewerUrl(null)}>
+          <button className="absolute top-6 right-6 btn-icon !bg-white/10 border-white/20 z-[600] !p-3">
             <X size={24} className="text-white" />
           </button>
-          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Ticket" />
+          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Evidencia" />
         </div>
       )}
 
@@ -1135,8 +1134,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
 import { Check, X, Store, Calendar, Euro, Link, Loader2, AlertCircle, Sparkles } from 'lucide-react';
-
-// CAMBIAMOS EL IMPORT A RUTA RELATIVA PARA EVITAR ERRORES DE VS CODE
 import { calculateMatchScore } from '../../lib/utils';
 
 interface ReviewModalProps {
@@ -1152,19 +1149,16 @@ interface ReviewModalProps {
 const ReviewModal: React.FC<ReviewModalProps> = ({ 
   pendingGasto, setPendingGasto, onSave, onCancel, loading, db, txt 
 }) => {
-  const [showComercioSuggestions, setShowComercioSuggestions] = useState(false);
   const [isManualExpanded, setIsManualExpanded] = useState(false);
   const [manualProd, setManualProd] = useState({ name: '', qty: 1, price: "" });
-  
   const [expandedIndices, setExpandedIndices] = useState<number[]>([]);
 
+  // Auto-expandir productos que no tienen un alias claro (cuando nombre_base === nombre_ticket)
   useEffect(() => {
     if (pendingGasto?.productos) {
       const autoExpand: number[] = [];
       pendingGasto.productos.forEach((p: any, i: number) => {
-        if (p.nombre_base === p.nombre_ticket) {
-          autoExpand.push(i);
-        }
+        if (p.nombre_base === p.nombre_ticket) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
     }
@@ -1203,7 +1197,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   return (
-    <div className="modal-content-full !pb-6 flex flex-col">
+    <div className="modal-content-full !pb-6 flex flex-col animate-in slide-in-from-bottom duration-500">
       <header className="flex justify-between items-center mb-6">
         <h2 className="text-fluid-lg font-black italic tracking-tighter text-brand-primary uppercase">
           REVISAR GASTO
@@ -1213,7 +1207,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto space-y-5 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-5 pr-1 no-scrollbar">
+        {/* CABECERA: TIENDA, FECHA Y TOTAL */}
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-12 relative">
             <label className="text-small-caps ml-1 mb-1.5 block opacity-60">Comercio</label>
@@ -1247,9 +1242,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
+        {/* LISTADO DE PRODUCTOS DETECTADOS */}
         <section className="space-y-2">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-small-caps">Productos detectados</h3>
+            <h3 className="text-small-caps">Productos</h3>
             <button 
               onClick={() => setIsManualExpanded(!isManualExpanded)}
               className="text-[9px] font-black uppercase text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10"
@@ -1270,12 +1266,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
           <div className="space-y-2">
             {pendingGasto.productos.map((p: any, i: number) => {
+              // Cálculo inteligente de coincidencias con la lista del usuario
               const smartSuggestions = db.lista
                 .filter(l => !l.confirmed)
                 .map(l => ({ ...l, matchScore: calculateMatchScore(p.nombre_ticket, l.name) }))
                 .sort((a, b) => b.matchScore - a.matchScore);
 
               const isExpanded = expandedIndices.includes(i);
+              const hasAlias = p.nombre_base !== p.nombre_ticket;
 
               return (
                 <div key={i} className={`flex flex-col transition-all duration-300 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-3' : 'bg-white/[0.02] border-white/[0.04] p-2.5'}`}>
@@ -1284,13 +1282,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     className="flex justify-between items-start gap-3 text-left w-full"
                   >
                     <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center gap-1.5 overflow-hidden">
-                        <p className={`text-[11px] font-black uppercase truncate leading-tight ${p.nombre_base !== p.nombre_ticket ? 'text-brand-accent' : 'text-white'}`}>
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        {/* PRIORIDAD VISUAL: EL ALIAS (NOMBRE GENÉRICO) */}
+                        <p className={`text-[12px] font-black uppercase truncate leading-tight ${hasAlias ? 'text-brand-accent' : 'text-white'}`}>
                           {p.nombre_base}
                         </p>
-                        {p.nombre_base !== p.nombre_ticket && <Sparkles size={10} className="text-brand-accent" />}
+                        {hasAlias && <Sparkles size={10} className="text-brand-accent" />}
                       </div>
-                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-0.5 opacity-40">
+                      {/* DETALLE SECUNDARIO: EL NOMBRE DEL TICKET */}
+                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-1 opacity-30">
                         {p.nombre_ticket}
                       </p>
                     </div>
@@ -1300,15 +1300,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         {Number(p.subtotal).toFixed(2)}€
                       </p>
                       <div className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-brand-primary text-white' : 'bg-white/5 text-brand-muted'}`}>
-                        <Link size={14} />
+                        <Link size={12} />
                       </div>
                     </div>
                   </button>
 
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-brand-primary/10 animate-in slide-in-from-top-2">
-                      <p className="text-[8px] font-black uppercase text-brand-primary mb-2 flex items-center gap-1">
-                        <AlertCircle size={10} /> Vincular con un ítem de tu lista:
+                      <p className="text-[8px] font-black uppercase text-brand-primary mb-2 flex items-center gap-1 opacity-60">
+                        <AlertCircle size={10} /> Vincular con tu lista:
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {smartSuggestions.map((item, lIdx) => (
@@ -1317,7 +1317,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                             onClick={() => setAlias(i, item.name)}
                             className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${
                                item.matchScore > 0 
-                               ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 border border-brand-primary/30' 
+                               ? 'bg-brand-primary text-white shadow-lg border border-brand-primary/30' 
                                : 'bg-white/5 text-brand-muted border border-white/5'
                             }`}
                           >
@@ -1327,7 +1327,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         ))}
                         <button 
                           onClick={() => {
-                            const n = prompt("Nombre personalizado para este producto:");
+                            const n = prompt("Nombre genérico personalizado:");
                             if (n) setAlias(i, n);
                           }}
                           className="px-3 py-1.5 bg-brand-secondary/40 border border-white/10 rounded-lg text-[9px] font-black uppercase text-brand-muted"
@@ -1344,8 +1344,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </section>
       </div>
 
+      {/* PIE DE MODAL */}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !lowercase !text-[10px] opacity-60">
+        <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !lowercase !text-[10px] opacity-60 font-black">
           descartar
         </button>
         <button 
@@ -1688,7 +1689,8 @@ export default SettingsView;
 "use client";
 import React, { useState } from 'react';
 import { Plus, Camera, Trash2, ListTodo, CheckCircle2, X, Check, Search, Loader2 } from 'lucide-react';
-import { searchLocalProducts } from '@/lib/products';
+import { searchLocalProducts } from '../../lib/products';
+import { supabase } from '../../lib/supabase';
 
 interface ShoppingListViewProps {
   db: { lista: any[] };
@@ -1715,16 +1717,28 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   };
 
   const addToList = async (name?: string) => {
-    const val = name || newItemName;
-    if (!val.trim()) return;
+    const val = (name || newItemName).trim();
+    if (!val) return;
 
+    // 1. Actualización Local (UX instantánea)
     const newDb = { 
       ...db, 
-      lista: [...(db.lista || []), { name: val.trim(), checked: false, confirmed: false }] 
+      lista: [...(db.lista || []), { name: val, checked: false, confirmed: false }] 
     };
     setNewItemName("");
     setSuggestions([]);
     await updateAndSync(newDb);
+
+    // 2. Registro en Supabase (Aprendizaje):
+    // Aseguramos que el nombre base exista en el catálogo maestro
+    try {
+        await supabase.from('productos').upsert(
+            { nombre_base: val, categoria: 'otros' },
+            { onConflict: 'nombre_base' }
+        );
+    } catch (e) {
+        console.error("Error al registrar producto en Supabase:", e);
+    }
   };
 
   const toggleCheck = async (item: any) => {
@@ -1750,7 +1764,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-10">
-      {/* BARRA DE BÚSQUEDA Y AGREGADO */}
+      {/* BUSCADOR */}
       <div className="relative group">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted group-focus-within:text-brand-primary transition-colors">
           {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
@@ -1769,7 +1783,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* SUGERENCIAS FLOTANTES */}
+        {/* SUGERENCIAS */}
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-50 border-brand-primary/30 shadow-2xl animate-in fade-in zoom-in-95">
             {suggestions.map((s, idx) => (
@@ -1786,25 +1800,19 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         )}
       </div>
 
-      {/* ACCIONES DE LISTA */}
+      {/* ACCIONES */}
       {db.lista.length > 0 && (
         <div className="flex gap-2.5">
-          <button 
-            onClick={() => setPurchaseMode('super')} 
-            className="btn-primary flex-1 py-3.5 !text-[10px] tracking-widest gap-2 shadow-none"
-          >
+          <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-1 py-3.5 !text-[10px] tracking-widest gap-2 shadow-none">
             <Camera size={18}/> {txt('list.scan_btn')}
           </button>
-          <button 
-            onClick={clearList} 
-            className="btn-secondary w-14 !p-0 bg-brand-danger/10 text-brand-danger border-none active:bg-brand-danger active:text-white"
-          >
+          <button onClick={clearList} className="btn-secondary w-14 !p-0 bg-brand-danger/10 text-brand-danger border-none active:bg-brand-danger active:text-white">
             <Trash2 size={20}/>
           </button>
         </div>
       )}
 
-      {/* SECCIÓN PENDIENTES */}
+      {/* PENDIENTES */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <ListTodo size={14} className="text-brand-primary" />
@@ -1814,7 +1822,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         <div className="space-y-2">
           {pendingItems.length > 0 ? (
             pendingItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 group">
+              <div key={i} className="flex items-center gap-2">
                 <button 
                   onClick={() => toggleCheck(item)}
                   className={`flex-1 flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
@@ -1834,10 +1842,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                     {item.name}
                   </span>
                 </button>
-                <button 
-                  onClick={() => removeItem(item)} 
-                  className="p-3 text-brand-muted/20 hover:text-brand-danger active:scale-90 transition-all"
-                >
+                <button onClick={() => removeItem(item)} className="p-3 text-brand-muted/20 hover:text-brand-danger transition-all">
                   <X size={18}/>
                 </button>
               </div>
@@ -1850,14 +1855,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         </div>
       </section>
 
-      {/* SECCIÓN COMPRADOS (DENSIDAD ALTA) */}
+      {/* COMPRADOS */}
       {boughtItems.length > 0 && (
         <section className="pt-6 border-t border-white/5">
           <div className="flex items-center gap-2 px-1 mb-4">
             <CheckCircle2 size={14} className="text-brand-success" />
             <h3 className="text-small-caps !text-brand-success opacity-80">{txt('list.bought')}</h3>
           </div>
-          
           <div className="grid grid-cols-2 gap-2">
             {boughtItems.map((item, i) => (
               <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-brand-success/[0.03] border border-brand-success/10">
@@ -2154,59 +2158,115 @@ export const t = (path: string, lang: string): string => {
 
 import { supabase } from "./supabase";
 
+/**
+ * Busca productos genéricos para "Mi Lista".
+ * Consulta la tabla 'productos' donde están los nombres limpios (ej: Tomate, Leche).
+ */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
-  const { data } = await supabase.from('productos')
-    .select(`id, nombre_base, producto_detalles(ultimo_precio, ultimo_comercio, marca)`)
-    .ilike('nombre_base', `%${query}%`).limit(5);
-  return data || [];
+  try {
+    const { data, error } = await supabase.from('productos')
+      .select(`id, nombre_base`)
+      .ilike('nombre_base', `%${query}%`)
+      .limit(10);
+
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error("Error en búsqueda de productos:", e);
+    return [];
+  }
 };
 
-export const getPricesForList = async (nombres: string[]) => {
-  if (nombres.length === 0) return [];
-  const { data } = await supabase.from('productos')
-    .select(`nombre_base, producto_detalles (ultimo_precio, ultimo_comercio)`)
-    .in('nombre_base', nombres);
-  return data || [];
+/**
+ * Busca si un nombre del ticket ya tiene un alias genérico asignado en el sistema global.
+ */
+export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('producto_alias')
+      .select('productos(nombre_base)')
+      .eq('nombre_ticket', nombreTicket.toUpperCase())
+      .maybeSingle();
+    
+    if (error) return null;
+    // @ts-ignore
+    return data?.productos?.nombre_base || null;
+  } catch (e) {
+    return null;
+  }
 };
 
+/**
+ * Guarda o actualiza la relación entre un nombre de ticket y un nombre genérico.
+ * Esto alimenta la "inteligencia colectiva" de la app.
+ */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
-    const ticketUpper = nombreTicket.toUpperCase();
-    let { data: prod } = await supabase.from('productos').select('id').eq('nombre_base', nombreBase).maybeSingle();
+    const ticketUpper = nombreTicket.toUpperCase().trim();
+    const baseLimpia = nombreBase.trim();
+    
+    // 1. Buscamos el ID del genérico por su nombre (ej: 'Jugo')
+    let { data: prod, error: errorSearch } = await supabase
+      .from('productos')
+      .select('id')
+      .eq('nombre_base', baseLimpia)
+      .maybeSingle();
+
+    // 2. Si el genérico no existe (ej: usaste un nombre muy personal), lo creamos
     if (!prod) {
-      const { data: newP } = await supabase.from('productos').insert([{ nombre_base: nombreBase }]).select().single();
+      const { data: newP, error: errorInsert } = await supabase
+        .from('productos')
+        .insert([{ nombre_base: baseLimpia, categoria: 'otros' }])
+        .select()
+        .single();
+      
+      if (errorInsert) throw errorInsert;
       prod = newP;
     }
+
+    // 3. Creamos o actualizamos el alias en la tabla 'producto_alias'
     if (prod) {
-      await supabase.from('producto_alias').upsert({ producto_id: prod.id, nombre_ticket: ticketUpper }, { onConflict: 'nombre_ticket' });
+      const { error: errorAlias } = await supabase.from('producto_alias').upsert({ 
+        producto_id: prod.id, 
+        nombre_ticket: ticketUpper 
+      }, { onConflict: 'nombre_ticket' });
+      
+      if (errorAlias) throw errorAlias;
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error("Error al guardar alias inteligente:", e);
+  }
 };
 
+/**
+ * Sincronización final: guarda precios y asegura que los alias queden registrados.
+ */
 export const syncProductWithSupabase = async (itemIA: any, comercio: string) => {
   try {
-    const nombreTicket = (itemIA.nombre_ticket || "PRODUCTO").toUpperCase();
-    const { data: alias } = await supabase.from('producto_alias').select('producto_id').eq('nombre_ticket', nombreTicket).maybeSingle();
-    let pId = alias?.producto_id;
-    if (!pId) {
-      const { data: p } = await supabase.from('productos').select('id').ilike('nombre_base', `%${itemIA.nombre_base}%`).maybeSingle();
-      pId = p?.id;
+    // 1. Primero registramos el alias (Ticket -> Base)
+    await saveManualAlias(itemIA.nombre_ticket, itemIA.nombre_base);
+    
+    // 2. Buscamos el producto base para actualizar el precio histórico
+    const { data: prod } = await supabase
+      .from('productos')
+      .select('id')
+      .eq('nombre_base', itemIA.nombre_base)
+      .maybeSingle();
+
+    if (prod) {
+      await supabase.from('producto_detalles').upsert({
+        producto_id: prod.id,
+        marca: 'Genérico',
+        tamano: 'Único',
+        ultimo_precio: (Number(itemIA.subtotal) / Number(itemIA.cantidad || 1)) || 0,
+        ultimo_comercio: comercio,
+        fecha_actualizacion: new Date().toISOString()
+      }, { onConflict: 'producto_id, tamano' });
     }
-    if (!pId) {
-      const { data: n } = await supabase.from('productos').insert([{ nombre_base: itemIA.nombre_base }]).select().single();
-      pId = n?.id;
-      if (pId) await supabase.from('producto_alias').insert([{ producto_id: pId, nombre_ticket: nombreTicket }]);
-    }
-    if (!pId) return;
-    const sub = parseFloat(itemIA.subtotal) || 0;
-    const qty = parseFloat(itemIA.cantidad) || 1;
-    await supabase.from('producto_detalles').upsert({
-      producto_id: pId, tamano: 'Único', marca: 'Genérico',
-      ultimo_precio: sub / qty, ultimo_comercio: comercio || "Tienda",
-      fecha_actualizacion: new Date().toISOString()
-    }, { onConflict: 'producto_id, tamano' });
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error("Error en sincronización Supabase:", e);
+  }
 };
 
 /* --- FIN ARCHIVO: lib/products.ts --- */
