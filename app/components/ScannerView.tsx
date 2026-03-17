@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, ShoppingCart, Store, Utensils, Pill, LayoutGrid, Edit3, X, Loader2, 
   AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag, 
-  ChevronRight, ChevronLeft, RefreshCw, FlipHorizontal
+  ChevronRight, ChevronLeft, Info
 } from 'lucide-react';
 import { compressImage } from '../../lib/utils';
 
@@ -101,7 +101,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE: CAPTURA CON WEBRTC Y GUÍA VISUAL ---
+// --- SUB-COMPONENTE: CAPTURA CON WEBRTC CORREGIDO ---
 ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, setShowListDialog, showListDialog, onCancel, txt, activeTab }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
@@ -115,13 +115,19 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     return () => stopCamera();
   }, []);
 
+  // ARREGLO PARA PANTALLA NEGRA: Reconectar el stream cuando el elemento video aparezca
+  useEffect(() => {
+    if (videoRef.current && capturedStream && !previewPhoto) {
+        videoRef.current.srcObject = capturedStream;
+    }
+  }, [previewPhoto, capturedStream]);
+
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, 
         audio: false 
       });
-      if (videoRef.current) videoRef.current.srcObject = stream;
       setCapturedStream(stream);
       setIsCameraActive(true);
     } catch (err) {
@@ -153,12 +159,10 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
   const confirmPhoto = async () => {
     if (previewPhoto) {
-      // Aplicar compresión adaptativa según el número de fotos que ya tenemos
       const compressed = await compressImage(previewPhoto, tempPhotos.length + 1);
       setTempPhotos((prev: any) => [...prev, compressed]);
       setPreviewPhoto(null);
       if (tempPhotos.length + 1 >= 3) {
-        // Si ya llegamos a 3, forzamos el procesado
         handleProcessClick();
       }
     }
@@ -176,8 +180,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
   const getStepText = () => {
     if (tempPhotos.length === 0) return txt('scan.step_top');
-    if (tempPhotos.length === 1) return txt('scan.step_middle');
-    return txt('scan.step_bottom');
+    if (tempPhotos.length === 1) return `${txt('scan.step_middle')} (${txt('scan.step_optional')})`;
+    return `${txt('scan.step_bottom')} (${txt('scan.step_optional')})`;
   };
 
   return (
@@ -186,19 +190,38 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
         {!previewPhoto ? (
           <>
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-            {/* PLANTILLA DE ENCUADRE (GHOST UI) */}
+            <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted
+                className="w-full h-full object-cover" 
+            />
+            
+            {/* PLANTILLA DE ENCUADRE */}
             <div className="absolute inset-0 pointer-events-none border-[40px] border-black/60">
                 <div className="w-full h-full border-2 border-dashed border-brand-accent/40 rounded-3xl relative">
                     <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-accent/20 animate-pulse" />
+                    
+                    {/* RECORDATORIO IMPORTANTE */}
+                    <div className="absolute top-10 left-0 right-0 px-6 text-center">
+                        <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-brand-accent/20 inline-flex items-center gap-2">
+                             <Info size={14} className="text-brand-accent" />
+                             <span className="text-[10px] font-black text-white uppercase tracking-wider">
+                                {txt('scan.important_note')}
+                             </span>
+                        </div>
+                    </div>
+
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[10px] font-black text-brand-accent uppercase tracking-[0.4em] opacity-40">
+                        <span className="text-[9px] font-black text-brand-accent/60 uppercase tracking-[0.4em]">
                             {txt('scan.instructions_camera')}
                         </span>
                     </div>
                 </div>
             </div>
-            {/* MINIATURA DE REFERENCIA (TICKET LARGO) */}
+
+            {/* MINIATURA DE REFERENCIA */}
             {tempPhotos.length > 0 && (
                 <div className="absolute top-6 left-6 w-20 aspect-[3/4] border-2 border-white/20 rounded-lg overflow-hidden shadow-2xl opacity-60">
                     <img src={tempPhotos[tempPhotos.length-1]} className="w-full h-full object-cover grayscale" />
@@ -231,23 +254,33 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
            <div className="flex items-center justify-between w-full max-w-xs">
               <button onClick={onCancel} className="btn-icon !bg-white/5 border-none"><X size={24} /></button>
+              
               <button 
                 onClick={takePhoto} 
                 className="w-20 h-20 bg-white rounded-full p-1 border-4 border-brand-primary shadow-2xl active:scale-90 transition-all flex items-center justify-center"
               >
                 <div className="w-full h-full bg-white rounded-full border-2 border-black/10" />
               </button>
+
               {tempPhotos.length > 0 ? (
-                <button onClick={handleProcessClick} className="btn-icon !bg-brand-success/10 border-none text-brand-success relative">
-                  <CheckCircle2 size={24} />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-brand-success text-brand-bg text-[10px] font-black rounded-full flex items-center justify-center">
-                    {tempPhotos.length}
-                  </span>
-                </button>
+                <div className="flex flex-col items-center gap-1">
+                    <button onClick={handleProcessClick} className="btn-icon !bg-brand-success text-brand-bg border-none shadow-lg shadow-brand-success/20">
+                        <CheckCircle2 size={24} />
+                    </button>
+                    <span className="text-[7px] font-black text-brand-success uppercase tracking-tighter">
+                        {txt('scan.process')}
+                    </span>
+                </div>
               ) : (
                 <div className="w-12" />
               )}
            </div>
+
+           {tempPhotos.length > 0 && (
+               <p className="text-[8px] font-black text-brand-muted uppercase animate-pulse">
+                   {txt('scan.finish_now')}
+               </p>
+           )}
         </div>
       )}
 

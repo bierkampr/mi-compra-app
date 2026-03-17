@@ -59,6 +59,9 @@
     "step_top": "TOP PART (Logo & Date)",
     "step_middle": "MIDDLE PART (Items)",
     "step_bottom": "BOTTOM PART (Totals)",
+    "step_optional": "Only if necessary",
+    "important_note": "STORE NAME and TOTAL are vital",
+    "finish_now": "Tap the check once finished",
     "max_photos_reached": "Maximum of 3 photos reached",
     "retry_after": "Server busy. Retrying in {{sec}}s...",
     "quality_check": "Is the text legible?",
@@ -100,7 +103,7 @@
     "sync_title": "Google Drive Sync",
     "sync_desc": "Active Synchronization",
     "logout": "Log Out",
-    "version": "My Purchase App v1.3.0 • 2026",
+    "version": "My Purchase App v1.3.1 • 2026",
     "restart_tour": "Watch User Tutorial"
   },
   "modals": {
