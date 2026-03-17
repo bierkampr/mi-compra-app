@@ -87,7 +87,8 @@
     "sync_title": "Google Drive Sync",
     "sync_desc": "Sincronización Activa",
     "logout": "Cerrar Sesión",
-    "version": "Mi Compra App v1.2.0 • 2026"
+    "version": "Mi Compra App v1.2.0 • 2026",
+    "restart_tour": "Ver Tutorial de Uso"
   },
   "modals": {
     "logout_confirm": "¿Cerrar sesión? Se borrará el acceso local.",
@@ -101,5 +102,21 @@
   },
   "ai": {
     "prompt": "Actúa como un experto extractor de datos de tickets de compra.\n      \n      IMPORTANTE REGLA DE CONTINUIDAD:\n      Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET (un ticket largo fotografiado por trozos). \n      - Une toda la información en un solo objeto JSON.\n      - NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.\n      - Suma los subtotales para verificar el total final.\n\n      LISTA DE PRODUCTOS ESPERADOS: [{{lista}}].\n      FECHA ACTUAL: {{fecha}}.\n\n      REGLAS CRÍTICAS:\n      1. \"comercio\": Debe ser un STRING (ej: \"MERCADONA\"). No uses nombres de empresas legales largas, solo el nombre comercial conocido.\n      2. \"total\": El número final pagado en el ticket.\n      3. \"nombre_base\": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si el producto del ticket coincide semánticamente.\n\n      FORMATO JSON ESTRICTO:\n      {\n        \"comercio\": \"string\",\n        \"fecha\": \"DD/MM/AAAA\",\n        \"total\": number,\n        \"productos\": [\n          { \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }\n        ]\n      }"
+  },
+  "help": {
+    "onboarding_title": "GUÍA RÁPIDA",
+    "next": "Siguiente",
+    "finish": "¡Empezar!",
+    "skip": "Saltar",
+    "home_title": "Panel de Inicio",
+    "home_desc": "Aquí ves cuánto llevas gastado este mes. Si tocas la tarjeta de gasto, verás un gráfico con la distribución por categorías.",
+    "nav_title": "Navegación",
+    "nav_desc": "Usa la barra inferior para moverte: Inicio, el botón (+) para subir tickets y Lista para tus compras pendientes.",
+    "scanner_title": "Carga de Tickets",
+    "scanner_desc": "Elige el tipo de tienda. Si el ticket es largo, saca varias fotos por partes, ¡la IA las unirá todas!",
+    "list_title": "Lista de Compras",
+    "list_desc": "Anota lo que necesites. Al escanear un ticket, la app marcará automáticamente lo que hayas encontrado.",
+    "settings_title": "Configuración",
+    "settings_desc": "En el engranaje superior puedes exportar tus gastos a Excel o ver este tutorial de nuevo."
   }
 }

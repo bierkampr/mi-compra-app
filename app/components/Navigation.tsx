@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { LayoutGrid, Plus, History, Settings, User, WifiOff } from 'lucide-react';
+import { LayoutGrid, Plus, History, Settings, User, WifiOff, Info } from 'lucide-react';
 
 interface NavigationProps {
   user: { name: string };
@@ -8,9 +8,10 @@ interface NavigationProps {
   setActiveTab: (tab: string) => void;
   isOffline: boolean;
   txt: (key: string) => string;
+  onShowHelp: () => void; // Nueva prop para activar el tutorial
 }
 
-const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, isOffline, txt }) => {
+const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, isOffline, txt, onShowHelp }) => {
   return (
     <>
       {/* HEADER SUPERIOR */}
@@ -35,6 +36,14 @@ const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, 
         </div>
 
         <div className="flex items-center gap-2">
+          {/* BOTÓN DE AYUDA (i) */}
+          <button 
+            onClick={onShowHelp}
+            className="btn-icon !p-2 bg-brand-accent/5 border-brand-accent/20 text-brand-accent hover:bg-brand-accent/10"
+          >
+            <Info size={18} />
+          </button>
+
           <button 
             onClick={() => setActiveTab('settings')} 
             className={`btn-icon !p-2 ${activeTab === 'settings' ? 'text-brand-primary border-brand-primary/30 bg-brand-primary/5' : ''}`}

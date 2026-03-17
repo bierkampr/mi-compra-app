@@ -17,6 +17,7 @@ import ScannerView from './components/ScannerView';
 import SettingsView from './components/SettingsView';
 import ReviewModal from './components/ReviewModal';
 import DetailView from './components/DetailView';
+import HelpModal from './components/HelpModal'; // Importación del nuevo componente
 
 export default function Home() {
     // --- ESTADO GLOBAL ---
@@ -25,7 +26,10 @@ export default function Home() {
     const [activeTab, setActiveTab] = useState('home');
     const [loading, setLoading] = useState(false);
     
-    // Añadimos customCategories a la estructura inicial del DB
+    // Estado para el tutorial y ayuda
+    const [showHelp, setShowHelp] = useState(false);
+
+    // Estructura inicial del DB
     const [db, setDb] = useState<{
         gastos: any[], 
         lista: any[], 
@@ -37,7 +41,6 @@ export default function Home() {
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
     // --- ESTADO FLUJO DE COMPRA ---
-    // CORRECCIÓN: Cambiamos el tipo a string | null para permitir categorías personalizadas
     const [purchaseMode, setPurchaseMode] = useState<string | null>(null);
     
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
@@ -59,6 +62,13 @@ export default function Home() {
         if (tkn && name) {
             setUser({ name, loggedIn: true, token: tkn });
             loadData(tkn);
+            
+            // Lógica de Onboarding (Primera vez)
+            const hasSeenTour = localStorage.getItem('mi_compra_seen_tour');
+            if (!hasSeenTour) {
+                setShowHelp(true);
+                localStorage.setItem('mi_compra_seen_tour', 'true');
+            }
         }
 
         const handleStatus = () => setIsOffline(!navigator.onLine);
@@ -216,6 +226,7 @@ export default function Home() {
                 setActiveTab={setActiveTab} 
                 isOffline={isOffline} 
                 txt={txt} 
+                onShowHelp={() => setShowHelp(true)} // Nueva prop para abrir ayuda
             />
 
             <div className="flex-1 overflow-y-auto pt-4 no-scrollbar">
@@ -256,9 +267,18 @@ export default function Home() {
                         db={db} 
                         setActiveTab={setActiveTab} 
                         txt={txt} 
+                        onShowHelp={() => setShowHelp(true)} // Nueva prop para ajustes
                     />
                 )}
             </div>
+
+            {/* OVERLAY: AYUDA / TUTORIAL */}
+            {showHelp && (
+                <HelpModal 
+                    onClose={() => setShowHelp(false)} 
+                    txt={txt} 
+                />
+            )}
 
             {/* OVERLAY: CAPTURA DE FOTOS */}
             {(purchaseMode && purchaseMode !== 'manual') && !pendingGasto && (

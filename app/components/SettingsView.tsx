@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { LogOut, Download, ChevronLeft, User, ShieldCheck, Database } from 'lucide-react';
+import { LogOut, Download, ChevronLeft, User, ShieldCheck, Database, Sparkles } from 'lucide-react';
 import { exportToCSV } from '@/lib/utils';
 
 interface SettingsViewProps {
@@ -8,11 +8,11 @@ interface SettingsViewProps {
   db: { gastos: any[] };
   setActiveTab: (tab: string) => void;
   txt: (key: string) => string;
+  onShowHelp: () => void; // Prop añadida para activar el tutorial
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt, onShowHelp }) => {
   const handleLogout = () => {
-    // Usamos el texto del JSON para el mensaje de confirmación del navegador
     if (confirm(txt('modals.logout_confirm'))) {
       localStorage.clear();
       window.location.reload();
@@ -56,6 +56,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt
         <h3 className="text-small-caps ml-1">
           {txt('settings.data_mgmt')}
         </h3>
+
+        {/* REINICIAR TUTORIAL (NUEVA FUNCIÓN) */}
+        <button 
+          onClick={onShowHelp} 
+          className="w-full flex items-center justify-between p-5 card-premium bg-brand-primary/5 hover:bg-brand-primary/10 transition-colors border-brand-primary/20"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-brand-primary/20 rounded-xl text-brand-primary">
+              <Sparkles size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-[11px] font-black uppercase text-white leading-tight">
+                {txt('settings.restart_tour')}
+              </p>
+              <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5 opacity-60">
+                Guía de uso paso a paso
+              </p>
+            </div>
+          </div>
+          <ChevronLeft size={16} className="rotate-180 opacity-20" />
+        </button>
         
         {/* Exportar CSV */}
         <button 

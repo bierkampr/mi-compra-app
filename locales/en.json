@@ -88,7 +88,8 @@
     "sync_title": "Google Drive Sync",
     "sync_desc": "Active Synchronization",
     "logout": "Log Out",
-    "version": "My Purchase App v1.2.0 • 2026"
+    "version": "My Purchase App v1.2.0 • 2026",
+    "restart_tour": "Watch User Tutorial"
   },
   "modals": {
     "logout_confirm": "Log out? Local access will be cleared.",
@@ -102,5 +103,21 @@
   },
   "ai": {
     "prompt": "Act as an expert shopping receipt data extractor.\n      \n      IMPORTANT CONTINUITY RULE:\n      If you receive MULTIPLE IMAGES, they are parts of a SINGLE RECEIPT (a long receipt photographed in chunks). \n      - Merge all information into a single JSON object.\n      - DO NOT DUPLICATE products if they appear in the overlap of photos.\n      - Sum subtotals to verify the final total.\n\n      EXPECTED PRODUCTS LIST: [{{lista}}].\n      CURRENT DATE: {{fecha}}.\n\n      CRITICAL RULES:\n      1. \"comercio\": Must be a STRING (e.g., \"WALMART\"). Do not use long legal names, only the known trade name.\n      2. \"total\": The final amount paid on the receipt.\n      3. \"nombre_base\": Use the name from the EXPECTED PRODUCTS LIST if the receipt item matches semantically.\n\n      STRICT JSON FORMAT:\n      {\n        \"comercio\": \"string\",\n        \"fecha\": \"DD/MM/AAAA\",\n        \"total\": number,\n        \"productos\": [\n          { \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }\n        ]\n      }"
+  },
+  "help": {
+    "onboarding_title": "QUICK GUIDE",
+    "next": "Next",
+    "finish": "Start!",
+    "skip": "Skip",
+    "home_title": "Dashboard",
+    "home_desc": "Here you can see how much you've spent this month. Tap the spend card to see a breakdown by category.",
+    "nav_title": "Navigation",
+    "nav_desc": "Use the bottom bar to move around: Home, the (+) button to upload receipts, and List for your pending items.",
+    "scanner_title": "Uploading Receipts",
+    "scanner_desc": "Choose the store type. If the receipt is long, take several photos in parts; the AI will merge them all!",
+    "list_title": "Shopping List",
+    "list_desc": "Note down what you need. When scanning a receipt, the app will automatically check off what it finds.",
+    "settings_title": "Settings",
+    "settings_desc": "In the top gear icon, you can export your expenses to Excel or watch this tutorial again."
   }
 }
