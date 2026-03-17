@@ -17,15 +17,21 @@ const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, 
       <header className="flex justify-between items-center mb-6 animate-in fade-in duration-500">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <h1 className="heading-1 !text-fluid-lg !mb-0 tracking-tight">MI COMPRA</h1>
+            <h1 className="heading-1 !text-fluid-lg !mb-0 tracking-tight">
+              {txt('nav.title')}
+            </h1>
             {isOffline && (
               <div className="px-2 py-0.5 bg-brand-danger/10 rounded-full flex items-center gap-1">
                 <WifiOff size={10} className="text-brand-danger" />
-                <span className="text-[8px] font-black text-brand-danger uppercase tracking-tighter">Offline</span>
+                <span className="text-[8px] font-black text-brand-danger uppercase tracking-tighter">
+                  {txt('nav.offline')}
+                </span>
               </div>
             )}
           </div>
-          <p className="text-small-caps !text-[8px] opacity-50">Expense AI Manager</p>
+          <p className="text-small-caps !text-[8px] opacity-50">
+            {txt('nav.subtitle')}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -51,7 +57,9 @@ const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, 
           }`}
         >
           <LayoutGrid size={22} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
-          <span className="text-[8px] font-black uppercase mt-1 tracking-widest">Inicio</span>
+          <span className="text-[8px] font-black uppercase mt-1 tracking-widest">
+            {txt('nav.home')}
+          </span>
         </button>
 
         <div className="relative -top-5 px-2">
@@ -72,7 +80,9 @@ const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, 
           }`}
         >
           <History size={22} strokeWidth={activeTab === 'list' ? 2.5 : 2} />
-          <span className="text-[8px] font-black uppercase mt-1 tracking-widest">Lista</span>
+          <span className="text-[8px] font-black uppercase mt-1 tracking-widest">
+            {txt('nav.list')}
+          </span>
         </button>
       </nav>
     </>

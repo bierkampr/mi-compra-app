@@ -1,30 +1,95 @@
 {
-  "ui": {
-    "title": "My Purchase",
-    "monthly_spend": "Monthly Spend",
-    "records": "Records",
-    "supermarket": "Supermarket",
-    "mini_market": "Mini Market",
+  "auth": {
+    "title": "MY PURCHASE",
+    "app": "APP",
+    "subtitle": "AI-powered grocery & expense manager",
+    "login_btn": "Sign in with Google",
+    "footer": "Your data is stored privately in your own Google Drive account"
+  },
+  "nav": {
+    "title": "MY PURCHASE",
+    "subtitle": "Expense AI Manager",
+    "home": "Home",
+    "add": "Add",
+    "list": "List",
+    "offline": "Offline"
+  },
+  "home": {
+    "monthly_spend": "MONTHLY SPEND",
+    "records": "RECORDS",
+    "analysis": "View Analysis",
+    "view_gastos": "View Expenses",
+    "no_records": "No records this month",
+    "shop_breakdown": "Spending by Store"
+  },
+  "list": {
+    "placeholder": "What do you need to buy?",
+    "scan_btn": "Scan Receipt",
+    "clear_all": "Clear All",
+    "clear_pending": "Clear",
+    "pending": "Pending",
+    "bought": "Bought"
+  },
+  "scan": {
+    "title": "Upload Receipt",
+    "subtitle": "Choose purchase type",
+    "super": "Supermarket",
+    "super_desc": "Large retail stores",
+    "mini": "Mini Market",
+    "mini_desc": "Local shops",
     "manual": "Manual",
-    "process_ticket": "PROCESS RECEIPT ⚡",
-    "add_photo": "+ Photo",
-    "export_csv": "Export CSV",
-    "logout": "Logout",
-    "what_need": "What do you need?",
-    "add_manual_item": "+ Add manual item",
-    "finish_registration": "FINISH REGISTRATION",
-    "discard": "DISCARD",
-    "total_paid": "Total Paid"
+    "capture_title": "UPLOAD RECEIPT",
+    "tip_title": "Closer is better",
+    "tip_desc": "If the receipt is long, take 2 or 3 close-up photos. The AI will merge them.",
+    "take_photo": "Take Photo",
+    "gallery": "Gallery",
+    "process": "PROCESS PURCHASE ⚡",
+    "cancel": "cancel upload"
+  },
+  "review": {
+    "title": "REVIEW PURCHASE",
+    "label_shop": "Store",
+    "label_date": "Date",
+    "label_total": "Total (€)",
+    "products_title": "Products",
+    "add_btn": "Add",
+    "close_btn": "Close",
+    "placeholder_prod": "Product...",
+    "placeholder_price": "0.00",
+    "manual_ok": "Accept",
+    "link_list": "Link with your list:",
+    "other_btn": "+ OTHER",
+    "search_placeholder": "Search...",
+    "discard_btn": "discard",
+    "save_btn": "Save Purchase"
+  },
+  "detail": {
+    "no_photos": "No photos",
+    "investment": "Investment",
+    "ticket_label": "Receipt"
+  },
+  "settings": {
+    "title": "Settings",
+    "verified": "Verified Account",
+    "data_mgmt": "Data Management",
+    "export_title": "Export Expenses",
+    "export_desc": "Download in CSV format",
+    "sync_title": "Google Drive Sync",
+    "sync_desc": "Active Synchronization",
+    "logout": "Log Out",
+    "version": "My Purchase App v1.1.0 • 2026"
   },
   "modals": {
-    "list_conflict_title": "Link with list?",
-    "list_conflict_desc": "You have a pending shopping list. Do you want the AI to check off the items found?",
-    "yes_link": "YES, LINK IT",
-    "no_only_ticket": "NO, JUST RECEIPT",
-    "cancel": "CANCEL",
-    "delete_confirm": "Delete this record?"
+    "logout_confirm": "Log out? Local access will be cleared.",
+    "delete_confirm": "Delete this record?",
+    "clear_list_msg": "Clear entire list?",
+    "clear_pending_msg": "Delete unpurchased items?",
+    "link_list_title": "LINK WITH LIST?",
+    "link_list_desc": "Active list detected. The AI will automatically check off found items.",
+    "yes_link": "YES, LINK",
+    "no_link": "NO, RECEIPT ONLY"
   },
   "ai": {
-    "prompt_template": "Act as an expert shopping receipt extractor.\nWISH LIST: [{{lista}}]\nTODAY'S DATE: {{hoy}}\n\nSTRICT RULES:\n1. If it is a card-only slip without details, products is [].\n2. 'nombre_ticket': EXACT name on paper.\n3. 'nombre_base': use name from WISH LIST if it matches, otherwise simplify.\n4. 'fecha': DD/MM/AAAA. If not found, use {{hoy}}.\n5. 'comercio': store name.\n\nJSON format:\n{\n  \"comercio\": \"string\",\n  \"fecha\": \"DD/MM/AAAA\",\n  \"total\": number,\n  \"forma_pago\": \"string\",\n  \"productos\": [{ \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }]\n}"
+    "prompt": "Act as an expert shopping receipt data extractor.\n      \n      IMPORTANT CONTINUITY RULE:\n      If you receive MULTIPLE IMAGES, they are parts of a SINGLE RECEIPT (a long receipt photographed in chunks). \n      - Merge all information into a single JSON object.\n      - DO NOT DUPLICATE products if they appear in the overlap of photos.\n      - Sum subtotals to verify the final total.\n\n      EXPECTED PRODUCTS LIST: [{{lista}}].\n      CURRENT DATE: {{fecha}}.\n\n      CRITICAL RULES:\n      1. \"comercio\": Must be a STRING (e.g., \"WALMART\"). Do not use long legal names, only the known trade name.\n      2. \"total\": The final amount paid on the receipt.\n      3. \"nombre_base\": Use the name from the EXPECTED PRODUCTS LIST if the receipt item matches semantically.\n\n      STRICT JSON FORMAT:\n      {\n        \"comercio\": \"string\",\n        \"fecha\": \"DD/MM/AAAA\",\n        \"total\": number,\n        \"productos\": [\n          { \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }\n        ]\n      }"
   }
 }

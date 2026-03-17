@@ -1,44 +1,95 @@
 {
-  "ui": {
+  "auth": {
     "title": "MI COMPRA",
+    "app": "APP",
+    "subtitle": "Inteligencia Artificial para tus gastos",
+    "login_btn": "Entrar con Google",
+    "footer": "Tus datos se guardan de forma privada en tu propia cuenta de Google Drive"
+  },
+  "nav": {
+    "title": "MI COMPRA",
+    "subtitle": "Expense AI Manager",
+    "home": "Inicio",
+    "add": "Añadir",
+    "list": "Lista",
+    "offline": "Offline"
+  },
+  "home": {
     "monthly_spend": "GASTO MENSUAL",
     "records": "REGISTROS",
-    "analysis": "ANÁLISIS",
-    "daily_spend": "GASTO DIARIO",
-    "settings": "AJUSTES",
-    "export_csv": "EXPORTAR CSV",
-    "logout": "SALIR",
-    "close": "CERRAR",
-    "what_need": "¿QUÉ NECESITAS?",
-    "supermarket": "SUPERMERCADO",
-    "mini_market": "MINI MARKET",
-    "manual": "MANUAL",
-    "add_photo": "+ FOTO",
-    "process_ticket": "PROCESAR TICKET ⚡",
-    "shop": "COMERCIO",
-    "date": "FECHA",
-    "total_euro": "TOTAL (€)",
-    "add_manual_item": "AÑADIR MANUAL",
-    "finish_registration": "FINALIZAR REGISTRO",
-    "discard": "DESCARTAR",
-    "view_ticket": "VER TICKET",
-    "total_paid": "TOTAL PAGADO",
-    "offline": "SIN CONEXIÓN",
-    "scan_list": "ESCANEAR TICKET",
-    "clear_list": "LIMPIAR LISTA",
-    "pending": "PENDIENTES",
-    "bought": "COMPRADO"
+    "analysis": "Ver Análisis",
+    "view_gastos": "Ver Gastos",
+    "no_records": "Sin registros este mes",
+    "shop_breakdown": "Gasto por comercio"
+  },
+  "list": {
+    "placeholder": "¿Qué necesitas comprar?",
+    "scan_btn": "Escanear Ticket",
+    "clear_all": "Limpiar Todo",
+    "clear_pending": "Limpiar",
+    "pending": "Pendientes",
+    "bought": "Comprado"
+  },
+  "scan": {
+    "title": "Cargar Ticket",
+    "subtitle": "Elige el tipo de compra",
+    "super": "Supermercado",
+    "super_desc": "Grandes superficies",
+    "mini": "Mini Market",
+    "mini_desc": "Tiendas de barrio",
+    "manual": "Manual",
+    "capture_title": "CARGAR TICKET",
+    "tip_title": "Cerca es mejor",
+    "tip_desc": "Si el ticket es largo, toma 2 o 3 fotos de cerca por partes. La IA las unirá.",
+    "take_photo": "Tomar Foto",
+    "gallery": "Galería",
+    "process": "PROCESAR COMPRA ⚡",
+    "cancel": "cancelar carga"
+  },
+  "review": {
+    "title": "REVISAR COMPRA",
+    "label_shop": "Comercio",
+    "label_date": "Fecha",
+    "label_total": "Total (€)",
+    "products_title": "Productos",
+    "add_btn": "Añadir",
+    "close_btn": "Cerrar",
+    "placeholder_prod": "Producto...",
+    "placeholder_price": "0.00",
+    "manual_ok": "Aceptar",
+    "link_list": "Vincular con tu lista:",
+    "other_btn": "+ OTRO",
+    "search_placeholder": "Buscar...",
+    "discard_btn": "descartar",
+    "save_btn": "Guardar Compra"
+  },
+  "detail": {
+    "no_photos": "Sin fotos",
+    "investment": "Inversión",
+    "ticket_label": "Ticket"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "verified": "Cuenta Verificada",
+    "data_mgmt": "Gestión de Datos",
+    "export_title": "Exportar Gastos",
+    "export_desc": "Descargar en formato CSV",
+    "sync_title": "Google Drive Sync",
+    "sync_desc": "Sincronización Activa",
+    "logout": "Cerrar Sesión",
+    "version": "Mi Compra App v1.1.0 • 2026"
   },
   "modals": {
-    "list_conflict_title": "¿VINCULAR CON LISTA?",
-    "list_conflict_desc": "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
+    "logout_confirm": "¿Cerrar sesión? Se borrará el acceso local.",
+    "delete_confirm": "¿Eliminar este registro?",
+    "clear_list_msg": "¿Limpiar toda la lista?",
+    "clear_pending_msg": "¿Borrar productos no comprados?",
+    "link_list_title": "¿VINCULAR CON LISTA?",
+    "link_list_desc": "Detectamos una lista activa. La IA marcará los productos automáticamente.",
     "yes_link": "SÍ, VINCULAR",
-    "no_only_ticket": "NO, SOLO TICKET",
-    "cancel": "CANCELAR",
-    "delete_confirm": "¿ELIMINAR ESTE REGISTRO?",
-    "finish_list_confirm": "¿LIMPIAR TODA LA LISTA? SE PERDERÁN LOS PRODUCTOS ACTUALES."
+    "no_link": "NO, SOLO TICKET"
   },
   "ai": {
-    "prompt_template": "Extrae datos de este ticket. LISTA DE PRODUCTOS ESPERADOS: [{{lista}}]. IDIOMA DE SALIDA: {{lang}}. REGLAS: 1. Si es solo un comprobante de tarjeta, devuelve productos: []. 2. 'nombre_ticket' literal. 3. 'nombre_base' debe ser igual al de la lista si coincide. NUNCA nombres vacíos. Formato JSON: { \"comercio\": \"string\", \"fecha\": \"DD/MM/AAAA\", \"total\": number, \"productos\": [{\"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number}] }"
+    "prompt": "Actúa como un experto extractor de datos de tickets de compra.\n      \n      IMPORTANTE REGLA DE CONTINUIDAD:\n      Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET (un ticket largo fotografiado por trozos). \n      - Une toda la información en un solo objeto JSON.\n      - NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.\n      - Suma los subtotales para verificar el total final.\n\n      LISTA DE PRODUCTOS ESPERADOS: [{{lista}}].\n      FECHA ACTUAL: {{fecha}}.\n\n      REGLAS CRÍTICAS:\n      1. \"comercio\": Debe ser un STRING (ej: \"MERCADONA\"). No uses nombres de empresas legales largas, solo el nombre comercial conocido.\n      2. \"total\": El número final pagado en el ticket.\n      3. \"nombre_base\": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si el producto del ticket coincide semánticamente.\n\n      FORMATO JSON ESTRICTO:\n      {\n        \"comercio\": \"string\",\n        \"fecha\": \"DD/MM/AAAA\",\n        \"total\": number,\n        \"productos\": [\n          { \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }\n        ]\n      }"
   }
 }

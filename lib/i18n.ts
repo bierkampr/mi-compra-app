@@ -1,66 +1,55 @@
-/* --- ARCHIVO: lib/i18n.ts (Completo) --- */
+/* --- ARCHIVO: lib/i18n.ts --- */
+import es from '../locales/es.json';
+import en from '../locales/en.json';
 
-const translations: any = {
-  es: {
-    common: { save: "Guardar", cancel: "Cancelar", close: "Cerrar", delete: "Eliminar", loading: "Procesando...", offline: "Sin conexión", back: "Volver" },
-    auth: { title: "Gestiona tus gastos", subtitle: "La forma más inteligente de controlar tu dinero con IA.", login_btn: "Entrar con Google" },
-    nav: { home: "Inicio", add: "Añadir", list: "Lista" },
-    home: { monthly_spend: "Gasto Mensual", records: "Registros", no_gastos: "No hay registros este mes", shop_breakdown: "Gasto por comercio", view_analysis: "Toca para ver desglose" },
-    list: { placeholder: "¿Qué necesitas comprar?", scan_btn: "Escanear Ticket", clear_btn: "Limpiar Lista", pending: "Pendientes", bought: "Comprado" },
-    scan: { title: "Cargar Ticket", add_photo: "+ Añadir Foto", process: "Procesar con IA ⚡", super: "Supermercado", mini: "Mini Market", manual: "Manual" },
-    review: { title: "Revisar Gasto", shop: "Comercio", date: "Fecha", total: "Total (€)", add_manual: "Añadir producto manual", finish: "Finalizar Registro", discard: "Descartar" },
-    settings: { title: "Ajustes", user: "Usuario", export: "Exportar CSV", logout: "Cerrar Sesión" },
-    modals: {
-      delete_confirm: "¿Eliminar este registro?",
-      link_list_title: "¿VINCULAR CON LISTA?",
-      link_list_msg: "TIENES UNA LISTA DE COMPRAS PENDIENTE. ¿QUIERES QUE LA IA MARQUE LOS PRODUCTOS ENCONTRADOS?",
-      yes_link: "SÍ, VINCULAR",
-      no_link: "NO, SOLO TICKET",
-      clear_list_msg: "¿Limpiar toda la lista?",
-      finish_list_confirm: "¿Dar por finalizada la compra?"
-    },
-    ai: {
-      prompt: `Actúa como un experto extractor de datos de tickets de compra.
-      
-      IMPORTANTE REGLA DE CONTINUIDAD:
-      Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET (un ticket largo fotografiado por trozos). 
-      - Une toda la información en un solo objeto JSON.
-      - NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.
-      - Suma los subtotales para verificar el total final.
+/**
+ * Diccionario de traducciones que importa los archivos JSON externos.
+ * Esto permite que el código sea agnóstico al contenido de los textos.
+ */
+const translations: any = { es, en };
 
-      LISTA DE PRODUCTOS ESPERADOS: [{{lista}}].
-      FECHA ACTUAL: {{fecha}}.
-
-      REGLAS CRÍTICAS:
-      1. "comercio": Debe ser un STRING (ej: "MERCADONA"). No uses nombres de empresas legales largas, solo el nombre comercial conocido.
-      2. "total": El número final pagado en el ticket.
-      3. "nombre_base": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si el producto del ticket coincide semánticamente.
-
-      FORMATO JSON ESTRICTO:
-      {
-        "comercio": "string",
-        "fecha": "DD/MM/AAAA",
-        "total": number,
-        "productos": [
-          { "cantidad": number, "nombre_ticket": "string", "nombre_base": "string", "subtotal": number }
-        ]
-      }`
-    }
-  }
-};
-
+/**
+ * Detecta el idioma preferido del sistema o navegador.
+ * @returns 'es' o 'en' dependiendo de la configuración del usuario.
+ */
 export const getSystemLanguage = (): string => {
   if (typeof window === 'undefined') return 'es';
+  
+  // navigator.language suele devolver algo como "es-ES" o "en-US"
+  // Dividimos por el guion para quedarnos solo con el código de idioma ("es" o "en")
   const lang = navigator.language.split('-')[0];
+  
+  // Si el idioma detectado existe en nuestro diccionario, lo devolvemos;
+  // de lo contrario, devolvemos 'es' por defecto.
   return translations[lang] ? lang : 'es';
 };
 
+/**
+ * Función principal de traducción (Translate).
+ * @param path Cadena con puntos que indica la ruta en el JSON (ej: 'auth.title')
+ * @param lang El idioma actual seleccionado en la aplicación ('es' o 'en')
+ * @returns El texto traducido o la ruta en mayúsculas si no se encuentra.
+ */
 export const t = (path: string, lang: string): string => {
+  if (!path) return "";
+  
   const keys = path.split('.');
+  
+  // Seleccionamos el objeto de traducción correspondiente al idioma, 
+  // cayendo siempre en español como idioma de respaldo (fallback).
   let result = translations[lang] || translations['es'];
+
+  // Navegamos recursivamente por el objeto usando las llaves del path
   for (const key of keys) {
-    if (result && result[key]) result = result[key];
-    else return path.toUpperCase();
+    if (result && result[key] !== undefined) {
+      result = result[key];
+    } else {
+      // Si en algún punto la llave no existe, registramos el error en consola
+      // y devolvemos la ruta solicitada para identificar el error visualmente.
+      console.warn(`[i18n] Error: No se encontró la llave "${path}" para el idioma "${lang}"`);
+      return path.toUpperCase(); 
+    }
   }
+
   return result;
 };

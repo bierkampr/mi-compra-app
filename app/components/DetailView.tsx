@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { ChevronLeft, Trash2, Store, ImageIcon, X, Loader2, Check } from 'lucide-react';
+import { ChevronLeft, Trash2, Store, ImageIcon, X, Loader2 } from 'lucide-react';
 import { getDriveFileBlob } from '@/lib/gdrive';
 
 interface DetailViewProps {
@@ -21,7 +21,7 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
       const url = await getDriveFileBlob(token, id);
       if (url) setViewerUrl(url);
     } catch (e) {
-      alert("Error al cargar imagen");
+      console.error("Error loading image", e);
     } finally {
       setLoadingImg(false);
     }
@@ -47,16 +47,14 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
         </button>
       </div>
 
-      {/* LISTADO DE PRODUCTOS: Alias arriba, Ticket abajo */}
+      {/* LISTADO DE PRODUCTOS */}
       <div className="flex-1 overflow-y-auto no-scrollbar mb-4 border-y border-white/[0.03]">
         {gasto.productos?.map((p: any, i: number) => (
           <div key={i} className="flex justify-between items-center py-3 border-b border-white/[0.02] last:border-none">
             <div className="flex-1 pr-4 overflow-hidden">
-              {/* ALIAS GENÉRICO: PRIORIDAD VISUAL */}
               <p className="text-[11px] font-black uppercase text-white leading-tight">
                 {p.nombre_base}
               </p>
-              {/* NOMBRE REAL TICKET: REFERENCIA SECUNDARIA */}
               <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-20 mt-0.5">
                 {p.nombre_ticket}
               </p>
@@ -71,10 +69,12 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
         ))}
       </div>
 
-      {/* FOOTER: TOTAL Y TICKETS EN UNA FILA */}
+      {/* FOOTER: TOTAL Y TICKETS */}
       <div className="flex items-stretch gap-2 h-20">
         <div className="flex-[1.2] bg-white/[0.03] p-3 rounded-2xl border border-white/[0.05] flex flex-col justify-center">
-            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-30">Inversión</p>
+            <p className="text-[7px] font-black uppercase text-brand-muted mb-0.5 opacity-30">
+              {txt('detail.investment')}
+            </p>
             <div className="flex items-baseline gap-0.5">
                 <span className="text-2xl font-black italic text-white tracking-tighter">
                     {Number(gasto.total).toFixed(2)}
@@ -92,12 +92,16 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
                         className="h-full flex-none bg-brand-card border border-white/[0.1] px-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all"
                     >
                         <ImageIcon size={16} className="text-brand-primary" />
-                        <span className="text-[7px] font-black uppercase tracking-widest text-brand-muted">Ticket {idx + 1}</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-brand-muted">
+                          {txt('detail.ticket_label')} {idx + 1}
+                        </span>
                     </button>
                 ))
             ) : (
                 <div className="h-full flex-1 flex items-center justify-center border border-dashed border-white/5 rounded-2xl">
-                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">Sin fotos</p>
+                    <p className="text-[8px] font-bold text-brand-muted uppercase italic">
+                      {txt('detail.no_photos')}
+                    </p>
                 </div>
             )}
         </div>
@@ -109,7 +113,7 @@ const DetailView: React.FC<DetailViewProps> = ({ gasto, onClose, onDelete, token
           <button className="absolute top-6 right-6 btn-icon !bg-white/10 border-white/20 z-[600] !p-3">
             <X size={24} className="text-white" />
           </button>
-          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Evidencia" />
+          <img src={viewerUrl} className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl object-contain border border-white/10 animate-in zoom-in-95" alt="Receipt" />
         </div>
       )}
 

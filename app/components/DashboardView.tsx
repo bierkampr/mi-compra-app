@@ -47,11 +47,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       </div>
 
-      {/* TARJETA DE GASTO TOTAL (DENSIDAD OPTIMIZADA) */}
+      {/* TARJETA DE GASTO TOTAL */}
       <div className="relative overflow-hidden card-premium bg-gradient-to-br from-brand-primary to-[#4318BB] border-none !p-6 shadow-[0_20px_40px_rgba(93,46,239,0.3)]">
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-1">
-            <p className="text-[9px] font-black uppercase tracking-widest text-white/60">{txt('home.monthly_spend')}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/60">
+              {txt('home.monthly_spend')}
+            </p>
             <TrendingUp size={14} className="text-brand-accent opacity-50" />
           </div>
           <h2 className="text-5xl font-black italic tracking-tighter text-white leading-none">
@@ -68,11 +70,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               className="flex items-center gap-1.5 ml-auto text-[8px] font-black uppercase tracking-widest text-brand-accent"
             >
               <BarChart3 size={12} />
-              {showBreakdown ? 'Ver Gastos' : 'Ver Análisis'}
+              {showBreakdown ? txt('home.view_gastos') : txt('home.analysis')}
             </button>
           </div>
         </div>
-        {/* Elemento decorativo */}
         <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-3xl" />
       </div>
 
@@ -112,7 +113,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               ))
             ) : (
               <div className="py-12 text-center card-premium bg-transparent border-dashed border-white/10">
-                <p className="text-xs font-bold text-brand-muted uppercase tracking-widest">Sin registros este mes</p>
+                <p className="text-xs font-bold text-brand-muted uppercase tracking-widest">
+                  {txt('home.no_records')}
+                </p>
               </div>
             )}
           </div>

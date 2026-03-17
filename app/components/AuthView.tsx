@@ -12,7 +12,7 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
     // @ts-ignore
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
-      scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile",
+      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile",
       callback: async (res: any) => {
         localStorage.setItem('gdrive_token', res.access_token);
         const info = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { 
@@ -39,10 +39,10 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
 
       <div className="space-y-4 mb-12 px-4">
         <h1 className="heading-1 !text-5xl tracking-tighter leading-none">
-          MI COMPRA <br/> <span className="text-brand-primary">APP</span>
+          {txt('auth.title')} <br/> <span className="text-brand-primary">{txt('auth.app')}</span>
         </h1>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-muted opacity-60">
-          Inteligencia Artificial para tus gastos
+          {txt('auth.subtitle')}
         </p>
       </div>
 
@@ -56,7 +56,7 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
         </button>
         
         <p className="text-[9px] font-bold text-brand-muted uppercase tracking-widest leading-relaxed opacity-40">
-          Tus datos se guardan de forma privada <br/> en tu propia cuenta de Google Drive
+          {txt('auth.footer')}
         </p>
       </div>
 

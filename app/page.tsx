@@ -1,14 +1,14 @@
 "use client";
 import { useState, useEffect, useMemo } from 'react';
 import { CLIENT_ID } from '@/lib/config';
-import { getDriveFile, saveDriveFile, uploadImageToDrive, getDriveFileBlob } from '@/lib/gdrive';
+import { getDriveFile, saveDriveFile, uploadImageToDrive } from '@/lib/gdrive';
 import { analyzeReceipt } from '@/lib/gemini';
-import { compressImage, normalizeStoreName } from '@/lib/utils';
+import { normalizeStoreName } from '@/lib/utils';
 import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 
-// RUTAS CORREGIDAS
+// Componentes de la interfaz
 import Navigation from './components/Navigation';
 import AuthView from './components/AuthView';
 import DashboardView from './components/DashboardView';
@@ -19,6 +19,7 @@ import ReviewModal from './components/ReviewModal';
 import DetailView from './components/DetailView';
 
 export default function Home() {
+    // --- ESTADO GLOBAL ---
     const [lang, setLang] = useState('es');
     const [user, setUser] = useState({ name: '', loggedIn: false, token: '' });
     const [activeTab, setActiveTab] = useState('home');
@@ -28,19 +29,26 @@ export default function Home() {
     const [isOffline, setIsOffline] = useState(false);
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
+    // --- ESTADO FLUJO DE COMPRA ---
     const [purchaseMode, setPurchaseMode] = useState<'super' | 'mini' | 'manual' | null>(null);
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
     const [pendingGasto, setPendingGasto] = useState<any>(null);
     const [selectedGasto, setSelectedGasto] = useState<any | null>(null);
     const [showListDialog, setShowListDialog] = useState(false);
 
+    // Función puente para traducciones
     const txt = (key: string) => t(key, lang);
 
+    // --- EFECTOS INICIALES ---
     useEffect(() => {
+        // 1. Detectar idioma
         setLang(getSystemLanguage());
+
+        // 2. Cargar caché local
         const localData = localStorage.getItem('mi_compra_cache_db');
         if (localData) setDb(JSON.parse(localData));
 
+        // 3. Verificar sesión
         const tkn = localStorage.getItem('gdrive_token');
         const name = localStorage.getItem('user_name');
         if (tkn && name) {
@@ -48,6 +56,7 @@ export default function Home() {
             loadData(tkn);
         }
 
+        // 4. Gestión de conectividad
         const handleStatus = () => setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
@@ -57,6 +66,7 @@ export default function Home() {
         };
     }, []);
 
+    // --- LÓGICA DE DATOS (GDRIVE) ---
     const loadData = async (token: string) => {
         const res = await getDriveFile(token);
         if (res) {
@@ -74,6 +84,7 @@ export default function Home() {
         }
     };
 
+    // --- LÓGICA DE PROCESAMIENTO IA ---
     const startAnalysis = async (useList: boolean) => {
         if (isOffline || loading) return;
 
@@ -93,6 +104,8 @@ export default function Home() {
 
         try {
             const listItems = useList ? db.lista.filter(l => !l.confirmed).map(l => l.name) : [];
+            
+            // Extraemos el prompt del JSON y reemplazamos variables dinámicas
             const promptFinal = txt('ai.prompt')
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
@@ -112,17 +125,20 @@ export default function Home() {
         setLoading(true);
         try {
             let pIds = [];
+            // Subida de imágenes a Drive (carpeta oculta)
             if (finalGasto.tempImages && !isOffline) {
                 for (let img of finalGasto.tempImages) {
                     pIds.push(await uploadImageToDrive(user.token, img));
                 }
             }
+            // Sincronización con Supabase (Alias y aprendizaje)
             if (!isOffline) {
                 for (let prod of finalGasto.productos) {
                     await syncProductWithSupabase(prod, finalGasto.comercio);
                 }
             }
 
+            // Marcar items de la lista como comprados si se usó vinculación
             const updatedL = db.lista.map(li => {
                 if (!finalGasto.usedList) return li;
                 const matched = finalGasto.productos?.some((p: any) => 
@@ -134,6 +150,7 @@ export default function Home() {
             const record = { ...finalGasto, photoIds: pIds, total: Number(finalGasto.total) || 0 };
             const returnToList = finalGasto.usedList;
 
+            // Limpieza de campos temporales antes de guardar en Drive
             delete record.tempImages; 
             delete record.usedList; 
             delete record._isGrouped;
@@ -142,7 +159,7 @@ export default function Home() {
             resetFlow(returnToList ? 'list' : 'home');
 
         } catch (e) { 
-            alert("Error al sincronizar"); 
+            alert("Error al sincronizar datos"); 
         } finally { 
             setLoading(false); 
         }
@@ -155,57 +172,98 @@ export default function Home() {
         setActiveTab(tab);
     };
 
+    // --- ESTADÍSTICAS (Memoized) ---
     const stats = useMemo(() => {
         const y = currentViewDate.getFullYear();
         const m = currentViewDate.getMonth();
         const first = new Date(y, m, 1);
         const last = new Date(y, m + 1, 0);
+        
         const currentGastos = (db.gastos || []).filter(g => {
             const [dd, mm, yy] = g.fecha.split('/');
             const d = new Date(+yy, +mm - 1, +dd);
             return d >= first && d <= last;
         });
+        
         const total = currentGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
+        
         const porComercio = currentGastos.reduce((acc: any, g) => { 
             const nombreLimpio = normalizeStoreName(g.comercio);
             acc[nombreLimpio] = (acc[nombreLimpio] || 0) + Number(g.total); 
             return acc; 
         }, {});
+        
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 
+    // --- RENDERIZADO ---
     if (!user.loggedIn) return <AuthView CLIENT_ID={CLIENT_ID} txt={txt} />;
 
     return (
         <main className="app-layout">
-            <Navigation user={user} activeTab={activeTab} setActiveTab={setActiveTab} isOffline={isOffline} txt={txt} />
+            <Navigation 
+                user={user} 
+                activeTab={activeTab} 
+                setActiveTab={setActiveTab} 
+                isOffline={isOffline} 
+                txt={txt} 
+            />
 
             <div className="flex-1 overflow-y-auto pt-4 no-scrollbar">
                 {activeTab === 'home' && !purchaseMode && (
-                    <DashboardView stats={stats} currentViewDate={currentViewDate} setCurrentViewDate={setCurrentViewDate} setSelectedGasto={setSelectedGasto} setActiveTab={setActiveTab} txt={txt} lang={lang} />
+                    <DashboardView 
+                        stats={stats} 
+                        currentViewDate={currentViewDate} 
+                        setCurrentViewDate={setCurrentViewDate} 
+                        setSelectedGasto={setSelectedGasto} 
+                        setActiveTab={setActiveTab} 
+                        txt={txt} 
+                        lang={lang} 
+                    />
                 )}
                 {activeTab === 'list' && (
-                    <ShoppingListView db={db} updateAndSync={updateAndSync} setPurchaseMode={setPurchaseMode} txt={txt} />
+                    <ShoppingListView 
+                        db={db} 
+                        updateAndSync={updateAndSync} 
+                        setPurchaseMode={setPurchaseMode} 
+                        txt={txt} 
+                    />
                 )}
                 {activeTab === 'add' && !purchaseMode && (
-                    <ScannerView setPurchaseMode={setPurchaseMode} startAnalysis={startAnalysis} txt={txt} />
+                    <ScannerView 
+                        setPurchaseMode={setPurchaseMode} 
+                        startAnalysis={startAnalysis} 
+                        txt={txt} 
+                    />
                 )}
                 {activeTab === 'settings' && (
-                    <SettingsView user={user} db={db} setActiveTab={setActiveTab} txt={txt} />
+                    <SettingsView 
+                        user={user} 
+                        db={db} 
+                        setActiveTab={setActiveTab} 
+                        txt={txt} 
+                    />
                 )}
             </div>
 
+            {/* Modales de flujo de captura */}
             {(purchaseMode === 'super' || purchaseMode === 'mini') && !pendingGasto && (
                 <div className="modal-content-full z-[1000] justify-center gap-10">
                     <ScannerView.Capture 
-                        tempPhotos={tempPhotos} setTempPhotos={setTempPhotos} 
-                        loading={loading} startAnalysis={startAnalysis} 
-                        db={db} setShowListDialog={setShowListDialog} 
-                        showListDialog={showListDialog} onCancel={() => resetFlow('home')} txt={txt} 
+                        tempPhotos={tempPhotos} 
+                        setTempPhotos={setTempPhotos} 
+                        loading={loading} 
+                        startAnalysis={startAnalysis} 
+                        db={db} 
+                        setShowListDialog={setShowListDialog} 
+                        showListDialog={showListDialog} 
+                        onCancel={() => resetFlow('home')} 
+                        txt={txt} 
                     />
                 </div>
             )}
 
+            {/* Modal de Revisión de IA */}
             {pendingGasto && (
                 <ReviewModal 
                     pendingGasto={pendingGasto} 
@@ -218,6 +276,7 @@ export default function Home() {
                 />
             )}
             
+            {/* Modal de Detalle de Gasto */}
             {selectedGasto && (
                 <DetailView 
                     gasto={selectedGasto} 
@@ -229,10 +288,12 @@ export default function Home() {
                             setSelectedGasto(null);
                         }
                     }} 
-                    token={user.token} txt={txt} 
+                    token={user.token} 
+                    txt={txt} 
                 />
             )}
 
+            {/* Overlay de Carga Global */}
             {loading && (
                 <div className="fixed inset-0 z-[2000] bg-brand-bg/60 backdrop-blur-md flex items-center justify-center">
                     <Loader2 className="animate-spin text-brand-primary" size={48} strokeWidth={3}/>

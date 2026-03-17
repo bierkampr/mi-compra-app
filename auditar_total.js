@@ -3,64 +3,87 @@
 const fs = require('fs');
 const path = require('path');
 
-// Lista completa y actualizada según tu nueva estructura modular
-const archivos = [
-  'package.json',
-  'tailwind.config.js',
-  'postcss.config.js',
-  'next.config.mjs',
-  'tsconfig.json',
-  'auditar_total.js',
-  'public/manifest.json',
-  'app/globals.css',
-  'app/layout.tsx',
-  'app/page.tsx',
-  // --- COMPONENTES ---
-  'app/components/AuthView.tsx',
-  'app/components/DashboardView.tsx',
-  'app/components/DetailView.tsx',
-  'app/components/Navigation.tsx',
-  'app/components/Providers.tsx',
-  'app/components/ReviewModal.tsx',
-  'app/components/ScannerView.tsx',
-  'app/components/SettingsView.tsx',
-  'app/components/ShoppingListView.tsx',
-  // --- LIBRERÍAS ---
-  'lib/config.ts',
-  'lib/gemini.ts',
-  'lib/gdrive.ts',
-  'lib/i18n.ts',
-  'lib/products.ts',
-  'lib/supabase.ts',
-  'lib/utils.ts',
-  // --- LOCALES (TRADUCCIONES) ---
-  'locales/en.json',
-  'locales/es.json'
-];
+// Configuración de carpetas y archivos a incluir/excluir
+const CONFIG = {
+  directorios: ['app', 'lib', 'locales'], // Carpetas donde buscará recursivamente
+  archivosRaiz: [
+    'package.json',
+    'tailwind.config.js',
+    'postcss.config.js',
+    'postcss.config.mjs',
+    'next.config.mjs',
+    'next.config.ts',
+    'tsconfig.json',
+    'eslint.config.mjs',
+    'README.md',
+    '.env.local' // Ten cuidado: esto incluye tus llaves secretas
+  ],
+  extensionesPermitidas: ['.ts', '.tsx', '.js', '.mjs', '.json', '.css', '.md'],
+  excluir: ['node_modules', '.next', '.git', 'package-lock.json', 'favicon.ico']
+};
 
-let contenidoTotal = "=== PROYECTO: MI COMPRA APP - FULL MODULAR ESTRUCTURE ===\n";
+let contenidoTotal = "=== PROYECTO: MI COMPRA APP - AUDITORÍA COMPLETA ===\n";
 contenidoTotal += "Fecha de exportación: " + new Date().toLocaleString() + "\n";
-contenidoTotal += "Descripción: App de gastos con IA, Modularizada, Alias Inteligentes y Diseño Denso.\n";
+contenidoTotal += "Estructura detectada automáticamente desde la raíz.\n";
 contenidoTotal += "================================================\n\n";
 
-archivos.forEach(archivo => {
+// Función para obtener archivos recursivamente
+function obtenerArchivos(dir, listaArchivos = []) {
+  const files = fs.readdirSync(dir);
+  files.forEach(file => {
+    const name = path.join(dir, file);
+    if (fs.statSync(name).isDirectory()) {
+      if (!CONFIG.excluir.includes(file)) {
+        obtenerArchivos(name, listaArchivos);
+      }
+    } else {
+      const ext = path.extname(name);
+      if (CONFIG.extensionesPermitidas.includes(ext) && !CONFIG.excluir.includes(file)) {
+        // Convertir a ruta relativa para el log
+        const rutaRelativa = path.relative(process.cwd(), name);
+        listaArchivos.push(rutaRelativa);
+      }
+    }
+  });
+  return listaArchivos;
+}
+
+// 1. Recopilar todos los archivos
+let todosLosArchivos = [...CONFIG.archivosRaiz];
+
+CONFIG.directorios.forEach(dir => {
+  const rutaDir = path.join(process.cwd(), dir);
+  if (fs.existsSync(rutaDir)) {
+    todosLosArchivos = todosLosArchivos.concat(obtenerArchivos(rutaDir));
+  }
+});
+
+// Eliminar duplicados si los hubiera
+todosLosArchivos = [...new Set(todosLosArchivos)];
+
+// 2. Leer y concatenar contenido
+todosLosArchivos.forEach(archivo => {
   const fullPath = path.join(process.cwd(), archivo);
-  if (fs.existsSync(fullPath)) {
-    contenidoTotal += `\n\n/* --- INICIO ARCHIVO: ${archivo} --- */\n\n`;
-    contenidoTotal += fs.readFileSync(fullPath, 'utf8');
-    contenidoTotal += `\n\n/* --- FIN ARCHIVO: ${archivo} --- */\n`;
-    console.log(`✅ Procesado: ${archivo}`);
-  } else {
-    contenidoTotal += `\n\n⚠️ ARCHIVO NO ENCONTRADO: ${archivo}\n`;
-    console.log(`⚠️ No encontrado: ${archivo}`);
+  
+  if (fs.existsSync(fullPath) && fs.lstatSync(fullPath).isFile()) {
+    try {
+      const contenido = fs.readFileSync(fullPath, 'utf8');
+      contenidoTotal += `\n\n/* --- INICIO ARCHIVO: ${archivo} --- */\n\n`;
+      contenidoTotal += contenido;
+      contenidoTotal += `\n\n/* --- FIN ARCHIVO: ${archivo} --- */\n`;
+      console.log(`✅ Procesado: ${archivo}`);
+    } catch (err) {
+      console.log(`❌ Error leyendo: ${archivo}`);
+    }
   }
 });
 
 const outputPath = 'PROYECTO_COMPLETO.txt';
 try {
-    fs.writeFileSync(outputPath, contenidoTotal);
-    console.log(`\n🚀 ¡TODO LISTO! Se ha generado ${outputPath}`);
-    console.log(`Este archivo ahora contiene los 9 componentes modulares y la lógica de Alias.`);
+  fs.writeFileSync(outputPath, contenidoTotal);
+  console.log(`\n🚀 ¡EXTRACCIÓN EXITOSA!`);
+  console.log(`Se han procesado ${todosLosArchivos.length} archivos.`);
+  console.log(`Archivo generado: ${outputPath}`);
 } catch (error) {
-    console.error(`❌ Error al escribir el archivo: ${error.message}`);
+  console.error(`❌ Error al escribir el archivo final: ${error.message}`);
 }

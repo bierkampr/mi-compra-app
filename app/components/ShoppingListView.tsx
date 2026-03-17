@@ -26,7 +26,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         const uniqueRes = Array.from(new Map(res.map(item => [item.nombre_base.toUpperCase(), item])).values());
         setSuggestions(uniqueRes);
       } catch (e) {
-        console.error(e);
+        console.error("Error searching products:", e);
       } finally {
         setIsSearching(false);
       }
@@ -40,15 +40,17 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     if (!val) return;
 
     // 1. Actualización Local inmediata
+    const newItem = { name: val, checked: false, confirmed: false };
     const newDb = { 
       ...db, 
-      lista: [...(db.lista || []), { name: val, checked: false, confirmed: false }] 
+      lista: [...(db.lista || []), newItem] 
     };
+    
     setNewItemName("");
     setSuggestions([]);
     await updateAndSync(newDb);
 
-    // 2. Registro seguro en Supabase
+    // 2. Registro silencioso en Supabase para nutrir el diccionario global
     try {
         const { data: existing } = await supabase
             .from('productos')
@@ -60,7 +62,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
             await supabase.from('productos').insert([{ nombre_base: val, categoria: 'otros' }]);
         }
     } catch (e) {
-        console.warn("Sincronización silenciosa falló.");
+        console.warn("Sincronización con Supabase falló.");
     }
   };
 
@@ -81,7 +83,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   };
 
   const clearPending = async () => {
-    if (confirm("¿Borrar productos no comprados?")) {
+    if (confirm(txt('modals.clear_pending_msg'))) {
       const onlyBought = db.lista.filter(li => li.confirmed);
       await updateAndSync({ ...db, lista: onlyBought });
     }
@@ -92,7 +94,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-20">
-      {/* BARRA DE BÚSQUEDA CON SUGERENCIAS SCROLLABLES */}
+      {/* BARRA DE BÚSQUEDA */}
       <div className="relative group z-[100]">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">
           {isSearching ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <Search size={18} />}
@@ -108,7 +110,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* CONTENEDOR DE SUGERENCIAS CON SCROLL */}
+        {/* SUGERENCIAS */}
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-[200] border-brand-primary/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 max-h-[300px] overflow-y-auto no-scrollbar">
             {suggestions.map((s, idx) => (
@@ -135,7 +137,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           {pendingItems.length > 0 && (
             <button onClick={clearPending} className="btn-secondary flex-1 !p-0 bg-brand-primary/5 border-brand-primary/10 text-brand-primary active:bg-brand-primary active:text-white transition-all">
                 <Eraser size={18}/>
-                <span className="text-[7px] font-black uppercase">Limpiar</span>
+                <span className="text-[7px] font-black uppercase">{txt('list.clear_pending')}</span>
             </button>
           )}
 
@@ -182,7 +184,10 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
             ))
           ) : (
             <div className="py-12 text-center border-2 border-dashed border-white/[0.02] rounded-[2.5rem]">
-                <p className="text-[9px] font-black text-brand-muted uppercase tracking-[0.3em] opacity-20">Nada pendiente</p>
+                <p className="text-[9px] font-black text-brand-muted uppercase tracking-[0.3em] opacity-20">
+                  {/* Aquí usamos una lógica de conteo o podrías añadir list.empty al JSON */}
+                  {txt('home.no_records')}
+                </p>
             </div>
           )}
         </div>
