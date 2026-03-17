@@ -3,33 +3,32 @@ import { supabase } from "./supabase";
 
 /**
  * BUSCADOR PARA "MI LISTA"
- * Busca en el catálogo maestro forzando mayúsculas y ordena por longitud del nombre.
+ * Es tolerante: busca por coincidencia exacta y también sustituyendo Ñ por N.
+ * Ordena por longitud (más corto primero).
  */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
-  
-  // Estandarizamos la búsqueda a Mayúsculas
   const upperQuery = query.toUpperCase().trim();
+  const fuzzyQuery = upperQuery.replace(/Ñ/g, 'N');
 
   try {
     const { data, error } = await supabase.from('productos')
       .select(`id, nombre_base`)
-      .ilike('nombre_base', `%${upperQuery}%`)
-      .limit(30); // Pedimos margen para el ordenamiento manual
+      .or(`nombre_base.ilike.%${upperQuery}%, nombre_base.ilike.%${fuzzyQuery}%`)
+      .limit(30);
 
     if (error) throw error;
 
-    // ORDENAMIENTO POR LONGITUD: Los más cortos primero para prioridad visual
+    // Ordenamiento por longitud: "PIÑA" antes que "PIÑA EN ALMIBAR"
     return (data || []).sort((a, b) => a.nombre_base.length - b.nombre_base.length);
   } catch (e) {
-    console.error("Error en búsqueda de productos:", e);
+    console.error("Error en búsqueda:", e);
     return [];
   }
 };
 
 /**
  * BUSCADOR DE ALIAS (Diccionario Inteligente)
- * Busca si un nombre sucio de ticket ya tiene un alias limpio asignado.
  */
 export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string | null> => {
   try {
@@ -49,33 +48,37 @@ export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string
 };
 
 /**
- * REGISTRO DE APRENDIZAJE (Vínculo Ticket -> Lista)
- * BLINDAJE: Evita que nombres idénticos al ticket (sucios) entren al catálogo maestro.
- * FUSIÓN: Busca por nombre existente antes de crear uno nuevo.
+ * REGISTRO DE APRENDIZAJE Y FUSIÓN Ñ/N
+ * Si el nombre no existe (ni con Ñ ni con N), lo crea. 
+ * Si existe, vincula el nombre del ticket a ese ID existente.
  */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
-    // REGLA DE ORO: Todo a MAYÚSCULAS y LIMPIO
     const ticketUpper = nombreTicket.toUpperCase().trim();
     const baseUpper = nombreBase.toUpperCase().trim();
     
     if (!ticketUpper || !baseUpper) return;
     
-    // Si el nombre base es igual al del ticket, es "ruido de supermercado".
-    // No permitimos que esto ensucie la tabla maestra de 'productos'.
-    if (ticketUpper === baseUpper) {
-       console.log("Blindaje activado: Ignorando nombre sucio para el catálogo maestro.");
-       return;
+    // Blindaje: si el nombre base es igual al del ticket, es un nombre sucio, no lo metemos al catálogo
+    if (ticketUpper === baseUpper) return;
+
+    // Clave para detectar duplicados de Ñ/N
+    const fuzzyBase = baseUpper.replace(/Ñ/g, 'N');
+
+    // 1. Buscamos si ya existe el producto (exacto o fuzzy)
+    let { data: productosExistentes } = await supabase
+      .from('productos')
+      .select('id, nombre_base')
+      .or(`nombre_base.eq.${baseUpper}, nombre_base.ilike.${fuzzyBase}`);
+
+    let prod = productosExistentes?.[0];
+
+    // Si existen versiones con y sin Ñ, preferimos la que tiene Ñ
+    if (productosExistentes && productosExistentes.length > 1) {
+        prod = productosExistentes.find(p => p.nombre_base.includes('Ñ')) || productosExistentes[0];
     }
 
-    // 1. Intentar buscar el producto por NOMBRE (Fusión automática para evitar duplicados)
-    let { data: prod } = await supabase
-      .from('productos')
-      .select('id')
-      .eq('nombre_base', baseUpper)
-      .maybeSingle();
-
-    // 2. Si el producto no existe en el catálogo maestro, lo creamos (siempre en Mayúsculas)
+    // 2. Si realmente es nuevo (no hay ni exacto ni fuzzy), lo creamos
     if (!prod) {
       const { data: newP, error: errorInsert } = await supabase
         .from('productos')
@@ -86,7 +89,7 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
       if (!errorInsert) prod = newP;
     }
 
-    // 3. Vincular el alias en la tabla de aprendizaje (Diccionario Inteligente)
+    // 3. Guardamos el alias apuntando al maestro
     if (prod) {
       await supabase.from('producto_alias').upsert({ 
         producto_id: prod.id, 
@@ -100,27 +103,29 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
 
 /**
  * SINCRONIZACIÓN POST-COMPRA
- * Procesa productos detectados por la IA para actualizar el diccionario global.
  */
 export const syncProductWithSupabase = async (itemIA: any, comercio: string) => {
   try {
-    // Forzamos la limpieza y mayúsculas delegando en saveManualAlias
-    await saveManualAlias(itemIA.nombre_ticket, itemIA.nombre_base);
-    
     const baseUpper = itemIA.nombre_base.toUpperCase().trim();
+    const ticketUpper = itemIA.nombre_ticket.toUpperCase().trim();
 
-    // Buscamos el ID (solo si superó el blindaje anterior)
-    const { data: prod } = await supabase
+    // Registramos alias y maestro
+    await saveManualAlias(ticketUpper, baseUpper);
+    
+    const fuzzyBase = baseUpper.replace(/Ñ/g, 'N');
+
+    // Recuperamos el ID para guardar el detalle de precio
+    const { data: productos } = await supabase
       .from('productos')
       .select('id')
-      .eq('nombre_base', baseUpper)
-      .maybeSingle();
+      .or(`nombre_base.eq.${baseUpper}, nombre_base.ilike.${fuzzyBase}`);
+
+    const prod = productos?.[0];
 
     if (prod) {
       const subtotal = Number(itemIA.subtotal) || 0;
       const cantidad = Number(itemIA.cantidad) || 1;
       
-      // Actualizamos el histórico de precios (Mayúsculas)
       await supabase.from('producto_detalles').upsert({
         producto_id: prod.id,
         marca: 'GENERICO',
@@ -131,6 +136,6 @@ export const syncProductWithSupabase = async (itemIA: any, comercio: string) => 
       }, { onConflict: 'producto_id, tamano' });
     }
   } catch (e) {
-    console.error("Error en sincronización silenciosa:", e);
+    console.error("Error en sincronización:", e);
   }
 };

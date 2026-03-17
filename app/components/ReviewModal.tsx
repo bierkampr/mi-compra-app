@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Check, X, Store, Search, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Check, X, Store, Search, Loader2, Sparkles, CheckCircle2, PlusCircle } from 'lucide-react';
 
-// Importaciones de lógica centralizada
+// Importaciones de lógica
 import { calculateMatchScore, groupRepeatedProducts } from '../../lib/utils';
 import { searchLocalProducts } from '../../lib/products';
 
@@ -28,7 +28,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isSearchingExtra, setIsSearchingExtra] = useState(false);
   const [showExtraSearchIdx, setShowExtraSearchIdx] = useState<number | null>(null);
 
-  // Agrupar productos al inicio
+  // Inicialización y agrupación
   useEffect(() => {
     if (pendingGasto?.productos && !pendingGasto._isGrouped) {
       const grouped = groupRepeatedProducts(pendingGasto.productos);
@@ -36,33 +36,34 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       
       const autoExpand: number[] = [];
       grouped.forEach((p: any, i: number) => {
-        if (p.nombre_base === p.nombre_ticket) autoExpand.push(i);
+        if (p.nombre_base.toUpperCase() === p.nombre_ticket.toUpperCase()) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
     }
   }, [pendingGasto, setPendingGasto]);
 
-  // FUNCIÓN CORREGIDA: Limpia todo al abrir/cerrar un producto
-  const toggleExpand = (idx: number) => {
-    setExpandedIndices(prev => 
-      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
-    );
-    // Limpieza de estados de búsqueda
-    limpiarBusqueda();
-  };
-
-  // NUEVA FUNCIÓN: Centraliza la limpieza para evitar rastro de texto previo
+  // Limpieza total de búsqueda
   const limpiarBusqueda = () => {
     setShowExtraSearchIdx(null);
     setExtraSearchTerm("");
     setExtraSuggestions([]);
+    setIsSearchingExtra(false);
+  };
+
+  const toggleExpand = (idx: number) => {
+    // Al abrir o cerrar un producto, limpiamos cualquier búsqueda pendiente
+    limpiarBusqueda();
+    setExpandedIndices(prev => 
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
   };
 
   const handleExtraSearch = async (val: string) => {
-    setExtraSearchTerm(val);
+    const upperVal = val.toUpperCase();
+    setExtraSearchTerm(upperVal);
     if (val.length > 1) {
       setIsSearchingExtra(true);
-      const res = await searchLocalProducts(val);
+      const res = await searchLocalProducts(upperVal);
       setExtraSuggestions(res);
       setIsSearchingExtra(false);
     } else {
@@ -70,13 +71,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     }
   };
 
-  const setAlias = (productIndex: number, listName: string) => {
+  const setAlias = (productIndex: number, cleanName: string) => {
     const newProds = [...pendingGasto.productos];
-    newProds[productIndex].nombre_base = listName;
+    newProds[productIndex].nombre_base = cleanName.toUpperCase().trim();
     setPendingGasto({ ...pendingGasto, productos: newProds });
-    setExpandedIndices(prev => prev.filter(i => i !== productIndex));
     
-    // Limpieza tras asignar
+    // Cerramos el acordeón de ese producto y limpiamos búsqueda
+    setExpandedIndices(prev => prev.filter(i => i !== productIndex));
     limpiarBusqueda();
   };
 
@@ -84,8 +85,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     if (!manualProd.name) return;
     const p = parseFloat(manualProd.price) || 0;
     const newProduct = { 
-      nombre_ticket: manualProd.name.toUpperCase(), 
-      nombre_base: manualProd.name, 
+      nombre_ticket: manualProd.name.toUpperCase().trim(), 
+      nombre_base: manualProd.name.toUpperCase().trim(), 
       cantidad: manualProd.qty, 
       subtotal: p * manualProd.qty 
     };
@@ -109,6 +110,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       </header>
 
       <div className="flex-1 overflow-y-auto space-y-5 pr-1 no-scrollbar pb-20">
+        {/* Cabecera del Gasto */}
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-12 relative">
             <label className="text-small-caps ml-1 mb-1.5 block opacity-60">{txt('review.label_shop')}</label>
@@ -127,6 +129,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
         </div>
 
+        {/* Listado de Productos */}
         <section className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <h3 className="text-small-caps">{txt('review.products_title')}</h3>
@@ -176,17 +179,19 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-brand-primary/10 animate-in slide-in-from-top-2 space-y-3">
                       <p className="text-[8px] font-black uppercase text-brand-primary opacity-60">{txt('review.link_list')}</p>
+                      
                       <div className="flex flex-wrap gap-1.5">
+                        {/* Sugerencias de la Lista actual */}
                         {smartSuggestions.map((item, lIdx) => (
                           <button key={lIdx} onClick={() => setAlias(i, item.name)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase ${item.matchScore > 0 ? 'bg-brand-primary text-white' : 'bg-white/5 text-brand-muted border border-white/5'}`}>
                             {item.name}
                           </button>
                         ))}
                         
+                        {/* Buscador de Alias (Catálogo Maestro) */}
                         {showExtraSearchIdx !== i ? (
                             <button 
                                 onClick={() => {
-                                    // CORRECCIÓN: Al abrir el buscador de un producto, limpiamos el rastro anterior
                                     setExtraSearchTerm("");
                                     setExtraSuggestions([]);
                                     setShowExtraSearchIdx(i);
@@ -198,12 +203,25 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         ) : (
                             <div className="w-full space-y-2 animate-in zoom-in-95">
                                 <input autoFocus value={extraSearchTerm} onChange={(e) => handleExtraSearch(e.target.value)} placeholder={txt('review.search_placeholder')} className="w-full bg-brand-bg/50 border border-brand-primary/30 p-2 rounded-xl text-[10px] uppercase font-bold outline-none" />
-                                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto no-scrollbar">
+                                
+                                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto no-scrollbar">
+                                    {/* Resultados de la Base de Datos */}
                                     {extraSuggestions.map((s, sIdx) => (
-                                        <button key={sIdx} onClick={() => setAlias(i, s.nombre_base)} className="px-2 py-1 bg-brand-primary/20 rounded-lg text-[8px] font-black text-white uppercase">
+                                        <button key={sIdx} onClick={() => setAlias(i, s.nombre_base)} className="px-2 py-1 bg-brand-primary/20 rounded-lg text-[8px] font-black text-white uppercase border border-brand-primary/20">
                                             {s.nombre_base}
                                         </button>
                                     ))}
+
+                                    {/* BOTÓN MAGICO: Crear nuevo si no existe */}
+                                    {extraSearchTerm.length > 2 && (
+                                        <button 
+                                            onClick={() => setAlias(i, extraSearchTerm)}
+                                            className="w-full mt-1 p-2 bg-brand-accent/10 border border-brand-accent/30 rounded-xl flex items-center justify-center gap-2 text-brand-accent animate-pulse"
+                                        >
+                                            <PlusCircle size={14} />
+                                            <span className="text-[9px] font-black uppercase">Crear nuevo: {extraSearchTerm}</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -217,6 +235,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </section>
       </div>
 
+      {/* Footer de Acciones */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-brand-bg via-brand-bg to-transparent">
         <div className="grid grid-cols-2 gap-3">
             <button onClick={onCancel} className="btn-secondary !bg-brand-danger/5 border-none text-brand-danger !lowercase !text-[10px] font-black">{txt('review.discard_btn')}</button>
