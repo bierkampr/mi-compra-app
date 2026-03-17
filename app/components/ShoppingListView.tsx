@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Plus, Camera, Trash2, ListTodo, CheckCircle2, X, Check, Search, Loader2, Eraser } from 'lucide-react';
-import { searchLocalProducts } from '../../lib/products';
+import { searchLocalProducts, saveManualAlias } from '../../lib/products';
 import { supabase } from '../../lib/supabase';
 
 interface ShoppingListViewProps {
@@ -22,8 +22,12 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
       setIsSearching(true);
       try {
         const res = await searchLocalProducts(val);
-        // Filtramos duplicados por nombre antes de mostrar
-        const uniqueRes = Array.from(new Map(res.map(item => [item.nombre_base.toUpperCase(), item])).values());
+        
+        // Reforzamos el ordenamiento por longitud: El más corto arriba (ej: "Tomate" antes que "Tomate Pera")
+        const sorted = [...res].sort((a, b) => a.nombre_base.length - b.nombre_base.length);
+        
+        // Filtramos duplicados visuales
+        const uniqueRes = Array.from(new Map(sorted.map(item => [item.nombre_base.toUpperCase(), item])).values());
         setSuggestions(uniqueRes);
       } catch (e) {
         console.error("Error searching products:", e);
@@ -39,7 +43,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     const val = (name || newItemName).trim();
     if (!val) return;
 
-    // 1. Actualización Local inmediata
+    // 1. Actualización en la base de datos local (Drive)
     const newItem = { name: val, checked: false, confirmed: false };
     const newDb = { 
       ...db, 
@@ -50,19 +54,26 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     setSuggestions([]);
     await updateAndSync(newDb);
 
-    // 2. Registro silencioso en Supabase para nutrir el diccionario global
+    // 2. Lógica de Blindaje en Supabase:
+    // Solo guardamos en el catálogo global si es un nombre que el usuario escribió 
+    // y no parece un "ruido" de ticket (nombres excesivamente largos o con códigos raros).
     try {
-        const { data: existing } = await supabase
-            .from('productos')
-            .select('id')
-            .eq('nombre_base', val)
-            .maybeSingle();
+        const esNombreLimpio = val.length < 30 && !/[0-9]{5,}/.test(val);
+        
+        if (esNombreLimpio) {
+            const { data: existing } = await supabase
+                .from('productos')
+                .select('id')
+                .eq('nombre_base', val)
+                .maybeSingle();
 
-        if (!existing) {
-            await supabase.from('productos').insert([{ nombre_base: val, categoria: 'otros' }]);
+            if (!existing) {
+                // Se guarda como producto maestro porque el usuario lo introdujo manualmente
+                await supabase.from('productos').insert([{ nombre_base: val, categoria: 'otros' }]);
+            }
         }
     } catch (e) {
-        console.warn("Sincronización con Supabase falló.");
+        console.warn("Error en registro silencioso de catálogo");
     }
   };
 
@@ -94,7 +105,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-20">
-      {/* BARRA DE BÚSQUEDA */}
+      {/* BARRA DE BÚSQUEDA ORDENADA POR LONGITUD */}
       <div className="relative group z-[100]">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">
           {isSearching ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <Search size={18} />}
@@ -104,13 +115,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           onChange={(e) => handleSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addToList()}
           placeholder={txt('list.placeholder')} 
-          className="input-premium pl-12 pr-14 !rounded-2xl shadow-xl" 
+          className="input-premium pl-12 pr-14 !rounded-2xl shadow-xl uppercase" 
         />
         <button onClick={() => addToList()} className="absolute right-2 top-2 p-2.5 bg-brand-primary rounded-xl text-white shadow-lg active:scale-90 transition-all">
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* SUGERENCIAS */}
+        {/* SUGERENCIAS: Tomate antes que Tomate Frito */}
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-[200] border-brand-primary/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 max-h-[300px] overflow-y-auto no-scrollbar">
             {suggestions.map((s, idx) => (
@@ -185,7 +196,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           ) : (
             <div className="py-12 text-center border-2 border-dashed border-white/[0.02] rounded-[2.5rem]">
                 <p className="text-[9px] font-black text-brand-muted uppercase tracking-[0.3em] opacity-20">
-                  {/* Aquí usamos una lógica de conteo o podrías añadir list.empty al JSON */}
                   {txt('home.no_records')}
                 </p>
             </div>
