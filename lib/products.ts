@@ -3,19 +3,23 @@ import { supabase } from "./supabase";
 
 /**
  * BUSCADOR PARA "MI LISTA"
- * Busca en el catálogo maestro y ordena por longitud del nombre (más cortos primero).
+ * Busca en el catálogo maestro forzando mayúsculas y ordena por longitud del nombre.
  */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
+  
+  // Estandarizamos la búsqueda a Mayúsculas
+  const upperQuery = query.toUpperCase().trim();
+
   try {
     const { data, error } = await supabase.from('productos')
       .select(`id, nombre_base`)
-      .ilike('nombre_base', `%${query}%`)
-      .limit(20); // Pedimos un poco más para poder ordenar bien en JS
+      .ilike('nombre_base', `%${upperQuery}%`)
+      .limit(30); // Pedimos margen para el ordenamiento manual
 
     if (error) throw error;
 
-    // ORDENAR POR LONGITUD: El plan de "Leche" antes que "Leche Desnatada"
+    // ORDENAMIENTO POR LONGITUD: Los más cortos primero para prioridad visual
     return (data || []).sort((a, b) => a.nombre_base.length - b.nombre_base.length);
   } catch (e) {
     console.error("Error en búsqueda de productos:", e);
@@ -25,14 +29,15 @@ export const searchLocalProducts = async (query: string) => {
 
 /**
  * BUSCADOR DE ALIAS (Diccionario Inteligente)
- * Mira si un texto sucio de ticket ya fue vinculado antes a un nombre limpio.
+ * Busca si un nombre sucio de ticket ya tiene un alias limpio asignado.
  */
 export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string | null> => {
   try {
+    const ticketUpper = nombreTicket.toUpperCase().trim();
     const { data, error } = await supabase
       .from('producto_alias')
       .select('productos(nombre_base)')
-      .eq('nombre_ticket', nombreTicket.toUpperCase().trim())
+      .eq('nombre_ticket', ticketUpper)
       .maybeSingle();
     
     if (error) return null;
@@ -45,39 +50,43 @@ export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string
 
 /**
  * REGISTRO DE APRENDIZAJE (Vínculo Ticket -> Lista)
- * BLINDAJE: Solo crea productos nuevos si el alias es distinto al nombre del ticket.
+ * BLINDAJE: Evita que nombres idénticos al ticket (sucios) entren al catálogo maestro.
+ * FUSIÓN: Busca por nombre existente antes de crear uno nuevo.
  */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
+    // REGLA DE ORO: Todo a MAYÚSCULAS y LIMPIO
     const ticketUpper = nombreTicket.toUpperCase().trim();
-    const baseLimpia = nombreBase.trim();
+    const baseUpper = nombreBase.toUpperCase().trim();
     
-    if (!ticketUpper || !baseLimpia) return;
+    if (!ticketUpper || !baseUpper) return;
     
-    // REGLA DE ORO: Si el nombre base es igual al del ticket, es "nombre sucio".
-    // No queremos que este nombre sucio cree un producto nuevo en el catálogo maestro.
-    const esNombreSucio = ticketUpper === baseLimpia.toUpperCase();
+    // Si el nombre base es igual al del ticket, es "ruido de supermercado".
+    // No permitimos que esto ensucie la tabla maestra de 'productos'.
+    if (ticketUpper === baseUpper) {
+       console.log("Blindaje activado: Ignorando nombre sucio para el catálogo maestro.");
+       return;
+    }
 
-    // 1. Buscamos si el nombre base ya existe en el catálogo limpio
+    // 1. Intentar buscar el producto por NOMBRE (Fusión automática para evitar duplicados)
     let { data: prod } = await supabase
       .from('productos')
       .select('id')
-      .eq('nombre_base', baseLimpia)
+      .eq('nombre_base', baseUpper)
       .maybeSingle();
 
-    // 2. Si no existe y NO ES SUCIO, lo creamos como nuevo producto maestro
-    if (!prod && !esNombreSucio) {
+    // 2. Si el producto no existe en el catálogo maestro, lo creamos (siempre en Mayúsculas)
+    if (!prod) {
       const { data: newP, error: errorInsert } = await supabase
         .from('productos')
-        .insert([{ nombre_base: baseLimpia, categoria: 'otros' }])
+        .insert([{ nombre_base: baseUpper, categoria: 'OTROS' }])
         .select()
         .single();
       
       if (!errorInsert) prod = newP;
     }
 
-    // 3. Si tenemos un producto maestro (viejo o recién creado), guardamos el alias
-    // Esto nutre el diccionario para que la IA aprenda sin ensuciar la lista de "Mi Compra"
+    // 3. Vincular el alias en la tabla de aprendizaje (Diccionario Inteligente)
     if (prod) {
       await supabase.from('producto_alias').upsert({ 
         producto_id: prod.id, 
@@ -91,35 +100,37 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
 
 /**
  * SINCRONIZACIÓN POST-COMPRA
- * Actualiza alias y precios. Solo si hay un producto maestro vinculado.
+ * Procesa productos detectados por la IA para actualizar el diccionario global.
  */
 export const syncProductWithSupabase = async (itemIA: any, comercio: string) => {
   try {
-    // Intentamos guardar el alias siguiendo las reglas de blindaje
+    // Forzamos la limpieza y mayúsculas delegando en saveManualAlias
     await saveManualAlias(itemIA.nombre_ticket, itemIA.nombre_base);
     
-    // Buscamos el ID del producto (solo si existe en el catálogo limpio)
+    const baseUpper = itemIA.nombre_base.toUpperCase().trim();
+
+    // Buscamos el ID (solo si superó el blindaje anterior)
     const { data: prod } = await supabase
       .from('productos')
       .select('id')
-      .eq('nombre_base', itemIA.nombre_base)
+      .eq('nombre_base', baseUpper)
       .maybeSingle();
 
     if (prod) {
       const subtotal = Number(itemIA.subtotal) || 0;
       const cantidad = Number(itemIA.cantidad) || 1;
       
-      // Guardamos histórico de precios solo para productos limpios
+      // Actualizamos el histórico de precios (Mayúsculas)
       await supabase.from('producto_detalles').upsert({
         producto_id: prod.id,
-        marca: 'Genérico',
-        tamano: 'Único',
+        marca: 'GENERICO',
+        tamano: 'UNICO',
         ultimo_precio: subtotal / cantidad,
-        ultimo_comercio: comercio,
+        ultimo_comercio: comercio.toUpperCase().trim(),
         fecha_actualizacion: new Date().toISOString()
       }, { onConflict: 'producto_id, tamano' });
     }
   } catch (e) {
-    console.error("Error en syncProductWithSupabase:", e);
+    console.error("Error en sincronización silenciosa:", e);
   }
 };

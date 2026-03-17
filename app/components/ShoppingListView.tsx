@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Plus, Camera, Trash2, ListTodo, CheckCircle2, X, Check, Search, Loader2, Eraser } from 'lucide-react';
-import { searchLocalProducts, saveManualAlias } from '../../lib/products';
+import { searchLocalProducts } from '../../lib/products';
 import { supabase } from '../../lib/supabase';
 
 interface ShoppingListViewProps {
@@ -16,18 +16,24 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  /**
+   * Maneja la búsqueda dinámica con ordenamiento por longitud de caracteres.
+   */
   const handleSearch = async (val: string) => {
-    setNewItemName(val);
+    // Forzamos visualmente la mayúscula mientras escribe
+    const upperVal = val.toUpperCase();
+    setNewItemName(upperVal);
+
     if (val.length > 1) {
       setIsSearching(true);
       try {
-        const res = await searchLocalProducts(val);
+        const res = await searchLocalProducts(upperVal);
         
-        // Reforzamos el ordenamiento por longitud: El más corto arriba (ej: "Tomate" antes que "Tomate Pera")
+        // Reforzamos el ordenamiento por longitud para asegurar que el más corto esté arriba
         const sorted = [...res].sort((a, b) => a.nombre_base.length - b.nombre_base.length);
         
-        // Filtramos duplicados visuales
-        const uniqueRes = Array.from(new Map(sorted.map(item => [item.nombre_base.toUpperCase(), item])).values());
+        // Filtramos duplicados visuales en el dropdown
+        const uniqueRes = Array.from(new Map(sorted.map(item => [item.nombre_base, item])).values());
         setSuggestions(uniqueRes);
       } catch (e) {
         console.error("Error searching products:", e);
@@ -39,11 +45,14 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     }
   };
 
+  /**
+   * Añade un ítem a la lista local (Mayúsculas) e intenta registrarlo en el catálogo si es "limpio".
+   */
   const addToList = async (name?: string) => {
-    const val = (name || newItemName).trim();
+    const val = (name || newItemName).toUpperCase().trim();
     if (!val) return;
 
-    // 1. Actualización en la base de datos local (Drive)
+    // 1. Actualización Local inmediata (Google Drive)
     const newItem = { name: val, checked: false, confirmed: false };
     const newDb = { 
       ...db, 
@@ -54,11 +63,10 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     setSuggestions([]);
     await updateAndSync(newDb);
 
-    // 2. Lógica de Blindaje en Supabase:
-    // Solo guardamos en el catálogo global si es un nombre que el usuario escribió 
-    // y no parece un "ruido" de ticket (nombres excesivamente largos o con códigos raros).
+    // 2. Registro silencioso en Supabase con política de blindaje
     try {
-        const esNombreLimpio = val.length < 30 && !/[0-9]{5,}/.test(val);
+        // Criterio de "Nombre Limpio": No demasiado largo y sin secuencias numéricas extrañas
+        const esNombreLimpio = val.length < 30 && !/[0-9]{3,}/.test(val);
         
         if (esNombreLimpio) {
             const { data: existing } = await supabase
@@ -68,12 +76,15 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                 .maybeSingle();
 
             if (!existing) {
-                // Se guarda como producto maestro porque el usuario lo introdujo manualmente
-                await supabase.from('productos').insert([{ nombre_base: val, categoria: 'otros' }]);
+                // Lo guardamos como producto maestro ya que proviene de escritura manual del usuario
+                await supabase.from('productos').insert([{ 
+                    nombre_base: val, 
+                    categoria: 'OTROS' 
+                }]);
             }
         }
     } catch (e) {
-        console.warn("Error en registro silencioso de catálogo");
+        console.warn("Sincronización silenciosa con Supabase falló.");
     }
   };
 
@@ -105,7 +116,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-20">
-      {/* BARRA DE BÚSQUEDA ORDENADA POR LONGITUD */}
+      {/* BARRA DE BÚSQUEDA (MAYÚSCULAS) */}
       <div className="relative group z-[100]">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">
           {isSearching ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <Search size={18} />}
@@ -121,7 +132,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* SUGERENCIAS: Tomate antes que Tomate Frito */}
+        {/* CONTENEDOR DE SUGERENCIAS (Ordenado por longitud) */}
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-[200] border-brand-primary/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 max-h-[300px] overflow-y-auto no-scrollbar">
             {suggestions.map((s, idx) => (

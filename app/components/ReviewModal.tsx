@@ -28,7 +28,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isSearchingExtra, setIsSearchingExtra] = useState(false);
   const [showExtraSearchIdx, setShowExtraSearchIdx] = useState<number | null>(null);
 
-  // Efecto para agrupar productos y auto-expandir aquellos que no tienen alias (nombres sucios)
+  // Agrupar productos al inicio
   useEffect(() => {
     if (pendingGasto?.productos && !pendingGasto._isGrouped) {
       const grouped = groupRepeatedProducts(pendingGasto.productos);
@@ -36,17 +36,23 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       
       const autoExpand: number[] = [];
       grouped.forEach((p: any, i: number) => {
-        // Si el nombre base es igual al del ticket, marcamos para expandir (invita a limpiar el nombre)
         if (p.nombre_base === p.nombre_ticket) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
     }
   }, [pendingGasto, setPendingGasto]);
 
+  // FUNCIÓN CORREGIDA: Limpia todo al abrir/cerrar un producto
   const toggleExpand = (idx: number) => {
     setExpandedIndices(prev => 
       prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
     );
+    // Limpieza de estados de búsqueda
+    limpiarBusqueda();
+  };
+
+  // NUEVA FUNCIÓN: Centraliza la limpieza para evitar rastro de texto previo
+  const limpiarBusqueda = () => {
     setShowExtraSearchIdx(null);
     setExtraSearchTerm("");
     setExtraSuggestions([]);
@@ -57,7 +63,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     if (val.length > 1) {
       setIsSearchingExtra(true);
       const res = await searchLocalProducts(val);
-      // Ya vienen ordenados por longitud desde lib/products.ts
       setExtraSuggestions(res);
       setIsSearchingExtra(false);
     } else {
@@ -70,7 +75,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     newProds[productIndex].nombre_base = listName;
     setPendingGasto({ ...pendingGasto, productos: newProds });
     setExpandedIndices(prev => prev.filter(i => i !== productIndex));
-    setShowExtraSearchIdx(null);
+    
+    // Limpieza tras asignar
+    limpiarBusqueda();
   };
 
   const addManualItem = () => {
@@ -146,8 +153,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 .sort((a, b) => b.matchScore - a.matchScore);
 
               const isExpanded = expandedIndices.includes(i);
-              
-              // REGLA VISUAL: Un producto tiene alias si el nombre base es distinto al del ticket
               const hasCleanAlias = p.nombre_base.toUpperCase() !== p.nombre_ticket.toUpperCase();
 
               return (
@@ -179,7 +184,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         ))}
                         
                         {showExtraSearchIdx !== i ? (
-                            <button onClick={() => setShowExtraSearchIdx(i)} className="px-3 py-1.5 bg-brand-secondary/40 rounded-lg text-[9px] font-black text-brand-muted flex items-center gap-1">
+                            <button 
+                                onClick={() => {
+                                    // CORRECCIÓN: Al abrir el buscador de un producto, limpiamos el rastro anterior
+                                    setExtraSearchTerm("");
+                                    setExtraSuggestions([]);
+                                    setShowExtraSearchIdx(i);
+                                }} 
+                                className="px-3 py-1.5 bg-brand-secondary/40 rounded-lg text-[9px] font-black text-brand-muted flex items-center gap-1"
+                            >
                                 <Search size={10} /> {txt('review.other_btn')}
                             </button>
                         ) : (
