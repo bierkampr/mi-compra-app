@@ -17,7 +17,6 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       throw new Error("La llave de API de Mistral no está configurada.");
     }
 
-    // El modo manual no requiere procesamiento de IA
     if (mode === 'manual') {
       return { 
         comercio: "INGRESO MANUAL", 
@@ -29,7 +28,6 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
 
     const url = "https://api.mistral.ai/v1/chat/completions";
 
-    // Preparamos el contenido multimedia siguiendo el esquema oficial de Mistral
     const imageContent = base64Images.map(img => ({
       type: "image_url",
       image_url: { url: img }
@@ -59,10 +57,11 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       keepalive: false 
     });
 
-    // --- MANEJO DE ERROR 429 (RATE LIMIT) CON REINTENTO ---
+    // --- MANEJO DE ERROR 429 (RATE LIMIT) CON REINTENTO MÁS LARGO ---
     if (response.status === 429 && attempt < 2) {
-      const waitTime = (attempt + 1) * 3000; // 3s, luego 6s
-      console.warn(`Error 429 detectado. Reintentando en ${waitTime/1000}s... (Intento ${attempt + 1})`);
+      // Esperamos 5s en el primer intento y 10s en el segundo
+      const waitTime = attempt === 0 ? 5000 : 10000;
+      console.warn(`Error 429: Servidor saturado. Reintentando en ${waitTime/1000}s...`);
       await sleep(waitTime);
       return analyzeReceipt(base64Images, mode, customPrompt, attempt + 1);
     }
@@ -72,12 +71,12 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       try {
         const errorJson = await response.json();
         if (response.status === 429) {
-          errorMessage = "Límite de velocidad excedido (429). Por favor, espera un momento antes de reintentar.";
+          errorMessage = "Límite de tokens de visión excedido. Intenta con menos fotos o fotos más cercanas.";
         } else {
           errorMessage = errorJson.error?.message || errorMessage;
         }
       } catch (e) {
-        errorMessage = "Error de conexión con la IA. Verifica tu internet.";
+        errorMessage = "Error de conexión con la IA.";
       }
       throw new Error(errorMessage);
     }
@@ -85,14 +84,12 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
     const data = await response.json();
 
     if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-      throw new Error("La IA devolvió una respuesta vacía o incompleta.");
+      throw new Error("La IA devolvió una respuesta vacía.");
     }
 
     const result = JSON.parse(data.choices[0].message.content);
 
-    // --- LÓGICA DE LIMPIEZA DE COMERCIO ---
     let finalComercio = "SIN NOMBRE";
-    
     if (result.comercio) {
       if (typeof result.comercio === 'string' && result.comercio.trim() !== "") {
         finalComercio = result.comercio;
@@ -115,6 +112,6 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
     };
   } catch (error: any) {
     console.error("DEBUG IA ERROR:", error);
-    throw new Error(error.message || "Error desconocido al procesar el ticket.");
+    throw new Error(error.message || "Error al procesar el ticket.");
   }
 };
