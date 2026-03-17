@@ -16,11 +16,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  /**
-   * Maneja la búsqueda dinámica con ordenamiento por longitud de caracteres.
-   */
   const handleSearch = async (val: string) => {
-    // Forzamos visualmente la mayúscula mientras escribe
     const upperVal = val.toUpperCase();
     setNewItemName(upperVal);
 
@@ -29,11 +25,15 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
       try {
         const res = await searchLocalProducts(upperVal);
         
-        // Reforzamos el ordenamiento por longitud para asegurar que el más corto esté arriba
+        // Orden por longitud (más corto arriba)
         const sorted = [...res].sort((a, b) => a.nombre_base.length - b.nombre_base.length);
         
-        // Filtramos duplicados visuales en el dropdown
-        const uniqueRes = Array.from(new Map(sorted.map(item => [item.nombre_base, item])).values());
+        // Unificar duplicados visuales en el dropdown (por si acaso quedara alguno)
+        const uniqueRes = Array.from(new Map(sorted.map(item => {
+            const fuzzyKey = item.nombre_base.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N");
+            return [fuzzyKey, item];
+        })).values());
+        
         setSuggestions(uniqueRes);
       } catch (e) {
         console.error("Error searching products:", e);
@@ -45,14 +45,11 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     }
   };
 
-  /**
-   * Añade un ítem a la lista local (Mayúsculas) e intenta registrarlo en el catálogo si es "limpio".
-   */
   const addToList = async (name?: string) => {
     const val = (name || newItemName).toUpperCase().trim();
     if (!val) return;
 
-    // 1. Actualización Local inmediata (Google Drive)
+    // 1. Local Update
     const newItem = { name: val, checked: false, confirmed: false };
     const newDb = { 
       ...db, 
@@ -63,28 +60,27 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     setSuggestions([]);
     await updateAndSync(newDb);
 
-    // 2. Registro silencioso en Supabase con política de blindaje
+    // 2. Registro silencioso con control de acentos
     try {
-        // Criterio de "Nombre Limpio": No demasiado largo y sin secuencias numéricas extrañas
         const esNombreLimpio = val.length < 30 && !/[0-9]{3,}/.test(val);
         
         if (esNombreLimpio) {
-            const { data: existing } = await supabase
-                .from('productos')
-                .select('id')
-                .eq('nombre_base', val)
-                .maybeSingle();
+            const fuzzyVal = val.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N");
+            
+            // Traemos todos para comparar fuzzy en JS (más fiable que SQL unaccent)
+            const { data: existentes } = await supabase.from('productos').select('id, nombre_base');
+            
+            const existeFuzzy = existentes?.some(p => {
+                const pFuzzy = p.nombre_base.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N");
+                return pFuzzy === fuzzyVal;
+            });
 
-            if (!existing) {
-                // Lo guardamos como producto maestro ya que proviene de escritura manual del usuario
-                await supabase.from('productos').insert([{ 
-                    nombre_base: val, 
-                    categoria: 'OTROS' 
-                }]);
+            if (!existeFuzzy) {
+                await supabase.from('productos').insert([{ nombre_base: val, categoria: 'OTROS' }]);
             }
         }
     } catch (e) {
-        console.warn("Sincronización silenciosa con Supabase falló.");
+        console.warn("Sincronización silenciosa falló.");
     }
   };
 
@@ -116,7 +112,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-4 duration-500 pb-20">
-      {/* BARRA DE BÚSQUEDA (MAYÚSCULAS) */}
       <div className="relative group z-[100]">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">
           {isSearching ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <Search size={18} />}
@@ -132,7 +127,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           <Plus size={20} strokeWidth={3}/>
         </button>
 
-        {/* CONTENEDOR DE SUGERENCIAS (Ordenado por longitud) */}
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 card-premium !p-1.5 z-[200] border-brand-primary/30 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 max-h-[300px] overflow-y-auto no-scrollbar">
             {suggestions.map((s, idx) => (
@@ -149,7 +143,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         )}
       </div>
 
-      {/* ACCIONES RÁPIDAS */}
       {db.lista.length > 0 && (
         <div className="flex gap-2.5">
           <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-[2.5] py-4 !text-[10px] tracking-widest gap-2 shadow-none">
@@ -169,7 +162,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         </div>
       )}
 
-      {/* LISTA PENDIENTES */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <ListTodo size={14} className="text-brand-primary" />
@@ -214,7 +206,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         </div>
       </section>
 
-      {/* LISTA COMPRADOS */}
       {boughtItems.length > 0 && (
         <section className="pt-6 border-t border-white/5">
           <div className="flex items-center gap-2 px-1 mb-4">

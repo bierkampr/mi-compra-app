@@ -2,16 +2,27 @@
 import { supabase } from "./supabase";
 
 /**
+ * Normaliza un texto para comparaciones "Fuzzy" (quita acentos y Ñ)
+ */
+const toFuzzy = (txt: string) => {
+  return txt.toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Quita acentos
+    .replace(/Ñ/g, "N")              // Trata Ñ como N para búsqueda
+    .trim();
+};
+
+/**
  * BUSCADOR PARA "MI LISTA"
- * Es tolerante: busca por coincidencia exacta y también sustituyendo Ñ por N.
- * Ordena por longitud (más corto primero).
+ * Es ultra-tolerante: busca ignorando acentos y Ñ.
  */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
   const upperQuery = query.toUpperCase().trim();
-  const fuzzyQuery = upperQuery.replace(/Ñ/g, 'N');
+  const fuzzyQuery = toFuzzy(upperQuery);
 
   try {
+    // Buscamos coincidencias que contengan la palabra base sin acentos
     const { data, error } = await supabase.from('productos')
       .select(`id, nombre_base`)
       .or(`nombre_base.ilike.%${upperQuery}%, nombre_base.ilike.%${fuzzyQuery}%`)
@@ -19,7 +30,7 @@ export const searchLocalProducts = async (query: string) => {
 
     if (error) throw error;
 
-    // Ordenamiento por longitud: "PIÑA" antes que "PIÑA EN ALMIBAR"
+    // Ordenamos por longitud: "PAN" antes que "PAN DE MOLDE"
     return (data || []).sort((a, b) => a.nombre_base.length - b.nombre_base.length);
   } catch (e) {
     console.error("Error en búsqueda:", e);
@@ -48,9 +59,7 @@ export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string
 };
 
 /**
- * REGISTRO DE APRENDIZAJE Y FUSIÓN Ñ/N
- * Si el nombre no existe (ni con Ñ ni con N), lo crea. 
- * Si existe, vincula el nombre del ticket a ese ID existente.
+ * REGISTRO DE APRENDIZAJE Y FUSIÓN TOTAL (Acentos, Ñ, Mayúsculas)
  */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
@@ -59,26 +68,20 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
     
     if (!ticketUpper || !baseUpper) return;
     
-    // Blindaje: si el nombre base es igual al del ticket, es un nombre sucio, no lo metemos al catálogo
+    // Blindaje contra nombres sucios de ticket
     if (ticketUpper === baseUpper) return;
 
-    // Clave para detectar duplicados de Ñ/N
-    const fuzzyBase = baseUpper.replace(/Ñ/g, 'N');
+    const fuzzyBase = toFuzzy(baseUpper);
 
-    // 1. Buscamos si ya existe el producto (exacto o fuzzy)
-    let { data: productosExistentes } = await supabase
+    // 1. Buscamos si ya existe el producto (considerando acentos y Ñ)
+    let { data: existentes } = await supabase
       .from('productos')
-      .select('id, nombre_base')
-      .or(`nombre_base.eq.${baseUpper}, nombre_base.ilike.${fuzzyBase}`);
+      .select('id, nombre_base');
 
-    let prod = productosExistentes?.[0];
+    // Filtramos en JS para un control total de la comparación fuzzy
+    let prod = existentes?.find(p => toFuzzy(p.nombre_base) === fuzzyBase);
 
-    // Si existen versiones con y sin Ñ, preferimos la que tiene Ñ
-    if (productosExistentes && productosExistentes.length > 1) {
-        prod = productosExistentes.find(p => p.nombre_base.includes('Ñ')) || productosExistentes[0];
-    }
-
-    // 2. Si realmente es nuevo (no hay ni exacto ni fuzzy), lo creamos
+    // 2. Si realmente es nuevo, lo creamos
     if (!prod) {
       const { data: newP, error: errorInsert } = await supabase
         .from('productos')
@@ -109,18 +112,15 @@ export const syncProductWithSupabase = async (itemIA: any, comercio: string) => 
     const baseUpper = itemIA.nombre_base.toUpperCase().trim();
     const ticketUpper = itemIA.nombre_ticket.toUpperCase().trim();
 
-    // Registramos alias y maestro
     await saveManualAlias(ticketUpper, baseUpper);
     
-    const fuzzyBase = baseUpper.replace(/Ñ/g, 'N');
+    const fuzzyBase = toFuzzy(baseUpper);
 
-    // Recuperamos el ID para guardar el detalle de precio
-    const { data: productos } = await supabase
+    const { data: existentes } = await supabase
       .from('productos')
-      .select('id')
-      .or(`nombre_base.eq.${baseUpper}, nombre_base.ilike.${fuzzyBase}`);
+      .select('id, nombre_base');
 
-    const prod = productos?.[0];
+    const prod = existentes?.find(p => toFuzzy(p.nombre_base) === fuzzyBase);
 
     if (prod) {
       const subtotal = Number(itemIA.subtotal) || 0;
