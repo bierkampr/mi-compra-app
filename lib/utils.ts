@@ -59,26 +59,24 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * COMPRESIÓN ULTRA-EXTREMA PARA VISION TOKENS
- * El error 429 se debe al área total de píxeles (Tokens).
- * Reducimos el lado largo a un máximo estricto según número de fotos.
+ * COMPRESIÓN DE ALTA LEGIBILIDAD PARA IA
+ * Ajustamos los límites para no perder nitidez en los caracteres.
  * 
- * 1 foto: Máx 700px / Calidad 0.4
- * 2 fotos: Máx 500px / Calidad 0.3
- * 3 fotos: Máx 400px / Calidad 0.2
+ * 1 foto: Máx 1000px / Calidad 0.7
+ * 2 fotos: Máx 850px / Calidad 0.6
+ * 3 fotos: Máx 750px / Calidad 0.5
  */
 export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
   return new Promise((resolve) => {
-    // Definimos el límite del lado más largo (sea ancho o alto)
-    let maxSide = 700;
-    let quality = 0.4;
+    let maxSide = 1000;
+    let quality = 0.7;
 
     if (photoCount === 2) {
-      maxSide = 500;
-      quality = 0.3;
+      maxSide = 850;
+      quality = 0.6;
     } else if (photoCount >= 3) {
-      maxSide = 400;
-      quality = 0.2;
+      maxSide = 750;
+      quality = 0.5;
     }
 
     const img = new Image();
@@ -88,7 +86,6 @@ export const compressImage = (base64Str: string, photoCount: number = 1): Promis
       let width = img.width;
       let height = img.height;
 
-      // Calculamos el escalado basado en el lado más largo
       if (width > height) {
         if (width > maxSide) {
           height *= maxSide / width;
@@ -111,15 +108,24 @@ export const compressImage = (base64Str: string, photoCount: number = 1): Promis
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Filtro de contraste agresivo para mantener legibilidad a baja resolución
+      // FILTRO DE MEJORA DE TEXTO (Grises de alto contraste)
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
+        // Conversión a escala de grises ponderada
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        // Forzamos blanco y negro puro casi al 100% para reducir peso y mejorar OCR
-        let contrastValue = gray < 120 ? 0 : 255; 
-        data[i] = data[i+1] = data[i+2] = contrastValue;
+        
+        // Ajuste de curvas de contraste para resaltar tinta negra sobre papel blanco
+        // No es binarización pura para no pixelar las letras
+        let v = gray;
+        if (gray < 140) {
+            v = gray * 0.6; // Oscurecer más lo que ya es oscuro (tinta)
+        } else {
+            v = Math.min(255, gray * 1.2); // Aclarar más el fondo
+        }
+        
+        data[i] = data[i+1] = data[i+2] = v;
       }
 
       ctx.putImageData(imageData, 0, 0);

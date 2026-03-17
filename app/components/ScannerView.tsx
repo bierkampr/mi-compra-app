@@ -101,7 +101,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE: CAPTURA CON RECORTE INTELIGENTE (CROP) ---
+// --- SUB-COMPONENTE: CAPTURA CON RECORTE MATEMÁTICO EXACTO ---
 ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, setShowListDialog, showListDialog, onCancel, txt, activeTab }) => {
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
@@ -137,43 +137,51 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     }
   };
 
-  /**
-   * FUNCIÓN DE CAPTURA CON RECORTE (CROP)
-   * Captura solo el área que el usuario ve dentro del recuadro de la plantilla.
-   */
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       
-      // 1. Obtener dimensiones reales del video
       const vW = video.videoWidth;
       const vH = video.videoHeight;
 
-      // 2. Obtener dimensiones del contenedor en pantalla (CSS)
       const rect = video.getBoundingClientRect();
       const cssW = rect.width;
       const cssH = rect.height;
 
-      // 3. Definir el grosor del borde de la plantilla (definido en el CSS como 40px)
-      const borderSize = 40; 
+      // 1. Calcular el factor de escala de 'object-cover'
+      // El video se escala para cubrir el contenedor, manteniendo el ratio
+      const scale = Math.max(cssW / vW, cssH / vH);
 
-      // 4. Calcular el área de recorte proporcionalmente
-      // Calculamos cuánto representan los 40px de borde en la resolución real
-      const sx = (borderSize / cssW) * vW;
-      const sy = (borderSize / cssH) * vH;
-      const sWidth = vW - (sx * 2);
-      const sHeight = vH - (sy * 2);
+      // 2. Calcular dimensiones del video proyectado en el CSS
+      const renderedW = vW * scale;
+      const renderedH = vH * scale;
 
-      // 5. Configurar el canvas para el tamaño del recorte
+      // 3. Calcular el desplazamiento (centrado) del video respecto al contenedor
+      const offsetX = (renderedW - cssW) / 2;
+      const offsetY = (renderedH - cssH) / 2;
+
+      // 4. Definir el área del recuadro en coordenadas CSS
+      // El borde negro es de 40px en todos los lados
+      const borderSize = 40;
+      const cropX_css = borderSize;
+      const cropY_css = borderSize;
+      const cropW_css = cssW - (borderSize * 2);
+      const cropH_css = cssH - (borderSize * 2);
+
+      // 5. Traducir coordenadas CSS a píxeles reales del origen del video
+      const sx = (cropX_css + offsetX) / scale;
+      const sy = (cropY_css + offsetY) / scale;
+      const sWidth = cropW_css / scale;
+      const sHeight = cropH_css / scale;
+
       canvas.width = sWidth;
       canvas.height = sHeight;
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Dibujamos solo la porción central del video
         ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         setPreviewPhoto(dataUrl);
       }
     }
@@ -213,7 +221,6 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             
-            {/* PLANTILLA DE ENCUADRE (Borde de 40px) */}
             <div className="absolute inset-0 pointer-events-none border-[40px] border-black/60">
                 <div className="w-full h-full border-2 border-dashed border-brand-accent/40 rounded-3xl relative">
                     <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-accent/20 animate-pulse" />
