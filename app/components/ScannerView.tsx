@@ -1,15 +1,15 @@
 "use client";
 import React from 'react';
-import { Camera, ShoppingCart, Store, Edit3, X, Loader2, AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Camera, ShoppingCart, Store, Utensils, Pill, LayoutGrid, Edit3, X, Loader2, AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2 } from 'lucide-react';
 import { compressImage } from '../../lib/utils';
 
 interface ScannerViewProps {
-  setPurchaseMode: (mode: 'super' | 'mini' | 'manual' | null) => void;
+  setPurchaseMode: (mode: 'super' | 'mini' | 'dining' | 'health' | 'others' | 'manual' | null) => void;
   startAnalysis: (useList: boolean) => void; 
   txt: (key: string) => string;
 }
 
-// Definimos el tipo para soportar el sub-componente Capture con activeTab
+// Definimos el tipo para soportar el sub-componente Capture con todas sus props
 interface ScannerViewComponent extends React.FC<ScannerViewProps> {
   Capture: React.FC<any>;
 }
@@ -24,6 +24,7 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
         </p>
       </div>
 
+      {/* --- CATEGORÍA: SUPERMERCADO --- */}
       <button 
         onClick={() => setPurchaseMode('super')} 
         className="card-clickable w-full !p-6 flex items-center gap-6 group overflow-hidden relative"
@@ -33,15 +34,14 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
         </div>
         <div className="text-left">
           <h2 className="heading-2 !text-sm tracking-widest">{txt('scan.super')}</h2>
-          <p className="text-[9px] font-bold text-brand-muted uppercase mt-1">
-            {txt('scan.super_desc')}
-          </p>
+          <p className="text-[9px] font-bold text-brand-muted uppercase mt-1">Grandes superficies</p>
         </div>
         <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
             <ShoppingCart size={80} />
         </div>
       </button>
 
+      {/* --- CATEGORÍA: MINI MARKET --- */}
       <button 
         onClick={() => setPurchaseMode('mini')} 
         className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
@@ -51,27 +51,77 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
         </div>
         <div className="text-left">
           <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.mini')}</h2>
-          <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">
-            {txt('scan.mini_desc')}
-          </p>
+          <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Tiendas de barrio</p>
+        </div>
+        <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
+            <Store size={40} />
         </div>
       </button>
 
+      {/* --- CATEGORÍA: RESTAURANTE / BAR --- */}
+      <button 
+        onClick={() => setPurchaseMode('dining')} 
+        className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
+      >
+        <div className="w-12 h-12 bg-orange-400/10 rounded-xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform">
+          <Utensils size={24}/>
+        </div>
+        <div className="text-left">
+          <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.dining')}</h2>
+          <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Consumo fuera de casa</p>
+        </div>
+        <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
+            <Utensils size={40} />
+        </div>
+      </button>
+
+      {/* --- CATEGORÍA: FARMACIA / SALUD --- */}
+      <button 
+        onClick={() => setPurchaseMode('health')} 
+        className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
+      >
+        <div className="w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+          <Pill size={24}/>
+        </div>
+        <div className="text-left">
+          <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.health')}</h2>
+          <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Gastos médicos</p>
+        </div>
+        <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
+            <Pill size={40} />
+        </div>
+      </button>
+
+      {/* --- CATEGORÍA: OTROS --- */}
+      <button 
+        onClick={() => setPurchaseMode('others')} 
+        className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
+      >
+        <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform">
+          <LayoutGrid size={24}/>
+        </div>
+        <div className="text-left">
+          <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.others')}</h2>
+          <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Varios / No clasificado</p>
+        </div>
+      </button>
+
+      {/* --- OPCIÓN: MANUAL --- */}
       <button 
         onClick={() => {
             setPurchaseMode('manual');
-            startAnalysis(false);
+            startAnalysis(false); 
         }} 
-        className="btn-secondary !py-5 !bg-transparent border-dashed border-white/10 text-brand-muted hover:border-brand-primary hover:text-white"
+        className="btn-secondary !py-5 !bg-transparent border-dashed border-white/10 text-brand-muted hover:border-brand-primary hover:text-white transition-all active:scale-95"
       >
         <Edit3 size={18}/> 
-        <span className="text-[10px] tracking-[0.2em]">{txt('scan.manual')}</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em]">{txt('scan.manual')}</span>
       </button>
     </div>
   );
 };
 
-// --- SUB-COMPONENTE DE CAPTURA DE FOTOS ---
+// --- SUB-COMPONENTE: CAPTURA DE FOTOS ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt, activeTab 
@@ -89,15 +139,17 @@ ScannerView.Capture = ({
     });
   };
 
-  // NUEVA LÓGICA: Determina si preguntar o vincular automáticamente
+  /**
+   * LÓGICA DE PROCESAMIENTO:
+   * Si venimos de la pestaña 'list', omitimos la pregunta y vinculamos directo.
+   * Si no, comprobamos si hay productos en la lista antes de preguntar.
+   */
   const handleProcessClick = () => {
-    // Si venimos de la sección de lista, vinculamos automáticamente
     if (activeTab === 'list') {
       startAnalysis(true);
     } else {
-      // Si estamos en la pestaña "Añadir" normal, comprobamos si hay lista
-      const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;
-      if (hasList) {
+      const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
+      if (hasListItems) {
         setShowListDialog(true);
       } else {
         startAnalysis(false);
@@ -118,15 +170,14 @@ ScannerView.Capture = ({
               <Sparkles size={20} />
           </div>
           <div>
-              <p className="text-[10px] font-black uppercase text-white tracking-widest">
-                {txt('scan.tip_title')}
-              </p>
+              <p className="text-[10px] font-black uppercase text-white tracking-widest">{txt('scan.tip_title')}</p>
               <p className="text-[8px] font-bold text-brand-muted uppercase leading-relaxed mt-0.5">
-                {txt('scan.tip_desc')}
+                  {txt('scan.tip_desc')}
               </p>
           </div>
       </div>
 
+      {/* Galería de vistas previas */}
       {tempPhotos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar px-1">
           {tempPhotos.map((p: string, i: number) => (
@@ -143,6 +194,7 @@ ScannerView.Capture = ({
         </div>
       )}
 
+      {/* Botones de acción de cámara */}
       <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
             <div className="w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-primary/20">
@@ -165,6 +217,7 @@ ScannerView.Capture = ({
           </label>
       </div>
 
+      {/* Procesar compra */}
       <div className="space-y-3 mt-4">
         <button 
           onClick={handleProcessClick} 
@@ -180,10 +233,11 @@ ScannerView.Capture = ({
         </button>
         
         <button onClick={onCancel} className="btn-secondary !bg-transparent border-none text-brand-danger !text-[10px] !lowercase opacity-60 font-black">
-            {txt('scan.cancel')}
+          {txt('scan.cancel')}
         </button>
       </div>
 
+      {/* Diálogo de vinculación (Solo si no vienes de lista) */}
       {showListDialog && (
         <div className="modal-overlay z-[2000] !p-6">
           <div className="card-premium w-full text-center space-y-6 !p-8 border-brand-primary/20 animate-in zoom-in-95 duration-300">
@@ -191,9 +245,7 @@ ScannerView.Capture = ({
               <AlertTriangle size={32} strokeWidth={2.5}/>
             </div>
             <div className="space-y-2">
-              <h2 className="heading-2 !text-sm tracking-widest">
-                {txt('modals.link_list_title')}
-              </h2>
+              <h2 className="heading-2 !text-sm tracking-widest">{txt('modals.link_list_title')}</h2>
               <p className="text-[10px] font-bold text-brand-muted uppercase leading-relaxed">
                 {txt('modals.link_list_desc')}
               </p>

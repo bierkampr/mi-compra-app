@@ -20,10 +20,11 @@
     "analysis": "Ver Análisis",
     "view_gastos": "Ver Gastos",
     "no_records": "Sin registros este mes",
-    "shop_breakdown": "Gasto por comercio"
+    "shop_breakdown": "Gasto por comercio",
+    "category_breakdown": "Gasto por categoría"
   },
   "list": {
-    "placeholder": "¿Qué necesitas comprar?",
+    "placeholder": "¿QUÉ NECESITAS COMPRAR?",
     "scan_btn": "Escanear Ticket",
     "clear_all": "Limpiar Todo",
     "clear_pending": "Limpiar",
@@ -32,12 +33,13 @@
   },
   "scan": {
     "title": "Cargar Ticket",
-    "subtitle": "Elige el tipo de compra",
+    "subtitle": "Selecciona el tipo de establecimiento",
     "super": "Supermercado",
-    "super_desc": "Grandes superficies",
-    "mini": "Mini Market",
-    "mini_desc": "Tiendas de barrio",
-    "manual": "Manual",
+    "mini": "Tienda / Mini",
+    "dining": "Bar / Resto",
+    "health": "Farmacia",
+    "others": "Otros / Varios",
+    "manual": "Ingreso Manual",
     "capture_title": "CARGAR TICKET",
     "tip_title": "Cerca es mejor",
     "tip_desc": "Si el ticket es largo, toma 2 o 3 fotos de cerca por partes. La IA las unirá.",
@@ -59,7 +61,7 @@
     "manual_ok": "Aceptar",
     "link_list": "Vincular con tu lista:",
     "other_btn": "+ OTRO",
-    "search_placeholder": "Buscar...",
+    "search_placeholder": "BUSCAR ALIAS...",
     "discard_btn": "descartar",
     "save_btn": "Guardar Compra"
   },

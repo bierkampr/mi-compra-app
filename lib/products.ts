@@ -2,19 +2,19 @@
 import { supabase } from "./supabase";
 
 /**
- * Normaliza un texto para comparaciones "Fuzzy" (quita acentos y Ñ)
+ * Normaliza un texto para comparaciones (quita acentos y Ñ)
  */
 const toFuzzy = (txt: string) => {
   return txt.toUpperCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Quita acentos
-    .replace(/Ñ/g, "N")              // Trata Ñ como N para búsqueda
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/Ñ/g, "N")
     .trim();
 };
 
 /**
  * BUSCADOR PARA "MI LISTA"
- * Es ultra-tolerante: busca ignorando acentos y Ñ.
+ * Busca ignorando acentos/Ñ y ordena por longitud (más corto primero).
  */
 export const searchLocalProducts = async (query: string) => {
   if (query.length < 2) return [];
@@ -22,7 +22,6 @@ export const searchLocalProducts = async (query: string) => {
   const fuzzyQuery = toFuzzy(upperQuery);
 
   try {
-    // Buscamos coincidencias que contengan la palabra base sin acentos
     const { data, error } = await supabase.from('productos')
       .select(`id, nombre_base`)
       .or(`nombre_base.ilike.%${upperQuery}%, nombre_base.ilike.%${fuzzyQuery}%`)
@@ -30,7 +29,7 @@ export const searchLocalProducts = async (query: string) => {
 
     if (error) throw error;
 
-    // Ordenamos por longitud: "PAN" antes que "PAN DE MOLDE"
+    // Ordenamos por longitud: "PIÑA" antes que "PIÑA NATURAL"
     return (data || []).sort((a, b) => a.nombre_base.length - b.nombre_base.length);
   } catch (e) {
     console.error("Error en búsqueda:", e);
@@ -59,7 +58,7 @@ export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string
 };
 
 /**
- * REGISTRO DE APRENDIZAJE Y FUSIÓN TOTAL (Acentos, Ñ, Mayúsculas)
+ * REGISTRO DE APRENDIZAJE Y FUSIÓN TOTAL
  */
 export const saveManualAlias = async (nombreTicket: string, nombreBase: string) => {
   try {
@@ -68,20 +67,16 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
     
     if (!ticketUpper || !baseUpper) return;
     
-    // Blindaje contra nombres sucios de ticket
+    // Blindaje contra nombres sucios
     if (ticketUpper === baseUpper) return;
 
     const fuzzyBase = toFuzzy(baseUpper);
 
-    // 1. Buscamos si ya existe el producto (considerando acentos y Ñ)
-    let { data: existentes } = await supabase
-      .from('productos')
-      .select('id, nombre_base');
-
-    // Filtramos en JS para un control total de la comparación fuzzy
+    // 1. Buscamos si ya existe (Fuzzy)
+    let { data: existentes } = await supabase.from('productos').select('id, nombre_base');
     let prod = existentes?.find(p => toFuzzy(p.nombre_base) === fuzzyBase);
 
-    // 2. Si realmente es nuevo, lo creamos
+    // 2. Si es nuevo, crear
     if (!prod) {
       const { data: newP, error: errorInsert } = await supabase
         .from('productos')
@@ -92,7 +87,7 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
       if (!errorInsert) prod = newP;
     }
 
-    // 3. Guardamos el alias apuntando al maestro
+    // 3. Vincular alias
     if (prod) {
       await supabase.from('producto_alias').upsert({ 
         producto_id: prod.id, 
@@ -115,11 +110,7 @@ export const syncProductWithSupabase = async (itemIA: any, comercio: string) => 
     await saveManualAlias(ticketUpper, baseUpper);
     
     const fuzzyBase = toFuzzy(baseUpper);
-
-    const { data: existentes } = await supabase
-      .from('productos')
-      .select('id, nombre_base');
-
+    const { data: existentes } = await supabase.from('productos').select('id, nombre_base');
     const prod = existentes?.find(p => toFuzzy(p.nombre_base) === fuzzyBase);
 
     if (prod) {
