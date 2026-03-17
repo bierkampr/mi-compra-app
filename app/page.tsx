@@ -142,13 +142,16 @@ export default function Home() {
             const updatedL = db.lista.map(li => {
                 if (!finalGasto.usedList) return li;
                 const matched = finalGasto.productos?.some((p: any) => 
-                    (p.nombre_base || "").toLowerCase() === li.name.toLowerCase()
+                    (p.nombre_base || "").toUpperCase() === li.name.toUpperCase()
                 );
                 return matched ? { ...li, confirmed: true, checked: true } : li;
             });
 
             const record = { ...finalGasto, photoIds: pIds, total: Number(finalGasto.total) || 0 };
-            const returnToList = finalGasto.usedList;
+            
+            // Decisión de retorno inteligente:
+            // Si veníamos de la pestaña lista o si se usó vinculación, volvemos a 'list'
+            const returnToList = finalGasto.usedList || activeTab === 'list';
 
             // Limpieza de campos temporales antes de guardar en Drive
             delete record.tempImages; 
@@ -246,7 +249,7 @@ export default function Home() {
                 )}
             </div>
 
-            {/* Modales de flujo de captura */}
+            {/* Modales de flujo de captura (VISTA DE CÁMARA/GALERÍA) */}
             {(purchaseMode === 'super' || purchaseMode === 'mini') && !pendingGasto && (
                 <div className="modal-content-full z-[1000] justify-center gap-10">
                     <ScannerView.Capture 
@@ -257,26 +260,27 @@ export default function Home() {
                         db={db} 
                         setShowListDialog={setShowListDialog} 
                         showListDialog={showListDialog} 
-                        onCancel={() => resetFlow('home')} 
-                        txt={txt} 
+                        onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
+                        txt={txt}
+                        activeTab={activeTab} // MEJORA: Pasamos la pestaña activa
                     />
                 </div>
             )}
 
-            {/* Modal de Revisión de IA */}
+            {/* Modal de Revisión de IA (PANTALLA DE EDICIÓN POST-ESCÁNER) */}
             {pendingGasto && (
                 <ReviewModal 
                     pendingGasto={pendingGasto} 
                     setPendingGasto={setPendingGasto} 
                     onSave={saveConfirmedGasto} 
-                    onCancel={() => resetFlow('home')} 
+                    onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
                     loading={loading} 
                     db={db} 
                     txt={txt} 
                 />
             )}
             
-            {/* Modal de Detalle de Gasto */}
+            {/* Modal de Detalle de Gasto (HISTORIAL) */}
             {selectedGasto && (
                 <DetailView 
                     gasto={selectedGasto} 

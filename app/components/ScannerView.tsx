@@ -9,7 +9,7 @@ interface ScannerViewProps {
   txt: (key: string) => string;
 }
 
-// Definimos el tipo para soportar el sub-componente Capture
+// Definimos el tipo para soportar el sub-componente Capture con activeTab
 interface ScannerViewComponent extends React.FC<ScannerViewProps> {
   Capture: React.FC<any>;
 }
@@ -24,7 +24,6 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
         </p>
       </div>
 
-      {/* Opción Supermercado */}
       <button 
         onClick={() => setPurchaseMode('super')} 
         className="card-clickable w-full !p-6 flex items-center gap-6 group overflow-hidden relative"
@@ -43,7 +42,6 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
         </div>
       </button>
 
-      {/* Opción Mini Market */}
       <button 
         onClick={() => setPurchaseMode('mini')} 
         className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
@@ -59,7 +57,6 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
         </div>
       </button>
 
-      {/* Opción Manual */}
       <button 
         onClick={() => {
             setPurchaseMode('manual');
@@ -77,7 +74,7 @@ const ScannerView: ScannerViewComponent = ({ setPurchaseMode, startAnalysis, txt
 // --- SUB-COMPONENTE DE CAPTURA DE FOTOS ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
-  setShowListDialog, showListDialog, onCancel, txt 
+  setShowListDialog, showListDialog, onCancel, txt, activeTab 
 }) => {
   
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,6 +89,22 @@ ScannerView.Capture = ({
     });
   };
 
+  // NUEVA LÓGICA: Determina si preguntar o vincular automáticamente
+  const handleProcessClick = () => {
+    // Si venimos de la sección de lista, vinculamos automáticamente
+    if (activeTab === 'list') {
+      startAnalysis(true);
+    } else {
+      // Si estamos en la pestaña "Añadir" normal, comprobamos si hay lista
+      const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;
+      if (hasList) {
+        setShowListDialog(true);
+      } else {
+        startAnalysis(false);
+      }
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-5 animate-in fade-in zoom-in-95 no-scrollbar">
       <div className="text-center">
@@ -100,7 +113,6 @@ ScannerView.Capture = ({
         </h2>
       </div>
 
-      {/* Tip de captura */}
       <div className="card-premium !p-4 bg-brand-primary/5 border-brand-primary/20 flex items-center gap-4">
           <div className="w-10 h-10 bg-brand-primary/20 rounded-full flex items-center justify-center text-brand-primary shrink-0">
               <Sparkles size={20} />
@@ -115,7 +127,6 @@ ScannerView.Capture = ({
           </div>
       </div>
 
-      {/* Preview de fotos tomadas */}
       {tempPhotos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar px-1">
           {tempPhotos.map((p: string, i: number) => (
@@ -132,7 +143,6 @@ ScannerView.Capture = ({
         </div>
       )}
 
-      {/* Botones de entrada (Cámara / Galería) */}
       <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col items-center justify-center gap-3 p-8 rounded-[2.5rem] bg-brand-primary/10 border border-brand-primary/20 active:scale-95 transition-all cursor-pointer">
             <div className="w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-brand-primary/20">
@@ -155,14 +165,9 @@ ScannerView.Capture = ({
           </label>
       </div>
 
-      {/* Acción principal */}
       <div className="space-y-3 mt-4">
         <button 
-          onClick={() => {
-            const hasList = db.lista.filter((l: any) => !l.confirmed).length > 0;
-            if (hasList) setShowListDialog(true);
-            else startAnalysis(false);
-          }} 
+          onClick={handleProcessClick} 
           disabled={tempPhotos.length === 0 || loading} 
           className="btn-primary !py-5 shadow-[0_15px_35px_rgba(16,185,129,0.2)] !bg-brand-success text-brand-bg disabled:opacity-10"
         >
@@ -179,7 +184,6 @@ ScannerView.Capture = ({
         </button>
       </div>
 
-      {/* Modal de vinculación con lista */}
       {showListDialog && (
         <div className="modal-overlay z-[2000] !p-6">
           <div className="card-premium w-full text-center space-y-6 !p-8 border-brand-primary/20 animate-in zoom-in-95 duration-300">
