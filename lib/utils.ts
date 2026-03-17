@@ -59,24 +59,26 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * COMPRESIÓN ADAPTATIVA PROGRESIVA
- * Ajusta la calidad y el tamaño según el número de fotos para evitar Error 429.
- * 1 foto: 1200px / 0.7 calidad
- * 2 fotos: 900px / 0.5 calidad
- * 3 fotos: 750px / 0.35 calidad
+ * COMPRESIÓN ULTRA-AGRESIVA ADAPTATIVA
+ * Reducimos drásticamente las dimensiones para evitar Error 429 por exceso de tokens.
+ * La IA lee perfectamente a 600px-800px si el contraste es alto.
+ * 
+ * 1 foto: 800px / 0.5 calidad
+ * 2 fotos: 700px / 0.3 calidad
+ * 3 fotos: 600px / 0.25 calidad
  */
 export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
   return new Promise((resolve) => {
-    // Definir presupuesto de píxeles y calidad según cantidad de fotos
-    let maxWidth = 1200;
-    let quality = 0.7;
+    // Presupuesto de píxeles muy ajustado para Mistral
+    let maxWidth = 800;
+    let quality = 0.5;
 
     if (photoCount === 2) {
-      maxWidth = 900;
-      quality = 0.5;
+      maxWidth = 700;
+      quality = 0.3;
     } else if (photoCount >= 3) {
-      maxWidth = 750;
-      quality = 0.35;
+      maxWidth = 600;
+      quality = 0.25;
     }
 
     const img = new Image();
@@ -86,7 +88,7 @@ export const compressImage = (base64Str: string, photoCount: number = 1): Promis
       let width = img.width;
       let height = img.height;
 
-      // Redimensionado proporcional
+      // Redimensionado proporcional estricto
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
@@ -101,18 +103,22 @@ export const compressImage = (base64Str: string, photoCount: number = 1): Promis
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Filtro de procesamiento para OCR (Escala de grises + Contraste)
+      // Filtro de alto contraste para compensar la baja resolución
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        // Mejora de contraste: aclara fondos, oscurece letras
-        let contrastValue = gray < 128 ? gray * 0.8 : Math.min(255, gray * 1.2);
+        
+        // Binarización suave: Todo lo que no sea texto oscuro se vuelve muy claro
+        // Esto reduce enormemente el ruido y el peso del JPG final
+        let contrastValue = gray < 110 ? gray * 0.5 : Math.min(255, gray * 1.4);
         data[i] = data[i+1] = data[i+2] = contrastValue;
       }
 
       ctx.putImageData(imageData, 0, 0);
+      
+      // Convertimos a JPEG con la calidad reducida
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = () => resolve(base64Str);
