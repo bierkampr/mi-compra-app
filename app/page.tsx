@@ -37,7 +37,6 @@ export default function Home() {
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
     // --- ESTADO FLUJO DE COMPRA ---
-    // CORRECCIÓN: Cambiamos el tipo a string | null para permitir categorías personalizadas
     const [purchaseMode, setPurchaseMode] = useState<string | null>(null);
     
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
@@ -206,6 +205,7 @@ export default function Home() {
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 
+    // --- RENDERIZADO PRINCIPAL ---
     if (!user.loggedIn) return <AuthView CLIENT_ID={CLIENT_ID} txt={txt} />;
 
     return (
@@ -240,7 +240,6 @@ export default function Home() {
                     />
                 )}
 
-                {/* CORRECCIÓN: Pasamos las props db y updateAndSync a ScannerView */}
                 {activeTab === 'add' && !purchaseMode && (
                     <ScannerView 
                         db={db}
@@ -261,8 +260,9 @@ export default function Home() {
                 )}
             </div>
 
+            {/* OVERLAY: CAPTURA DE FOTOS - Adaptado para escritorio */}
             {(purchaseMode && purchaseMode !== 'manual') && !pendingGasto && (
-                <div className="modal-content-full z-[1000] justify-center gap-10">
+                <div className="modal-content-full z-[1000] justify-center gap-10 lg:max-w-4xl lg:h-[85vh] lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white/5">
                     <ScannerView.Capture 
                         tempPhotos={tempPhotos} 
                         setTempPhotos={setTempPhotos} 
@@ -278,39 +278,49 @@ export default function Home() {
                 </div>
             )}
 
+            {/* OVERLAY: REVISIÓN DE PRODUCTOS - Adaptado para escritorio */}
             {pendingGasto && (
-                <ReviewModal 
-                    pendingGasto={pendingGasto} 
-                    setPendingGasto={setPendingGasto} 
-                    onSave={saveConfirmedGasto} 
-                    onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
-                    loading={loading} 
-                    db={db} 
-                    txt={txt} 
-                />
+                <div className="modal-content-full z-[1100] lg:max-w-4xl lg:h-[90vh] lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white/5">
+                    <ReviewModal 
+                        pendingGasto={pendingGasto} 
+                        setPendingGasto={setPendingGasto} 
+                        onSave={saveConfirmedGasto} 
+                        onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
+                        loading={loading} 
+                        db={db} 
+                        txt={txt} 
+                    />
+                </div>
             )}
             
+            {/* OVERLAY: DETALLE DE GASTO - Adaptado para escritorio */}
             {selectedGasto && (
-                <DetailView 
-                    gasto={selectedGasto} 
-                    onClose={() => setSelectedGasto(null)} 
-                    onDelete={async (g) => {
-                        if (confirm(txt('modals.delete_confirm'))) {
-                            const newDb = { ...db, gastos: db.gastos.filter(x => x !== g) };
-                            await updateAndSync(newDb);
-                            setSelectedGasto(null);
-                        }
-                    }} 
-                    token={user.token} 
-                    txt={txt} 
-                />
+                <div className="modal-content-full z-[1200] lg:max-w-2xl lg:h-[80vh] lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white/5">
+                    <DetailView 
+                        gasto={selectedGasto} 
+                        onClose={() => setSelectedGasto(null)} 
+                        onDelete={async (g) => {
+                            if (confirm(txt('modals.delete_confirm'))) {
+                                const newDb = { ...db, gastos: db.gastos.filter(x => x !== g) };
+                                await updateAndSync(newDb);
+                                setSelectedGasto(null);
+                            }
+                        }} 
+                        token={user.token} 
+                        txt={txt} 
+                    />
+                </div>
             )}
 
+            {/* OVERLAY: SPINNER GLOBAL */}
             {loading && (
                 <div className="fixed inset-0 z-[2000] bg-brand-bg/60 backdrop-blur-md flex items-center justify-center">
                     <Loader2 className="animate-spin text-brand-primary" size={48} strokeWidth={3}/>
                 </div>
             )}
+
+            {/* Sombra de fondo solo visible en escritorio para dar profundidad */}
+            <div className="hidden lg:block fixed inset-0 bg-black/40 -z-10 pointer-events-none" />
         </main>
     );
 }
