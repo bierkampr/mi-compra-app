@@ -295,7 +295,7 @@ export default function Home() {
             
             {/* OVERLAY: DETALLE DE GASTO */}
             {selectedGasto && (
-                <div className="modal-content-full z-[1200] lg:max-w-2xl">
+                <div className="modal-content-full z-[1200]">
                     <DetailView 
                         gasto={selectedGasto} 
                         onClose={() => setSelectedGasto(null)} 
@@ -318,7 +318,7 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Sombra de profundidad solo para escritorio */}
+            {/* Sombra de profundidad para escritorio */}
             <div className="hidden lg:block fixed inset-0 bg-black/40 -z-10 pointer-events-none" />
         </main>
     );
