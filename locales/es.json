@@ -50,7 +50,19 @@
     "process": "PROCESAR COMPRA ⚡",
     "cancel": "cancelar carga",
     "custom_cat_placeholder": "Nueva categoría...",
-    "add_custom": "Añadir Categoría"
+    "add_custom": "Añadir Categoría",
+    "camera_not_found": "No se detectó la cámara",
+    "camera_error": "Error al acceder a la cámara",
+    "instructions_camera": "Encuadra el ticket dentro del marco",
+    "scanning_label": "ESCANEANDO...",
+    "step_top": "PARTE SUPERIOR (Logo y Fecha)",
+    "step_middle": "PARTE MEDIA (Productos)",
+    "step_bottom": "PARTE INFERIOR (Totales)",
+    "max_photos_reached": "Máximo de 3 fotos alcanzado",
+    "retry_after": "Servidor ocupado. Reintentando en {{sec}}s...",
+    "quality_check": "¿Se lee bien el texto?",
+    "retry_photo": "Repetir",
+    "confirm_photo": "Usar esta"
   },
   "review": {
     "title": "REVISAR COMPRA",
@@ -87,7 +99,7 @@
     "sync_title": "Google Drive Sync",
     "sync_desc": "Sincronización Activa",
     "logout": "Cerrar Sesión",
-    "version": "Mi Compra App v1.2.0 • 2026",
+    "version": "Mi Compra App v1.3.0 • 2026",
     "restart_tour": "Ver Tutorial de Uso"
   },
   "modals": {

@@ -1,12 +1,17 @@
-/* --- INICIO ARCHIVO: lib/gemini.ts --- */
+/* --- ARCHIVO: lib/gemini.ts --- */
 
 import { MISTRAL_API_KEY } from "./config";
 
 /**
- * Envía las imágenes de los tickets a Mistral AI (Pixtral) para su análisis.
- * Incluye gestión de errores robusta para evitar bloqueos en iOS/Android.
+ * Función auxiliar para esperar un tiempo determinado (ms)
  */
-export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string) => {
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Envía las imágenes de los tickets a Mistral AI (Pixtral) para su análisis.
+ * Incluye gestión de errores robusta y reintentos automáticos para Error 429.
+ */
+export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string, attempt: number = 0): Promise<any> => {
   try {
     if (!MISTRAL_API_KEY) {
       throw new Error("La llave de API de Mistral no está configurada.");
@@ -27,7 +32,7 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
     // Preparamos el contenido multimedia siguiendo el esquema oficial de Mistral
     const imageContent = base64Images.map(img => ({
       type: "image_url",
-      image_url: { url: img } // Formato de objeto anidado para mayor compatibilidad
+      image_url: { url: img }
     }));
 
     const response = await fetch(url, {
@@ -51,16 +56,21 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
         "response_format": { "type": "json_object" },
         "temperature": 0
       }),
-      // Evita que navegadores móviles (iOS) mantengan conexiones latentes que causen 429 falsos
       keepalive: false 
     });
 
-    // --- MANEJO DE ERRORES DETALLADO ---
+    // --- MANEJO DE ERROR 429 (RATE LIMIT) CON REINTENTO ---
+    if (response.status === 429 && attempt < 2) {
+      const waitTime = (attempt + 1) * 3000; // 3s, luego 6s
+      console.warn(`Error 429 detectado. Reintentando en ${waitTime/1000}s... (Intento ${attempt + 1})`);
+      await sleep(waitTime);
+      return analyzeReceipt(base64Images, mode, customPrompt, attempt + 1);
+    }
+
     if (!response.ok) {
       let errorMessage = `Error ${response.status}`;
       try {
         const errorJson = await response.json();
-        // Si es un 429, especificamos que es por límite de velocidad/cuota
         if (response.status === 429) {
           errorMessage = "Límite de velocidad excedido (429). Por favor, espera un momento antes de reintentar.";
         } else {
@@ -74,27 +84,24 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
 
     const data = await response.json();
 
-    // Verificamos que la respuesta contenga los datos esperados antes de procesar
     if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
       throw new Error("La IA devolvió una respuesta vacía o incompleta.");
     }
 
     const result = JSON.parse(data.choices[0].message.content);
 
-    // --- LÓGICA DE LIMPIEZA DE COMERCIO (Evita el error [object Object]) ---
+    // --- LÓGICA DE LIMPIEZA DE COMERCIO ---
     let finalComercio = "SIN NOMBRE";
     
     if (result.comercio) {
       if (typeof result.comercio === 'string' && result.comercio.trim() !== "") {
         finalComercio = result.comercio;
       } else if (typeof result.comercio === 'object') {
-        // Si la IA devuelve un objeto, buscamos cualquier string dentro de sus valores
         const found = Object.values(result.comercio).find(v => typeof v === 'string' && v.length > 0);
         if (found) finalComercio = found as string;
       }
     }
 
-    // Retornamos el objeto estructurado y limpio
     return {
       comercio: finalComercio.toUpperCase().trim(),
       fecha: result.fecha || new Date().toLocaleDateString('es-ES'),
@@ -108,9 +115,6 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
     };
   } catch (error: any) {
     console.error("DEBUG IA ERROR:", error);
-    // Propagamos el error con un mensaje limpio para el usuario
     throw new Error(error.message || "Error desconocido al procesar el ticket.");
   }
 };
-
-/* --- FIN ARCHIVO: lib/gemini.ts --- */

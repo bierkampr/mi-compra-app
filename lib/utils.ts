@@ -59,11 +59,26 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * COMPRESIÓN ULTRA-LIGERA (700px / 0.4)
- * Optimizada para fotos de cerca. Permite múltiples imágenes sin error 429.
+ * COMPRESIÓN ADAPTATIVA PROGRESIVA
+ * Ajusta la calidad y el tamaño según el número de fotos para evitar Error 429.
+ * 1 foto: 1200px / 0.7 calidad
+ * 2 fotos: 900px / 0.5 calidad
+ * 3 fotos: 750px / 0.35 calidad
  */
-export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.4): Promise<string> => {
+export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
   return new Promise((resolve) => {
+    // Definir presupuesto de píxeles y calidad según cantidad de fotos
+    let maxWidth = 1200;
+    let quality = 0.7;
+
+    if (photoCount === 2) {
+      maxWidth = 900;
+      quality = 0.5;
+    } else if (photoCount >= 3) {
+      maxWidth = 750;
+      quality = 0.35;
+    }
+
     const img = new Image();
     img.src = base64Str;
     img.onload = () => {
@@ -71,6 +86,7 @@ export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.4):
       let width = img.width;
       let height = img.height;
 
+      // Redimensionado proporcional
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
@@ -85,13 +101,14 @@ export const compressImage = (base64Str: string, maxWidth = 700, quality = 0.4):
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
+      // Filtro de procesamiento para OCR (Escala de grises + Contraste)
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        // Contraste para texto: aclara fondo, oscurece letras
-        let contrastValue = gray < 130 ? gray * 0.7 : Math.min(255, gray * 1.2);
+        // Mejora de contraste: aclara fondos, oscurece letras
+        let contrastValue = gray < 128 ? gray * 0.8 : Math.min(255, gray * 1.2);
         data[i] = data[i+1] = data[i+2] = contrastValue;
       }
 
