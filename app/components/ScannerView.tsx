@@ -101,21 +101,18 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE: CAPTURA CON WEBRTC CORREGIDO ---
+// --- SUB-COMPONENTE: CAPTURA CON RECORTE INTELIGENTE (CROP) ---
 ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, setShowListDialog, showListDialog, onCancel, txt, activeTab }) => {
-  const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Iniciar cámara al montar
   useEffect(() => {
     startCamera();
     return () => stopCamera();
   }, []);
 
-  // ARREGLO PARA PANTALLA NEGRA: Reconectar el stream cuando el elemento video aparezca
   useEffect(() => {
     if (videoRef.current && capturedStream && !previewPhoto) {
         videoRef.current.srcObject = capturedStream;
@@ -129,7 +126,6 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         audio: false 
       });
       setCapturedStream(stream);
-      setIsCameraActive(true);
     } catch (err) {
       alert(txt('scan.camera_error'));
     }
@@ -139,18 +135,44 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     if (capturedStream) {
       capturedStream.getTracks().forEach(track => track.stop());
     }
-    setIsCameraActive(false);
   };
 
+  /**
+   * FUNCIÓN DE CAPTURA CON RECORTE (CROP)
+   * Captura solo el área que el usuario ve dentro del recuadro de la plantilla.
+   */
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      
+      // 1. Obtener dimensiones reales del video
+      const vW = video.videoWidth;
+      const vH = video.videoHeight;
+
+      // 2. Obtener dimensiones del contenedor en pantalla (CSS)
+      const rect = video.getBoundingClientRect();
+      const cssW = rect.width;
+      const cssH = rect.height;
+
+      // 3. Definir el grosor del borde de la plantilla (definido en el CSS como 40px)
+      const borderSize = 40; 
+
+      // 4. Calcular el área de recorte proporcionalmente
+      // Calculamos cuánto representan los 40px de borde en la resolución real
+      const sx = (borderSize / cssW) * vW;
+      const sy = (borderSize / cssH) * vH;
+      const sWidth = vW - (sx * 2);
+      const sHeight = vH - (sy * 2);
+
+      // 5. Configurar el canvas para el tamaño del recorte
+      canvas.width = sWidth;
+      canvas.height = sHeight;
+
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Dibujamos solo la porción central del video
+        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         setPreviewPhoto(dataUrl);
       }
@@ -186,42 +208,27 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
   return (
     <div className="fixed inset-0 bg-black z-[2000] flex flex-col overflow-hidden">
-      {/* VISOR DE CÁMARA O PREVIEW */}
       <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
         {!previewPhoto ? (
           <>
-            <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted
-                className="w-full h-full object-cover" 
-            />
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             
-            {/* PLANTILLA DE ENCUADRE */}
+            {/* PLANTILLA DE ENCUADRE (Borde de 40px) */}
             <div className="absolute inset-0 pointer-events-none border-[40px] border-black/60">
                 <div className="w-full h-full border-2 border-dashed border-brand-accent/40 rounded-3xl relative">
                     <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-accent/20 animate-pulse" />
-                    
-                    {/* RECORDATORIO IMPORTANTE */}
                     <div className="absolute top-10 left-0 right-0 px-6 text-center">
                         <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-brand-accent/20 inline-flex items-center gap-2">
                              <Info size={14} className="text-brand-accent" />
-                             <span className="text-[10px] font-black text-white uppercase tracking-wider">
-                                {txt('scan.important_note')}
-                             </span>
+                             <span className="text-[10px] font-black text-white uppercase tracking-wider">{txt('scan.important_note')}</span>
                         </div>
                     </div>
-
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[9px] font-black text-brand-accent/60 uppercase tracking-[0.4em]">
-                            {txt('scan.instructions_camera')}
-                        </span>
+                        <span className="text-[9px] font-black text-brand-accent/60 uppercase tracking-[0.4em]">{txt('scan.instructions_camera')}</span>
                     </div>
                 </div>
             </div>
 
-            {/* MINIATURA DE REFERENCIA */}
             {tempPhotos.length > 0 && (
                 <div className="absolute top-6 left-6 w-20 aspect-[3/4] border-2 border-white/20 rounded-lg overflow-hidden shadow-2xl opacity-60">
                     <img src={tempPhotos[tempPhotos.length-1]} className="w-full h-full object-cover grayscale" />
@@ -231,9 +238,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
           </>
         ) : (
           <div className="relative w-full h-full flex flex-col items-center justify-center p-6 gap-6 animate-in zoom-in-95">
-             <h3 className="text-xl font-black italic text-brand-accent uppercase tracking-tighter">
-                {txt('scan.quality_check')}
-             </h3>
+             <h3 className="text-xl font-black italic text-brand-accent uppercase tracking-tighter">{txt('scan.quality_check')}</h3>
              <img src={previewPhoto} className="max-h-[60vh] rounded-3xl border-2 border-brand-accent shadow-2xl" />
              <div className="flex gap-4 w-full max-w-xs">
                 <button onClick={() => setPreviewPhoto(null)} className="btn-secondary flex-1 !py-4">{txt('scan.retry_photo')}</button>
@@ -244,7 +249,6 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      {/* CONTROLES INFERIORES */}
       {!previewPhoto && (
         <div className="bg-brand-bg p-8 flex flex-col items-center gap-6 rounded-t-[3rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
            <div className="text-center space-y-1">
@@ -254,37 +258,20 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
            <div className="flex items-center justify-between w-full max-w-xs">
               <button onClick={onCancel} className="btn-icon !bg-white/5 border-none"><X size={24} /></button>
-              
-              <button 
-                onClick={takePhoto} 
-                className="w-20 h-20 bg-white rounded-full p-1 border-4 border-brand-primary shadow-2xl active:scale-90 transition-all flex items-center justify-center"
-              >
+              <button onClick={takePhoto} className="w-20 h-20 bg-white rounded-full p-1 border-4 border-brand-primary shadow-2xl active:scale-90 transition-all flex items-center justify-center">
                 <div className="w-full h-full bg-white rounded-full border-2 border-black/10" />
               </button>
-
               {tempPhotos.length > 0 ? (
                 <div className="flex flex-col items-center gap-1">
-                    <button onClick={handleProcessClick} className="btn-icon !bg-brand-success text-brand-bg border-none shadow-lg shadow-brand-success/20">
-                        <CheckCircle2 size={24} />
-                    </button>
-                    <span className="text-[7px] font-black text-brand-success uppercase tracking-tighter">
-                        {txt('scan.process')}
-                    </span>
+                    <button onClick={handleProcessClick} className="btn-icon !bg-brand-success text-brand-bg border-none shadow-lg shadow-brand-success/20"><CheckCircle2 size={24} /></button>
+                    <span className="text-[7px] font-black text-brand-success uppercase tracking-tighter">{txt('scan.process')}</span>
                 </div>
-              ) : (
-                <div className="w-12" />
-              )}
+              ) : ( <div className="w-12" /> )}
            </div>
-
-           {tempPhotos.length > 0 && (
-               <p className="text-[8px] font-black text-brand-muted uppercase animate-pulse">
-                   {txt('scan.finish_now')}
-               </p>
-           )}
+           {tempPhotos.length > 0 && ( <p className="text-[8px] font-black text-brand-muted uppercase animate-pulse">{txt('scan.finish_now')}</p> )}
         </div>
       )}
 
-      {/* DIÁLOGO VINCULAR LISTA */}
       {showListDialog && (
         <div className="modal-overlay z-[3000] !p-6">
            <div className="card-premium max-w-sm w-full text-center space-y-8 !p-12 border-brand-primary/20">
@@ -307,9 +294,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                 <Loader2 className="animate-spin text-brand-primary" size={64} strokeWidth={3}/>
                 <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-accent animate-pulse" size={24} />
             </div>
-            <p className="text-[10px] font-black text-white uppercase tracking-[0.5em] animate-pulse">
-                {txt('scan.scanning_label')}
-            </p>
+            <p className="text-[10px] font-black text-white uppercase tracking-[0.5em] animate-pulse">{txt('scan.scanning_label')}</p>
         </div>
       )}
     </div>
