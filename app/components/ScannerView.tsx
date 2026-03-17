@@ -16,7 +16,8 @@ import {
   CheckCircle2, 
   Plus,
   Tag,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { compressImage } from '../../lib/utils';
 
@@ -28,7 +29,6 @@ interface ScannerViewProps {
   txt: (key: string) => string;
 }
 
-// Definimos el tipo para soportar el sub-componente Capture
 interface ScannerViewComponent extends React.FC<ScannerViewProps> {
   Capture: React.FC<any>;
 }
@@ -43,7 +43,6 @@ const ScannerView: ScannerViewComponent = ({ db, updateAndSync, setPurchaseMode,
     const val = newCatName.trim().toUpperCase();
     if (!val) return;
     
-    // Si la categoría no existe, la añadimos al DB
     if (!customCategories.includes(val)) {
       const newDb = {
         ...db,
@@ -70,8 +69,8 @@ const ScannerView: ScannerViewComponent = ({ db, updateAndSync, setPurchaseMode,
       </div>
 
       {!showOthers ? (
-        <>
-          {/* CATEGORÍAS ESTÁNDAR */}
+        <div className="space-y-3">
+          {/* CATEGORÍA PRINCIPAL: SUPERMERCADO (GRANDE) */}
           <button 
             onClick={() => selectMode('super')} 
             className="card-clickable w-full !p-6 flex items-center gap-6 group overflow-hidden relative"
@@ -88,73 +87,67 @@ const ScannerView: ScannerViewComponent = ({ db, updateAndSync, setPurchaseMode,
             </div>
           </button>
 
-          <button 
-            onClick={() => selectMode('mini')} 
-            className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
-          >
-            <div className="w-12 h-12 bg-brand-accent/10 rounded-xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform">
-              <Store size={24}/>
-            </div>
-            <div className="text-left">
-              <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.mini')}</h2>
-              <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Tiendas de barrio</p>
-            </div>
-            <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
-                <Store size={40} />
-            </div>
-          </button>
+          {/* GRID DE CATEGORÍAS SECUNDARIAS (CUADRADAS) */}
+          <div className="grid grid-cols-2 gap-3">
+            <button 
+                onClick={() => selectMode('mini')} 
+                className="card-clickable !p-4 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden"
+            >
+                <div className="w-12 h-12 bg-brand-accent/10 rounded-xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform">
+                    <Store size={24}/>
+                </div>
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.mini')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
+                    <Store size={40} />
+                </div>
+            </button>
 
-          <button 
-            onClick={() => selectMode('dining')} 
-            className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
-          >
-            <div className="w-12 h-12 bg-orange-400/10 rounded-xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform">
-              <Utensils size={24}/>
-            </div>
-            <div className="text-left">
-              <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.dining')}</h2>
-              <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Consumo fuera de casa</p>
-            </div>
-          </button>
+            <button 
+                onClick={() => selectMode('dining')} 
+                className="card-clickable !p-4 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden"
+            >
+                <div className="w-12 h-12 bg-orange-400/10 rounded-xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform">
+                    <Utensils size={24}/>
+                </div>
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.dining')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
+                    <Utensils size={40} />
+                </div>
+            </button>
 
-          <button 
-            onClick={() => selectMode('health')} 
-            className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
-          >
-            <div className="w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-              <Pill size={24}/>
-            </div>
-            <div className="text-left">
-              <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.health')}</h2>
-              <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Gastos médicos</p>
-            </div>
-          </button>
+            <button 
+                onClick={() => selectMode('health')} 
+                className="card-clickable !p-4 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden"
+            >
+                <div className="w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                    <Pill size={24}/>
+                </div>
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.health')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white">
+                    <Pill size={40} />
+                </div>
+            </button>
 
-          {/* BOTÓN PARA ABRIR OTROS */}
-          <button 
-            onClick={() => setShowOthers(true)} 
-            className="card-clickable w-full !p-5 flex items-center gap-6 group overflow-hidden relative"
-          >
-            <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform">
-              <LayoutGrid size={24}/>
-            </div>
-            <div className="text-left">
-              <h2 className="heading-2 !text-xs tracking-widest">{txt('scan.others')}</h2>
-              <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Varios / Personalizados</p>
-            </div>
-            <ChevronRight size={18} className="ml-auto text-brand-muted opacity-30" />
-          </button>
-        </>
+            <button 
+                onClick={() => setShowOthers(true)} 
+                className="card-clickable !p-4 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden"
+            >
+                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform">
+                    <LayoutGrid size={24}/>
+                </div>
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.others')}</h2>
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-3 animate-in fade-in zoom-in-95 duration-300">
           <div className="flex items-center gap-2 mb-4">
             <button onClick={() => setShowOthers(false)} className="btn-icon !p-1.5 border-none bg-white/5">
-              <X size={18} />
+              <ChevronLeft size={18} />
             </button>
             <span className="text-small-caps">Categorías Personalizadas</span>
           </div>
 
-          {/* INPUT PARA NUEVA CATEGORÍA */}
           <div className="relative mb-6">
             <input 
               value={newCatName}
@@ -170,7 +163,6 @@ const ScannerView: ScannerViewComponent = ({ db, updateAndSync, setPurchaseMode,
             </button>
           </div>
 
-          {/* LISTA DE CATEGORÍAS GUARDADAS */}
           <div className="grid grid-cols-1 gap-2">
             {customCategories.length > 0 ? (
               customCategories.map((cat, i) => (
@@ -192,7 +184,6 @@ const ScannerView: ScannerViewComponent = ({ db, updateAndSync, setPurchaseMode,
               </div>
             )}
             
-            {/* Categoría "Otros" por defecto si no quiere crear una específica */}
             <button 
               onClick={() => selectMode('others')}
               className="w-full flex items-center justify-between p-4 card-premium bg-brand-secondary/20 border-dashed border-white/10"
@@ -221,7 +212,7 @@ const ScannerView: ScannerViewComponent = ({ db, updateAndSync, setPurchaseMode,
   );
 };
 
-// --- SUB-COMPONENTE: CAPTURA DE FOTOS (Sin cambios estructurales, solo integración) ---
+// --- SUB-COMPONENTE: CAPTURA DE FOTOS ---
 ScannerView.Capture = ({ 
   tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   setShowListDialog, showListDialog, onCancel, txt, activeTab 

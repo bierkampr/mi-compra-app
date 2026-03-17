@@ -47,9 +47,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const isCurrentMonth = currentViewDate.getMonth() === new Date().getMonth() && 
                          currentViewDate.getFullYear() === new Date().getFullYear();
 
-  /**
-   * Cálculo de gasto por categoría para el gráfico
-   */
   const statsPorCategoria = useMemo(() => {
     const cats: Record<string, number> = {};
     stats.currentGastos.forEach(g => {
@@ -59,9 +56,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     return Object.entries(cats).sort((a, b) => b[1] - a[1]);
   }, [stats.currentGastos]);
 
-  /**
-   * Helper para obtener el icono y color según la categoría
-   */
   const getCategoryStyles = (category: string) => {
     switch (category) {
       case 'dining':
@@ -75,21 +69,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       case 'others':
         return { icon: <LayoutGrid size={18} />, color: 'text-brand-muted', bg: 'bg-white/5', hex: '#8E94AF' };
       default:
-        // Categorías personalizadas
         return { icon: <Tag size={18} />, color: 'text-indigo-400', bg: 'bg-indigo-400/10', hex: '#818CF8' };
     }
   };
 
-  /**
-   * Lógica para generar el gráfico de Donut mediante SVG
-   */
   const renderDonutChart = () => {
     let cumulativePercent = 0;
     const radius = 70;
     const circumference = 2 * Math.PI * radius;
 
     return (
-      <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
+      <div className="relative w-40 h-40 mx-auto flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
           {statsPorCategoria.map(([cat, val], i) => {
             const percent = (val / stats.total) * 100;
@@ -116,15 +106,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[10px] font-black text-brand-muted uppercase tracking-widest">{txt('home.records')}</span>
-          <span className="text-2xl font-black italic text-white tracking-tighter">{stats.currentGastos.length}</span>
+          <span className="text-[8px] font-black text-brand-muted uppercase tracking-widest">{txt('home.records')}</span>
+          <span className="text-xl font-black italic text-white tracking-tighter">{stats.currentGastos.length}</span>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 no-scrollbar">
+    <div className="space-y-5 animate-in slide-in-from-bottom-4 duration-500 no-scrollbar">
       {/* SELECTOR DE MES */}
       <div className="flex items-center justify-between px-2">
         <button onClick={() => changeMonth(-1)} className="btn-icon !p-1.5 border-none bg-white/5">
@@ -142,40 +132,47 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       </div>
 
-      {/* TARJETA DE GASTO TOTAL */}
+      {/* TARJETA DE GASTO TOTAL (DINÁMICA) */}
       <button 
         onClick={() => setShowBreakdown(!showBreakdown)}
-        className="w-full text-left relative overflow-hidden card-premium bg-gradient-to-br from-brand-primary to-[#4318BB] border-none !p-6 shadow-[0_20px_40px_rgba(93,46,239,0.3)] active:scale-[0.98] transition-all group"
+        className={`w-full text-left relative overflow-hidden card-premium bg-gradient-to-br from-brand-primary to-[#4318BB] border-none shadow-[0_20px_40px_rgba(93,46,239,0.3)] active:scale-[0.98] transition-all duration-500 group ${
+          showBreakdown ? '!p-4' : '!p-6'
+        }`}
       >
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-1">
             <p className="text-[9px] font-black uppercase tracking-widest text-white/60">
                 {txt('home.monthly_spend')}
             </p>
-            <TrendingUp size={14} className="text-brand-accent opacity-50 group-hover:scale-125 transition-transform" />
+            <TrendingUp size={showBreakdown ? 12 : 14} className="text-brand-accent opacity-50 group-hover:scale-125 transition-transform" />
           </div>
           
-          <h2 className="text-5xl font-black italic tracking-tighter text-white leading-none">
+          <h2 className={`font-black italic tracking-tighter text-white leading-none transition-all duration-500 ${
+            showBreakdown ? 'text-3xl' : 'text-5xl'
+          }`}>
             {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
           </h2>
 
-          <div className="flex items-center gap-3 mt-4">
-            <div className="px-3 py-1 bg-white/10 rounded-full border border-white/5">
-              <span className="text-[8px] font-black uppercase tracking-tighter text-white">
-                {stats.currentGastos.length} {txt('home.records')}
-              </span>
+          {/* ESTA SECCIÓN SE OCULTA AL ACHICARSE */}
+          {!showBreakdown && (
+            <div className="flex items-center gap-3 mt-4 animate-in fade-in duration-500">
+              <div className="px-3 py-1 bg-white/10 rounded-full border border-white/5">
+                <span className="text-[8px] font-black uppercase tracking-tighter text-white">
+                  {stats.currentGastos.length} {txt('home.records')}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1.5 ml-auto text-[8px] font-black uppercase tracking-widest text-brand-accent">
+                <PieIcon size={12} />
+                {txt('home.analysis')}
+              </div>
             </div>
-            
-            <div className="flex items-center gap-1.5 ml-auto text-[8px] font-black uppercase tracking-widest text-brand-accent">
-              {showBreakdown ? <LayoutGrid size={12} /> : <PieIcon size={12} />}
-              {showBreakdown ? txt('home.view_gastos') : txt('home.analysis')}
-            </div>
-          </div>
+          )}
         </div>
         <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-3xl" />
       </button>
 
-      {/* CONTENIDO: LISTA O ANÁLISIS (GRÁFICO) */}
+      {/* CONTENIDO: LISTA O ANÁLISIS */}
       {!showBreakdown ? (
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1 mb-1">
@@ -222,11 +219,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
       ) : (
-        <section className="space-y-8 animate-in fade-in zoom-in-95 duration-500 pb-10">
+        <section className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 pb-10">
           
-          {/* GRÁFICO CIRCULAR */}
-          <div className="py-4">
-            <h3 className="text-small-caps text-center mb-6">{txt('home.chart_title')}</h3>
+          {/* GRÁFICO CIRCULAR (MÁS COMPACTO) */}
+          <div className="py-2">
+            <h3 className="text-[9px] font-black uppercase tracking-widest text-brand-muted text-center mb-4">{txt('home.chart_title')}</h3>
             {renderDonutChart()}
           </div>
 
@@ -252,7 +249,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                         <span className="text-xs font-black text-white">{val.toFixed(2)}€</span>
                       </div>
-                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                         <div 
                           className="h-full rounded-full transition-all duration-1000 ease-out" 
                           style={{ width: `${percentage}%`, backgroundColor: styles.hex }}
