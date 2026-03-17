@@ -38,6 +38,40 @@ export const searchLocalProducts = async (query: string) => {
 };
 
 /**
+ * OBTIENE EL ÚLTIMO PRECIO REGISTRADO
+ * Se usa en la fase de revisión para comparar si el producto subió o bajó.
+ */
+export const getLastPrice = async (nombreBase: string): Promise<number | null> => {
+  try {
+    const fuzzyBase = toFuzzy(nombreBase);
+    
+    // 1. Buscamos el ID del producto por su nombre base
+    const { data: prod } = await supabase
+      .from('productos')
+      .select('id, nombre_base')
+      .filter('nombre_base', 'ilike', nombreBase)
+      .maybeSingle();
+
+    if (!prod) return null;
+
+    // 2. Buscamos en detalles el último precio registrado
+    const { data: detalle, error } = await supabase
+      .from('producto_detalles')
+      .select('ultimo_precio')
+      .eq('producto_id', prod.id)
+      .order('fecha_actualizacion', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !detalle) return null;
+    return detalle.ultimo_precio;
+  } catch (e) {
+    console.error("Error al obtener precio histórico:", e);
+    return null;
+  }
+};
+
+/**
  * BUSCADOR DE ALIAS (Diccionario Inteligente)
  */
 export const getBaseNameFromAlias = async (nombreTicket: string): Promise<string | null> => {
@@ -101,12 +135,14 @@ export const saveManualAlias = async (nombreTicket: string, nombreBase: string) 
 
 /**
  * SINCRONIZACIÓN POST-COMPRA
+ * Actualiza el catálogo global y los precios de referencia.
  */
 export const syncProductWithSupabase = async (itemIA: any, comercio: string) => {
   try {
     const baseUpper = itemIA.nombre_base.toUpperCase().trim();
     const ticketUpper = itemIA.nombre_ticket.toUpperCase().trim();
 
+    // Guardamos el alias primero (IA Aprendizaje)
     await saveManualAlias(ticketUpper, baseUpper);
     
     const fuzzyBase = toFuzzy(baseUpper);
@@ -116,12 +152,14 @@ export const syncProductWithSupabase = async (itemIA: any, comercio: string) => 
     if (prod) {
       const subtotal = Number(itemIA.subtotal) || 0;
       const cantidad = Number(itemIA.cantidad) || 1;
+      const precioUnitario = subtotal / cantidad;
       
+      // Upsert en detalles: Si ya existe para ese tamaño/id, actualiza el precio y fecha
       await supabase.from('producto_detalles').upsert({
         producto_id: prod.id,
         marca: 'GENERICO',
         tamano: 'UNICO',
-        ultimo_precio: subtotal / cantidad,
+        ultimo_precio: precioUnitario,
         ultimo_comercio: comercio.toUpperCase().trim(),
         fecha_actualizacion: new Date().toISOString()
       }, { onConflict: 'producto_id, tamano' });

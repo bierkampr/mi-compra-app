@@ -20,7 +20,9 @@
     "analysis": "View Analysis",
     "view_gastos": "View Expenses",
     "no_records": "No records this month",
-    "shop_breakdown": "Spending by Store"
+    "shop_breakdown": "Spending by Store",
+    "category_breakdown": "Spending by Category",
+    "chart_title": "Expense Distribution"
   },
   "list": {
     "placeholder": "What do you need to buy?",
@@ -37,14 +39,19 @@
     "super_desc": "Large retail stores",
     "mini": "Mini Market",
     "mini_desc": "Local shops",
-    "manual": "Manual",
+    "dining": "Bar / Restaurant",
+    "health": "Pharmacy",
+    "others": "Others / Misc",
+    "manual": "Manual Entry",
     "capture_title": "UPLOAD RECEIPT",
     "tip_title": "Closer is better",
     "tip_desc": "If the receipt is long, take 2 or 3 close-up photos. The AI will merge them.",
     "take_photo": "Take Photo",
     "gallery": "Gallery",
     "process": "PROCESS PURCHASE ⚡",
-    "cancel": "cancel upload"
+    "cancel": "cancel upload",
+    "custom_cat_placeholder": "New category...",
+    "add_custom": "Add Category"
   },
   "review": {
     "title": "REVIEW PURCHASE",
@@ -61,7 +68,11 @@
     "other_btn": "+ OTHER",
     "search_placeholder": "Search...",
     "discard_btn": "discard",
-    "save_btn": "Save Purchase"
+    "save_btn": "Save Purchase",
+    "price_up": "Up",
+    "price_down": "Down",
+    "price_same": "Same",
+    "no_history": "No history"
   },
   "detail": {
     "no_photos": "No photos",
@@ -77,7 +88,7 @@
     "sync_title": "Google Drive Sync",
     "sync_desc": "Active Synchronization",
     "logout": "Log Out",
-    "version": "My Purchase App v1.1.0 • 2026"
+    "version": "My Purchase App v1.2.0 • 2026"
   },
   "modals": {
     "logout_confirm": "Log out? Local access will be cleared.",

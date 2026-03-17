@@ -21,7 +21,8 @@
     "view_gastos": "Ver Gastos",
     "no_records": "Sin registros este mes",
     "shop_breakdown": "Gasto por comercio",
-    "category_breakdown": "Gasto por categoría"
+    "category_breakdown": "Gasto por categoría",
+    "chart_title": "Distribución de Gastos"
   },
   "list": {
     "placeholder": "¿QUÉ NECESITAS COMPRAR?",
@@ -39,6 +40,7 @@
     "dining": "Bar / Resto",
     "health": "Farmacia",
     "others": "Otros / Varios",
+    "others_placeholder": "¿QUÉ TIPO DE GASTO ES?",
     "manual": "Ingreso Manual",
     "capture_title": "CARGAR TICKET",
     "tip_title": "Cerca es mejor",
@@ -46,7 +48,9 @@
     "take_photo": "Tomar Foto",
     "gallery": "Galería",
     "process": "PROCESAR COMPRA ⚡",
-    "cancel": "cancelar carga"
+    "cancel": "cancelar carga",
+    "custom_cat_placeholder": "Nueva categoría...",
+    "add_custom": "Añadir Categoría"
   },
   "review": {
     "title": "REVISAR COMPRA",
@@ -63,7 +67,11 @@
     "other_btn": "+ OTRO",
     "search_placeholder": "BUSCAR ALIAS...",
     "discard_btn": "descartar",
-    "save_btn": "Guardar Compra"
+    "save_btn": "Guardar Compra",
+    "price_up": "Sube",
+    "price_down": "Baja",
+    "price_same": "Igual",
+    "no_history": "Sin historial"
   },
   "detail": {
     "no_photos": "Sin fotos",
@@ -79,7 +87,7 @@
     "sync_title": "Google Drive Sync",
     "sync_desc": "Sincronización Activa",
     "logout": "Cerrar Sesión",
-    "version": "Mi Compra App v1.1.0 • 2026"
+    "version": "Mi Compra App v1.2.0 • 2026"
   },
   "modals": {
     "logout_confirm": "¿Cerrar sesión? Se borrará el acceso local.",

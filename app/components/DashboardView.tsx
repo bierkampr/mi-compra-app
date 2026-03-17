@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -10,7 +10,9 @@ import {
   Utensils, 
   Pill, 
   LayoutGrid,
-  ArrowUpRight
+  ArrowUpRight,
+  Tag,
+  PieChart as PieIcon
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -46,27 +48,84 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                          currentViewDate.getFullYear() === new Date().getFullYear();
 
   /**
-   * Helper para obtener el icono y color según la categoría del gasto
+   * Cálculo de gasto por categoría para el gráfico
+   */
+  const statsPorCategoria = useMemo(() => {
+    const cats: Record<string, number> = {};
+    stats.currentGastos.forEach(g => {
+      const c = g.category || 'others';
+      cats[c] = (cats[c] || 0) + Number(g.total);
+    });
+    return Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  }, [stats.currentGastos]);
+
+  /**
+   * Helper para obtener el icono y color según la categoría
    */
   const getCategoryStyles = (category: string) => {
     switch (category) {
       case 'dining':
-        return { icon: <Utensils size={18} />, color: 'text-orange-400', bg: 'bg-orange-400/10' };
+        return { icon: <Utensils size={18} />, color: 'text-orange-400', bg: 'bg-orange-400/10', hex: '#FB923C' };
       case 'health':
-        return { icon: <Pill size={18} />, color: 'text-emerald-400', bg: 'bg-emerald-400/10' };
+        return { icon: <Pill size={18} />, color: 'text-emerald-400', bg: 'bg-emerald-400/10', hex: '#34D399' };
       case 'mini':
-        return { icon: <Store size={18} />, color: 'text-brand-accent', bg: 'bg-brand-accent/10' };
-      case 'others':
-        return { icon: <LayoutGrid size={18} />, color: 'text-brand-muted', bg: 'bg-white/5' };
+        return { icon: <Store size={18} />, color: 'text-brand-accent', bg: 'bg-brand-accent/10', hex: '#00FAD9' };
       case 'super':
+        return { icon: <ShoppingCart size={18} />, color: 'text-brand-primary', bg: 'bg-brand-primary/10', hex: '#5D2EEF' };
+      case 'others':
+        return { icon: <LayoutGrid size={18} />, color: 'text-brand-muted', bg: 'bg-white/5', hex: '#8E94AF' };
       default:
-        return { icon: <ShoppingCart size={18} />, color: 'text-brand-primary', bg: 'bg-brand-primary/10' };
+        // Categorías personalizadas
+        return { icon: <Tag size={18} />, color: 'text-indigo-400', bg: 'bg-indigo-400/10', hex: '#818CF8' };
     }
   };
 
+  /**
+   * Lógica para generar el gráfico de Donut mediante SVG
+   */
+  const renderDonutChart = () => {
+    let cumulativePercent = 0;
+    const radius = 70;
+    const circumference = 2 * Math.PI * radius;
+
+    return (
+      <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
+          {statsPorCategoria.map(([cat, val], i) => {
+            const percent = (val / stats.total) * 100;
+            const strokeDasharray = `${(percent * circumference) / 100} ${circumference}`;
+            const strokeDashoffset = `-${(cumulativePercent * circumference) / 100}`;
+            cumulativePercent += percent;
+            const styles = getCategoryStyles(cat);
+
+            return (
+              <circle
+                key={i}
+                cx="100"
+                cy="100"
+                r={radius}
+                fill="transparent"
+                stroke={styles.hex}
+                strokeWidth="22"
+                strokeDasharray={strokeDasharray}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
+              />
+            );
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[10px] font-black text-brand-muted uppercase tracking-widest">{txt('home.records')}</span>
+          <span className="text-2xl font-black italic text-white tracking-tighter">{stats.currentGastos.length}</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      {/* SELECTOR DE MES COMPACTO */}
+    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 no-scrollbar">
+      {/* SELECTOR DE MES */}
       <div className="flex items-center justify-between px-2">
         <button onClick={() => changeMonth(-1)} className="btn-icon !p-1.5 border-none bg-white/5">
           <ChevronLeft size={18} />
@@ -83,7 +142,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       </div>
 
-      {/* TARJETA DE GASTO TOTAL (TODA LA TARJETA ES UN BOTÓN) */}
+      {/* TARJETA DE GASTO TOTAL */}
       <button 
         onClick={() => setShowBreakdown(!showBreakdown)}
         className="w-full text-left relative overflow-hidden card-premium bg-gradient-to-br from-brand-primary to-[#4318BB] border-none !p-6 shadow-[0_20px_40px_rgba(93,46,239,0.3)] active:scale-[0.98] transition-all group"
@@ -108,17 +167,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             
             <div className="flex items-center gap-1.5 ml-auto text-[8px] font-black uppercase tracking-widest text-brand-accent">
-              <BarChart3 size={12} />
+              {showBreakdown ? <LayoutGrid size={12} /> : <PieIcon size={12} />}
               {showBreakdown ? txt('home.view_gastos') : txt('home.analysis')}
             </div>
           </div>
         </div>
-        
-        {/* Elemento decorativo de fondo */}
         <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-3xl" />
       </button>
 
-      {/* CONTENIDO DINÁMICO: LISTA O ANÁLISIS */}
+      {/* CONTENIDO: LISTA O ANÁLISIS (GRÁFICO) */}
       {!showBreakdown ? (
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1 mb-1">
@@ -136,7 +193,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     className="w-full flex justify-between items-center p-3.5 card-clickable bg-white/[0.03] border-white/[0.05]"
                   >
                     <div className="flex items-center gap-3.5 text-left overflow-hidden">
-                      {/* Icono de categoría dinámico */}
                       <div className={`flex-shrink-0 p-2.5 rounded-xl ${styles.bg} ${styles.color}`}>
                         {styles.icon}
                       </div>
@@ -166,7 +222,49 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
       ) : (
-        <section className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+        <section className="space-y-8 animate-in fade-in zoom-in-95 duration-500 pb-10">
+          
+          {/* GRÁFICO CIRCULAR */}
+          <div className="py-4">
+            <h3 className="text-small-caps text-center mb-6">{txt('home.chart_title')}</h3>
+            {renderDonutChart()}
+          </div>
+
+          {/* DESGLOSE POR CATEGORÍA */}
+          <div className="space-y-3">
+              <h3 className="text-small-caps mb-4">{txt('home.category_breakdown')}</h3>
+              <div className="space-y-3">
+                {statsPorCategoria.map(([cat, val], i) => {
+                  const percentage = (val / stats.total) * 100;
+                  const styles = getCategoryStyles(cat);
+                  const isCustom = !['super', 'mini', 'dining', 'health', 'others'].includes(cat);
+                  
+                  return (
+                    <div key={i} className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className={`${styles.color} p-1 bg-white/5 rounded-lg`}>
+                            {styles.icon}
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-white/80">
+                            {isCustom ? cat : txt(`scan.${cat}`)}
+                          </span>
+                        </div>
+                        <span className="text-xs font-black text-white">{val.toFixed(2)}€</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-1000 ease-out" 
+                          style={{ width: `${percentage}%`, backgroundColor: styles.hex }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+          </div>
+
+          {/* DESGLOSE POR COMERCIO */}
           <div className="space-y-3">
               <h3 className="text-small-caps mb-4">{txt('home.shop_breakdown')}</h3>
               <div className="space-y-2">
@@ -175,14 +273,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   .map(([name, val], i) => {
                     const percentage = (val / stats.total) * 100;
                     return (
-                      <div key={i} className="shop-row flex-col !items-start gap-2">
+                      <div key={i} className="shop-row flex-col !items-start gap-2 bg-white/[0.01]">
                         <div className="flex justify-between w-full">
-                          <span className="text-[10px] font-black uppercase text-white/80">{name}</span>
-                          <span className="text-xs font-black text-brand-success">{val.toFixed(2)}€</span>
+                          <span className="text-[10px] font-black uppercase text-white/60">{name}</span>
+                          <span className="text-[10px] font-black text-brand-success">{val.toFixed(2)}€</span>
                         </div>
                         <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                           <div 
-                            className="h-full bg-brand-primary rounded-full transition-all duration-1000" 
+                            className="h-full bg-brand-primary/40 rounded-full transition-all duration-1000" 
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -191,8 +289,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   })}
               </div>
           </div>
-
-          {/* Tips de ahorro o info extra según la categoría predominante se podría añadir aquí en el futuro */}
         </section>
       )}
     </div>

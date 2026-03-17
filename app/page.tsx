@@ -24,13 +24,22 @@ export default function Home() {
     const [user, setUser] = useState({ name: '', loggedIn: false, token: '' });
     const [activeTab, setActiveTab] = useState('home');
     const [loading, setLoading] = useState(false);
-    const [db, setDb] = useState({ gastos: [] as any[], lista: [] as any[] });
+    
+    // Añadimos customCategories a la estructura inicial del DB
+    const [db, setDb] = useState<{
+        gastos: any[], 
+        lista: any[], 
+        customCategories?: string[]
+    }>({ gastos: [], lista: [], customCategories: [] });
+
     const [fileId, setFileId] = useState<string | null>(null);
     const [isOffline, setIsOffline] = useState(false);
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
     // --- ESTADO FLUJO DE COMPRA ---
-    const [purchaseMode, setPurchaseMode] = useState<'super' | 'mini' | 'dining' | 'health' | 'others' | 'manual' | null>(null);
+    // CORRECCIÓN: Cambiamos el tipo a string | null para permitir categorías personalizadas
+    const [purchaseMode, setPurchaseMode] = useState<string | null>(null);
+    
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
     const [pendingGasto, setPendingGasto] = useState<any>(null);
     const [selectedGasto, setSelectedGasto] = useState<any | null>(null);
@@ -41,14 +50,10 @@ export default function Home() {
 
     // --- EFECTOS INICIALES ---
     useEffect(() => {
-        // 1. Detectar idioma del sistema
         setLang(getSystemLanguage());
-
-        // 2. Cargar caché local para que la app abra instantáneamente
         const localData = localStorage.getItem('mi_compra_cache_db');
         if (localData) setDb(JSON.parse(localData));
 
-        // 3. Verificar si hay sesión activa en el navegador
         const tkn = localStorage.getItem('gdrive_token');
         const name = localStorage.getItem('user_name');
         if (tkn && name) {
@@ -56,7 +61,6 @@ export default function Home() {
             loadData(tkn);
         }
 
-        // 4. Gestión de conectividad Online/Offline
         const handleStatus = () => setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
@@ -72,7 +76,6 @@ export default function Home() {
         if (res) {
             setDb(res.data);
             setFileId(res.id);
-            // Actualizamos caché al recibir datos frescos
             localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
         }
     };
@@ -89,7 +92,6 @@ export default function Home() {
     const startAnalysis = async (useList: boolean) => {
         if (isOffline || loading) return;
 
-        // Caso especial: Entrada manual
         if (purchaseMode === 'manual') {
             setPendingGasto({
                 comercio: "NUEVA COMPRA",
@@ -105,17 +107,12 @@ export default function Home() {
         setShowListDialog(false);
 
         try {
-            // Preparamos los items de la lista para enviárselos a la IA
             const listItems = useList ? db.lista.filter(l => !l.confirmed).map(l => l.name) : [];
-            
-            // Construimos el prompt dinámico desde el JSON de idiomas
             const promptFinal = txt('ai.prompt')
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
 
             const res = await analyzeReceipt(tempPhotos, purchaseMode || 'super', promptFinal);
-            
-            // Añadimos las imágenes temporales y el flag de lista al objeto pendiente
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
         } catch (err: any) { 
             alert(err.message); 
@@ -130,7 +127,6 @@ export default function Home() {
         setLoading(true);
         try {
             let pIds = [];
-            // 1. Subir fotos a la carpeta oculta de Google Drive
             if (finalGasto.tempImages && !isOffline) {
                 for (let img of finalGasto.tempImages) {
                     const id = await uploadImageToDrive(user.token, img);
@@ -138,14 +134,12 @@ export default function Home() {
                 }
             }
 
-            // 2. Sincronizar productos con el Diccionario Maestro de Supabase (Mayúsculas y Alias)
             if (!isOffline) {
                 for (let prod of finalGasto.productos) {
                     await syncProductWithSupabase(prod, finalGasto.comercio);
                 }
             }
 
-            // 3. Si se usó la lista, marcar productos encontrados como comprados
             const updatedL = db.lista.map(li => {
                 if (!finalGasto.usedList) return li;
                 const matched = finalGasto.productos?.some((p: any) => 
@@ -154,23 +148,19 @@ export default function Home() {
                 return matched ? { ...li, confirmed: true, checked: true } : li;
             });
 
-            // 4. Crear el registro final del gasto
             const record = { 
                 ...finalGasto, 
-                category: purchaseMode, // Guardamos la categoría seleccionada
+                category: purchaseMode, 
                 photoIds: pIds, 
                 total: Number(finalGasto.total) || 0 
             };
 
-            // 5. Determinar a qué pestaña volver (Si vienes de lista, vuelves a lista)
             const returnToList = finalGasto.usedList || activeTab === 'list';
 
-            // 6. Limpieza de campos internos antes de persistir
             delete record.tempImages; 
             delete record.usedList; 
             delete record._isGrouped;
             
-            // 7. Guardar en Drive y actualizar estado local
             await updateAndSync({ 
                 ...db, 
                 gastos: [record, ...db.gastos], 
@@ -193,7 +183,6 @@ export default function Home() {
         setActiveTab(tab);
     };
 
-    // --- ESTADÍSTICAS DEL MES (Memoized) ---
     const stats = useMemo(() => {
         const y = currentViewDate.getFullYear();
         const m = currentViewDate.getMonth();
@@ -217,12 +206,10 @@ export default function Home() {
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 
-    // --- RENDERIZADO PRINCIPAL ---
     if (!user.loggedIn) return <AuthView CLIENT_ID={CLIENT_ID} txt={txt} />;
 
     return (
         <main className="app-layout">
-            {/* Barra superior y navegación inferior */}
             <Navigation 
                 user={user} 
                 activeTab={activeTab} 
@@ -232,7 +219,6 @@ export default function Home() {
             />
 
             <div className="flex-1 overflow-y-auto pt-4 no-scrollbar">
-                {/* VISTA: DASHBOARD (INICIO) */}
                 {activeTab === 'home' && !purchaseMode && (
                     <DashboardView 
                         stats={stats} 
@@ -245,7 +231,6 @@ export default function Home() {
                     />
                 )}
 
-                {/* VISTA: MI LISTA DE LA COMPRA */}
                 {activeTab === 'list' && (
                     <ShoppingListView 
                         db={db} 
@@ -255,16 +240,17 @@ export default function Home() {
                     />
                 )}
 
-                {/* VISTA: SELECCIÓN DE ESTABLECIMIENTO */}
+                {/* CORRECCIÓN: Pasamos las props db y updateAndSync a ScannerView */}
                 {activeTab === 'add' && !purchaseMode && (
                     <ScannerView 
+                        db={db}
+                        updateAndSync={updateAndSync}
                         setPurchaseMode={setPurchaseMode} 
                         startAnalysis={startAnalysis} 
                         txt={txt} 
                     />
                 )}
 
-                {/* VISTA: AJUSTES */}
                 {activeTab === 'settings' && (
                     <SettingsView 
                         user={user} 
@@ -275,7 +261,6 @@ export default function Home() {
                 )}
             </div>
 
-            {/* OVERLAY: CAPTURA DE FOTOS (CÁMARA / GALERÍA) */}
             {(purchaseMode && purchaseMode !== 'manual') && !pendingGasto && (
                 <div className="modal-content-full z-[1000] justify-center gap-10">
                     <ScannerView.Capture 
@@ -293,7 +278,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* OVERLAY: MODAL DE REVISIÓN DE PRODUCTOS (POST-IA) */}
             {pendingGasto && (
                 <ReviewModal 
                     pendingGasto={pendingGasto} 
@@ -306,7 +290,6 @@ export default function Home() {
                 />
             )}
             
-            {/* OVERLAY: DETALLE DE UN GASTO ANTERIOR */}
             {selectedGasto && (
                 <DetailView 
                     gasto={selectedGasto} 
@@ -323,7 +306,6 @@ export default function Home() {
                 />
             )}
 
-            {/* OVERLAY: SPINNER DE CARGA GLOBAL */}
             {loading && (
                 <div className="fixed inset-0 z-[2000] bg-brand-bg/60 backdrop-blur-md flex items-center justify-center">
                     <Loader2 className="animate-spin text-brand-primary" size={48} strokeWidth={3}/>

@@ -1,10 +1,23 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Check, X, Store, Search, Loader2, Sparkles, CheckCircle2, PlusCircle } from 'lucide-react';
+import { 
+  Check, 
+  X, 
+  Store, 
+  Search, 
+  Loader2, 
+  Sparkles, 
+  CheckCircle2, 
+  PlusCircle, 
+  TrendingUp, 
+  TrendingDown, 
+  Minus,
+  History
+} from 'lucide-react';
 
 // Importaciones de lógica
 import { calculateMatchScore, groupRepeatedProducts } from '../../lib/utils';
-import { searchLocalProducts } from '../../lib/products';
+import { searchLocalProducts, getLastPrice } from '../../lib/products';
 
 interface ReviewModalProps {
   pendingGasto: any;
@@ -28,19 +41,37 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isSearchingExtra, setIsSearchingExtra] = useState(false);
   const [showExtraSearchIdx, setShowExtraSearchIdx] = useState<number | null>(null);
 
-  // Inicialización y agrupación
+  // Estado para guardar los precios históricos cargados desde Supabase
+  const [historyPrices, setHistoryPrices] = useState<Record<string, number | null>>({});
+
+  // 1. Inicialización, agrupación y Carga de Historial
   useEffect(() => {
     if (pendingGasto?.productos && !pendingGasto._isGrouped) {
       const grouped = groupRepeatedProducts(pendingGasto.productos);
       setPendingGasto({ ...pendingGasto, productos: grouped, _isGrouped: true });
       
+      // Auto-expandir productos que ya vienen limpios de la IA
       const autoExpand: number[] = [];
       grouped.forEach((p: any, i: number) => {
         if (p.nombre_base.toUpperCase() === p.nombre_ticket.toUpperCase()) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
+
+      // Cargar precios históricos para todos los productos detectados
+      loadAllHistory(grouped);
     }
   }, [pendingGasto, setPendingGasto]);
+
+  const loadAllHistory = async (products: any[]) => {
+    const prices: Record<string, number | null> = {};
+    for (const p of products) {
+      if (p.nombre_base) {
+        const lastP = await getLastPrice(p.nombre_base);
+        prices[p.nombre_base.toUpperCase()] = lastP;
+      }
+    }
+    setHistoryPrices(prices);
+  };
 
   // Limpieza total de búsqueda
   const limpiarBusqueda = () => {
@@ -51,7 +82,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   const toggleExpand = (idx: number) => {
-    // Al abrir o cerrar un producto, limpiamos cualquier búsqueda pendiente
     limpiarBusqueda();
     setExpandedIndices(prev => 
       prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
@@ -71,12 +101,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     }
   };
 
-  const setAlias = (productIndex: number, cleanName: string) => {
+  const setAlias = async (productIndex: number, cleanName: string) => {
     const newProds = [...pendingGasto.productos];
-    newProds[productIndex].nombre_base = cleanName.toUpperCase().trim();
+    const upperClean = cleanName.toUpperCase().trim();
+    newProds[productIndex].nombre_base = upperClean;
+    
     setPendingGasto({ ...pendingGasto, productos: newProds });
     
-    // Cerramos el acordeón de ese producto y limpiamos búsqueda
+    // Al cambiar el alias, actualizamos el historial de precio para ese item específico
+    const lastP = await getLastPrice(upperClean);
+    setHistoryPrices(prev => ({ ...prev, [upperClean]: lastP }));
+
     setExpandedIndices(prev => prev.filter(i => i !== productIndex));
     limpiarBusqueda();
   };
@@ -90,12 +125,60 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       cantidad: manualProd.qty, 
       subtotal: p * manualProd.qty 
     };
+    const updatedProducts = groupRepeatedProducts([...pendingGasto.productos, newProduct]);
     setPendingGasto({
       ...pendingGasto,
-      productos: groupRepeatedProducts([...pendingGasto.productos, newProduct])
+      productos: updatedProducts
     });
+    
+    // Cargar historial para el nuevo item
+    loadAllHistory(updatedProducts);
+
     setManualProd({ name: '', qty: 1, price: "" });
     setIsManualExpanded(false);
+  };
+
+  /**
+   * Renderiza el indicador de comparación de precios
+   */
+  const renderPriceComparison = (nombreBase: string, subtotal: number, cantidad: number) => {
+    const currentPrice = subtotal / (cantidad || 1);
+    const oldPrice = historyPrices[nombreBase.toUpperCase()];
+
+    if (oldPrice === undefined || oldPrice === null) {
+      return (
+        <div className="flex items-center gap-1 opacity-20">
+          <History size={8} />
+          <span className="text-[7px] font-bold uppercase">{txt('review.no_history')}</span>
+        </div>
+      );
+    }
+
+    const diff = currentPrice - oldPrice;
+    const threshold = 0.01; // Margen para considerar "igual"
+
+    if (diff > threshold) {
+      return (
+        <div className="flex items-center gap-0.5 text-brand-danger animate-in fade-in zoom-in">
+          <TrendingUp size={10} />
+          <span className="text-[8px] font-black uppercase">{txt('review.price_up')}</span>
+        </div>
+      );
+    } else if (diff < -threshold) {
+      return (
+        <div className="flex items-center gap-0.5 text-brand-success animate-in fade-in zoom-in">
+          <TrendingDown size={10} />
+          <span className="text-[8px] font-black uppercase">{txt('review.price_down')}</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex items-center gap-0.5 text-brand-muted opacity-40">
+          <Minus size={10} />
+          <span className="text-[8px] font-black uppercase">{txt('review.price_same')}</span>
+        </div>
+      );
+    }
   };
 
   return (
@@ -171,7 +254,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         </p>
                         {hasCleanAlias && <Sparkles size={10} className="text-brand-accent flex-shrink-0" />}
                       </div>
-                      <p className="text-[8px] font-bold text-brand-muted uppercase truncate mt-0.5 opacity-30">{p.nombre_ticket}</p>
+                      
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-30">{p.nombre_ticket}</p>
+                        {/* INDICADOR DE HISTORIAL DE PRECIO */}
+                        {renderPriceComparison(p.nombre_base, p.subtotal, p.cantidad)}
+                      </div>
                     </div>
                     <p className="text-xs font-black text-brand-success italic">{Number(p.subtotal).toFixed(2)}€</p>
                   </button>
