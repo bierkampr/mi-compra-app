@@ -13,8 +13,8 @@
     @apply bg-brand-bg text-white antialiased overflow-x-hidden select-none;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
-    /* Fondo para escritorio: un gradiente sutil para que no sea solo negro */
-    background: radial-gradient(circle at top right, #161926, #0D0F1A 50%);
+    /* Fondo con gradiente para que en escritorio no se vea plano */
+    background: radial-gradient(circle at top right, #161926, #0D0F1A 60%);
   }
   
   input, select, textarea {
@@ -23,14 +23,13 @@
 }
 
 @layer components {
-  /* Estructura Principal */
-  /* lg:max-w-4xl permite que en escritorio la app se ensanche para mostrar columnas */
+  /* Estructura Principal: max-w-6xl para que no se estire en monitores de 27" */
   .app-layout {
-    @apply max-w-md lg:max-w-5xl mx-auto min-h-screen flex flex-col relative bg-transparent px-[5vw] lg:px-8 pb-44 pt-6 transition-all duration-500;
+    @apply max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col relative bg-transparent px-[5vw] lg:px-10 pb-44 pt-6 transition-all duration-500;
   }
 
   .card-premium {
-    @apply bg-brand-card border border-white/[0.05] rounded-[1.75rem] p-5 shadow-2xl transition-all duration-300;
+    @apply bg-brand-card border border-white/[0.05] rounded-[1.75rem] p-5 lg:p-8 shadow-2xl transition-all duration-300;
   }
 
   .card-clickable {
@@ -46,7 +45,7 @@
   }
 
   .text-small-caps { 
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted; 
+    @apply text-[10px] lg:text-[12px] font-black uppercase tracking-[0.2em] text-brand-muted; 
   }
   
   .btn-primary {
@@ -77,12 +76,14 @@
            animate-in fade-in duration-300;
   }
 
+  /* Modales en Escritorio: Ventanas centradas con tamaño fijo */
   .modal-content-full {
-    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-[6vw] lg:p-12 overflow-y-auto 
-           animate-in slide-in-from-bottom duration-500 ease-out;
+    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-[6vw] overflow-y-auto 
+           animate-in slide-in-from-bottom duration-500 ease-out
+           lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 
+           lg:w-[850px] lg:h-[85vh] lg:rounded-[3rem] lg:border lg:border-white/10 lg:shadow-[0_0_80px_rgba(0,0,0,0.9)];
   }
 
-  /* Barra de navegación: En escritorio la hacemos un poco más ancha y centrada */
   .nav-bottom {
     @apply fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm lg:max-w-md
            bg-brand-card/90 backdrop-blur-2xl rounded-[2rem] px-2 py-2

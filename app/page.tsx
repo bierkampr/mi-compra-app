@@ -37,6 +37,7 @@ export default function Home() {
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
     // --- ESTADO FLUJO DE COMPRA ---
+    // CORRECCIÓN: Cambiamos el tipo a string | null para permitir categorías personalizadas
     const [purchaseMode, setPurchaseMode] = useState<string | null>(null);
     
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
@@ -205,7 +206,6 @@ export default function Home() {
         return { total, currentGastos, porComercio };
     }, [db.gastos, currentViewDate]);
 
-    // --- RENDERIZADO PRINCIPAL ---
     if (!user.loggedIn) return <AuthView CLIENT_ID={CLIENT_ID} txt={txt} />;
 
     return (
@@ -260,9 +260,9 @@ export default function Home() {
                 )}
             </div>
 
-            {/* OVERLAY: CAPTURA DE FOTOS - Adaptado para escritorio */}
+            {/* OVERLAY: CAPTURA DE FOTOS */}
             {(purchaseMode && purchaseMode !== 'manual') && !pendingGasto && (
-                <div className="modal-content-full z-[1000] justify-center gap-10 lg:max-w-4xl lg:h-[85vh] lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white/5">
+                <div className="modal-content-full z-[1000] justify-center gap-10">
                     <ScannerView.Capture 
                         tempPhotos={tempPhotos} 
                         setTempPhotos={setTempPhotos} 
@@ -278,9 +278,9 @@ export default function Home() {
                 </div>
             )}
 
-            {/* OVERLAY: REVISIÓN DE PRODUCTOS - Adaptado para escritorio */}
+            {/* OVERLAY: REVISIÓN DE PRODUCTOS */}
             {pendingGasto && (
-                <div className="modal-content-full z-[1100] lg:max-w-4xl lg:h-[90vh] lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white/5">
+                <div className="modal-content-full z-[1100]">
                     <ReviewModal 
                         pendingGasto={pendingGasto} 
                         setPendingGasto={setPendingGasto} 
@@ -293,9 +293,9 @@ export default function Home() {
                 </div>
             )}
             
-            {/* OVERLAY: DETALLE DE GASTO - Adaptado para escritorio */}
+            {/* OVERLAY: DETALLE DE GASTO */}
             {selectedGasto && (
-                <div className="modal-content-full z-[1200] lg:max-w-2xl lg:h-[80vh] lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white/5">
+                <div className="modal-content-full z-[1200] lg:max-w-2xl">
                     <DetailView 
                         gasto={selectedGasto} 
                         onClose={() => setSelectedGasto(null)} 
@@ -312,14 +312,13 @@ export default function Home() {
                 </div>
             )}
 
-            {/* OVERLAY: SPINNER GLOBAL */}
             {loading && (
                 <div className="fixed inset-0 z-[2000] bg-brand-bg/60 backdrop-blur-md flex items-center justify-center">
                     <Loader2 className="animate-spin text-brand-primary" size={48} strokeWidth={3}/>
                 </div>
             )}
 
-            {/* Sombra de fondo solo visible en escritorio para dar profundidad */}
+            {/* Sombra de profundidad solo para escritorio */}
             <div className="hidden lg:block fixed inset-0 bg-black/40 -z-10 pointer-events-none" />
         </main>
     );
