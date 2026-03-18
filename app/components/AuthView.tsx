@@ -9,21 +9,43 @@ interface AuthViewProps {
 
 const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
   const handleLogin = () => {
+    // Cambiamos a initCodeClient para obtener un Refresh Token (Sesión infinita)
     // @ts-ignore
-    const client = window.google.accounts.oauth2.initTokenClient({
+    const client = window.google.accounts.oauth2.initCodeClient({
       client_id: CLIENT_ID,
       scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile",
-      callback: async (res: any) => {
-        localStorage.setItem('gdrive_token', res.access_token);
-        const info = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { 
-          headers: { Authorization: `Bearer ${res.access_token}` } 
-        }).then(r => r.json());
-        
-        localStorage.setItem('user_name', info.name);
-        window.location.reload();
+      ux_mode: 'popup',
+      callback: async (response: any) => {
+        if (response.code) {
+          try {
+            // Enviamos el código al servidor para intercambiarlo por tokens
+            const res = await fetch('/api/auth/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: response.code })
+            }).then(r => r.json());
+
+            if (res.access_token) {
+              localStorage.setItem('gdrive_token', res.access_token);
+              if (res.refresh_token) {
+                localStorage.setItem('gdrive_refresh_token', res.refresh_token);
+              }
+              
+              const info = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { 
+                headers: { Authorization: `Bearer ${res.access_token}` } 
+              }).then(r => r.json());
+              
+              localStorage.setItem('user_name', info.name);
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error exchanging code for token", error);
+            alert("Error al iniciar sesión");
+          }
+        }
       },
     });
-    client.requestAccessToken();
+    client.requestCode();
   };
 
   return (

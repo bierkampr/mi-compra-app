@@ -1,29 +1,70 @@
-/* --- ARCHIVO: lib/gdrive.ts (Versión Datos Ocultos Mejorada) --- */
+/* --- ARCHIVO: lib/gdrive.ts (Versión con Auto-Refresh Token) --- */
 
 import { FILE_NAME } from "./config";
 import { AppDB } from "./types";
 
 /**
- * Cierra la sesión si el token ha expirado (Error 401)
+ * Intenta renovar el access_token usando el refresh_token guardado
+ */
+const refreshAccessToken = async (): Promise<string | null> => {
+  const refreshToken = localStorage.getItem('gdrive_refresh_token');
+  if (!refreshToken) return null;
+
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    }).then(r => r.json());
+
+    if (res.access_token) {
+      localStorage.setItem('gdrive_token', res.access_token);
+      return res.access_token;
+    }
+  } catch (error) {
+    console.error("Error refreshing token", error);
+  }
+  return null;
+};
+
+/**
+ * Cierra la sesión si el token ha expirado y no se puede renovar
  */
 const logoutForced = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('gdrive_token');
+    localStorage.removeItem('gdrive_refresh_token');
     localStorage.removeItem('user_name');
     window.location.href = "/";
   }
 };
 
 /**
- * Helper para realizar fetch con reintentos
+ * Helper para realizar fetch con reintentos y renovación automática de token
  */
-async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = 1): Promise<Response> {
   try {
     const res = await fetch(url, options);
+    
     if (res.status === 401) {
-      logoutForced();
-      throw new Error("Sesión expirada");
+      // Intentamos renovar el token
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        // Reintentamos la petición original con el nuevo token
+        const newOptions = {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${newToken}`
+          }
+        };
+        return fetch(url, newOptions);
+      } else {
+        logoutForced();
+        throw new Error("Sesión expirada");
+      }
     }
+
     if (!res.ok && retries > 0) {
       return fetchWithRetry(url, options, retries - 1);
     }
@@ -54,7 +95,6 @@ export const getDriveFile = async (token: string): Promise<{ id: string | null; 
       });
 
       const jsonData = await contentRes.json();
-      // Asegurar que las categorías personalizadas existan
       if (!jsonData.customCategories) jsonData.customCategories = [];
       return { id: fileId, data: jsonData };
     }
