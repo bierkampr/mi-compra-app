@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CLIENT_ID } from '@/lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive } from '@/lib/gdrive';
 import { analyzeReceipt } from '@/lib/gemini';
@@ -7,6 +7,7 @@ import { normalizeStoreName } from '@/lib/utils';
 import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
+import { AppDB, Gasto, UserState } from '@/lib/types';
 
 // Componentes de la interfaz
 import Navigation from './components/Navigation';
@@ -17,45 +18,52 @@ import ScannerView from './components/ScannerView';
 import SettingsView from './components/SettingsView';
 import ReviewModal from './components/ReviewModal';
 import DetailView from './components/DetailView';
-import HelpModal from './components/HelpModal'; // Importación del nuevo componente
+import HelpModal from './components/HelpModal';
 
 export default function Home() {
     // --- ESTADO GLOBAL ---
     const [lang, setLang] = useState('es');
-    const [user, setUser] = useState({ name: '', loggedIn: false, token: '' });
+    const [user, setUser] = useState<UserState>({ name: '', loggedIn: false, token: '' });
     const [activeTab, setActiveTab] = useState('home');
     const [loading, setLoading] = useState(false);
-    
-    // Estado para el tutorial y ayuda
     const [showHelp, setShowHelp] = useState(false);
 
     // Estructura inicial del DB
-    const [db, setDb] = useState<{
-        gastos: any[], 
-        lista: any[], 
-        customCategories?: string[]
-    }>({ gastos: [], lista: [], customCategories: [] });
-
+    const [db, setDb] = useState<AppDB>({ gastos: [], lista: [], customCategories: [] });
     const [fileId, setFileId] = useState<string | null>(null);
     const [isOffline, setIsOffline] = useState(false);
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
     // --- ESTADO FLUJO DE COMPRA ---
     const [purchaseMode, setPurchaseMode] = useState<string | null>(null);
-    
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
     const [pendingGasto, setPendingGasto] = useState<any>(null);
-    const [selectedGasto, setSelectedGasto] = useState<any | null>(null);
+    const [selectedGasto, setSelectedGasto] = useState<Gasto | null>(null);
     const [showListDialog, setShowListDialog] = useState(false);
 
-    // Función puente para traducciones
-    const txt = (key: string) => t(key, lang);
+    const txt = useCallback((key: string) => t(key, lang), [lang]);
+
+    // --- CARGA DE DATOS ---
+    const loadData = useCallback(async (token: string) => {
+        const res = await getDriveFile(token);
+        if (res) {
+            setDb(res.data);
+            setFileId(res.id);
+            localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
+        }
+    }, []);
 
     // --- EFECTOS INICIALES ---
     useEffect(() => {
         setLang(getSystemLanguage());
         const localData = localStorage.getItem('mi_compra_cache_db');
-        if (localData) setDb(JSON.parse(localData));
+        if (localData) {
+            try {
+                setDb(JSON.parse(localData));
+            } catch (e) {
+                console.error("Error parsing cache", e);
+            }
+        }
 
         const tkn = localStorage.getItem('gdrive_token');
         const name = localStorage.getItem('user_name');
@@ -63,9 +71,7 @@ export default function Home() {
             setUser({ name, loggedIn: true, token: tkn });
             loadData(tkn);
             
-            // Lógica de Onboarding (Primera vez)
-            const hasSeenTour = localStorage.getItem('mi_compra_seen_tour');
-            if (!hasSeenTour) {
+            if (!localStorage.getItem('mi_compra_seen_tour')) {
                 setShowHelp(true);
                 localStorage.setItem('mi_compra_seen_tour', 'true');
             }
@@ -78,23 +84,18 @@ export default function Home() {
             window.removeEventListener('online', handleStatus);
             window.removeEventListener('offline', handleStatus);
         };
-    }, []);
+    }, [loadData]);
 
-    // --- LÓGICA DE DATOS (GDRIVE) ---
-    const loadData = async (token: string) => {
-        const res = await getDriveFile(token);
-        if (res) {
-            setDb(res.data);
-            setFileId(res.id);
-            localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
-        }
-    };
-
-    const updateAndSync = async (newDb: any) => {
+    const updateAndSync = async (newDb: AppDB) => {
         setDb(newDb);
         localStorage.setItem('mi_compra_cache_db', JSON.stringify(newDb));
         if (navigator.onLine && user.token) {
-            await saveDriveFile(user.token, newDb, fileId);
+            try {
+                await saveDriveFile(user.token, newDb, fileId);
+            } catch (e) {
+                console.error("Sync error:", e);
+                // Aquí se podría implementar un sistema de reintentos silencioso
+            }
         }
     };
 
@@ -136,18 +137,19 @@ export default function Home() {
         if (loading) return;
         setLoading(true);
         try {
-            let pIds = [];
+            // OPTIMIZACIÓN: Subida de imágenes en paralelo
+            let pIds: string[] = [];
             if (finalGasto.tempImages && !isOffline) {
-                for (let img of finalGasto.tempImages) {
-                    const id = await uploadImageToDrive(user.token, img);
-                    pIds.push(id);
-                }
+                pIds = await Promise.all(
+                    finalGasto.tempImages.map((img: string) => uploadImageToDrive(user.token, img))
+                );
             }
 
+            // Sincronización con Supabase (Catálogo maestro)
             if (!isOffline) {
-                for (let prod of finalGasto.productos) {
-                    await syncProductWithSupabase(prod, finalGasto.comercio);
-                }
+                await Promise.all(
+                    finalGasto.productos.map((prod: any) => syncProductWithSupabase(prod, finalGasto.comercio))
+                );
             }
 
             const updatedL = db.lista.map(li => {
@@ -158,18 +160,16 @@ export default function Home() {
                 return matched ? { ...li, confirmed: true, checked: true } : li;
             });
 
-            const record = { 
-                ...finalGasto, 
-                category: purchaseMode, 
-                photoIds: pIds, 
-                total: Number(finalGasto.total) || 0 
+            const record: Gasto = { 
+                comercio: finalGasto.comercio,
+                fecha: finalGasto.fecha,
+                total: Number(finalGasto.total) || 0,
+                category: purchaseMode || 'super',
+                photoIds: pIds,
+                productos: finalGasto.productos
             };
 
             const returnToList = finalGasto.usedList || activeTab === 'list';
-
-            delete record.tempImages; 
-            delete record.usedList; 
-            delete record._isGrouped;
             
             await updateAndSync({ 
                 ...db, 
@@ -180,7 +180,8 @@ export default function Home() {
             resetFlow(returnToList ? 'list' : 'home');
 
         } catch (e) { 
-            alert("Error al sincronizar con Google Drive"); 
+            console.error(e);
+            alert("Error al sincronizar datos"); 
         } finally { 
             setLoading(false); 
         }
@@ -207,7 +208,7 @@ export default function Home() {
         
         const total = currentGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
         
-        const porComercio = currentGastos.reduce((acc: any, g) => { 
+        const porComercio = currentGastos.reduce((acc: Record<string, number>, g) => { 
             const nombreLimpio = normalizeStoreName(g.comercio);
             acc[nombreLimpio] = (acc[nombreLimpio] || 0) + Number(g.total); 
             return acc; 
@@ -226,7 +227,7 @@ export default function Home() {
                 setActiveTab={setActiveTab} 
                 isOffline={isOffline} 
                 txt={txt} 
-                onShowHelp={() => setShowHelp(true)} // Nueva prop para abrir ayuda
+                onShowHelp={() => setShowHelp(true)}
             />
 
             <div className="flex-1 overflow-y-auto pt-4 no-scrollbar">
@@ -267,20 +268,13 @@ export default function Home() {
                         db={db} 
                         setActiveTab={setActiveTab} 
                         txt={txt} 
-                        onShowHelp={() => setShowHelp(true)} // Nueva prop para ajustes
+                        onShowHelp={() => setShowHelp(true)}
                     />
                 )}
             </div>
 
-            {/* OVERLAY: AYUDA / TUTORIAL */}
-            {showHelp && (
-                <HelpModal 
-                    onClose={() => setShowHelp(false)} 
-                    txt={txt} 
-                />
-            )}
+            {showHelp && <HelpModal onClose={() => setShowHelp(false)} txt={txt} />}
 
-            {/* OVERLAY: CAPTURA DE FOTOS */}
             {(purchaseMode && purchaseMode !== 'manual') && !pendingGasto && (
                 <div className="modal-content-full z-[1000] justify-center gap-10">
                     <ScannerView.Capture 
@@ -298,7 +292,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* OVERLAY: REVISIÓN DE PRODUCTOS */}
             {pendingGasto && (
                 <div className="modal-content-full z-[1100]">
                     <ReviewModal 
@@ -313,7 +306,6 @@ export default function Home() {
                 </div>
             )}
             
-            {/* OVERLAY: DETALLE DE GASTO */}
             {selectedGasto && (
                 <div className="modal-content-full z-[1200]">
                     <DetailView 
@@ -338,7 +330,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Sombra de profundidad para escritorio */}
             <div className="hidden lg:block fixed inset-0 bg-black/40 -z-10 pointer-events-none" />
         </main>
     );

@@ -1,74 +1,79 @@
-/* --- ARCHIVO: lib/gdrive.ts (Versión Datos Ocultos) --- */
+/* --- ARCHIVO: lib/gdrive.ts (Versión Datos Ocultos Mejorada) --- */
 
 import { FILE_NAME } from "./config";
+import { AppDB } from "./types";
 
 /**
  * Cierra la sesión si el token ha expirado (Error 401)
  */
 const logoutForced = () => {
-  localStorage.removeItem('gdrive_token');
-  localStorage.removeItem('user_name');
   if (typeof window !== 'undefined') {
+    localStorage.removeItem('gdrive_token');
+    localStorage.removeItem('user_name');
     window.location.href = "/";
   }
 };
 
 /**
+ * Helper para realizar fetch con reintentos
+ */
+async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+  try {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+      logoutForced();
+      throw new Error("Sesión expirada");
+    }
+    if (!res.ok && retries > 0) {
+      return fetchWithRetry(url, options, retries - 1);
+    }
+    return res;
+  } catch (err) {
+    if (retries > 0) return fetchWithRetry(url, options, retries - 1);
+    throw err;
+  }
+}
+
+/**
  * Busca el archivo JSON de la base de datos en la carpeta OCULTA de la app
  */
-export const getDriveFile = async (token: string) => {
+export const getDriveFile = async (token: string): Promise<{ id: string | null; data: AppDB } | null> => {
   try {
-    // IMPORTANTE: añadimos 'spaces=appDataFolder' para buscar en el espacio oculto
     const url = `https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}' and trashed=false&spaces=appDataFolder&fields=files(id,name)`;
     
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
-
-    if (res.status === 401) { 
-      logoutForced(); 
-      return null; 
-    }
 
     const data = await res.json();
 
     if (data.files && data.files.length > 0) {
       const fileId = data.files[0].id;
-      // Descargamos el contenido del archivo
-      const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      const contentRes = await fetchWithRetry(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (contentRes.status === 401) { 
-        logoutForced(); 
-        return null; 
-      }
-
       const jsonData = await contentRes.json();
+      // Asegurar que las categorías personalizadas existan
+      if (!jsonData.customCategories) jsonData.customCategories = [];
       return { id: fileId, data: jsonData };
     }
 
-    // Si no existe, devolvemos una estructura vacía
-    return { id: null, data: { gastos: [], lista: [] } };
+    return { id: null, data: { gastos: [], lista: [], customCategories: [] } };
   } catch (e) {
     console.error("Error al obtener archivo de Drive:", e);
-    return { id: null, data: { gastos: [], lista: [] } };
+    return { id: null, data: { gastos: [], lista: [], customCategories: [] } };
   }
 };
 
 /**
- * Obtiene una imagen (blob) por su ID para mostrarla en el visor
+ * Obtiene una imagen (blob) por su ID
  */
-export const getDriveFileBlob = async (token: string, fileId: string) => {
+export const getDriveFileBlob = async (token: string, fileId: string): Promise<string | null> => {
   try {
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    const res = await fetchWithRetry(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-
-    if (res.status === 401) {
-      logoutForced();
-      return null;
-    }
 
     const blob = await res.blob();
     return URL.createObjectURL(blob);
@@ -81,8 +86,7 @@ export const getDriveFileBlob = async (token: string, fileId: string) => {
 /**
  * Sube una imagen (ticket) a la carpeta OCULTA de la app
  */
-export const uploadImageToDrive = async (token: string, base64Image: string) => {
-  // Metadata: Definimos que el padre es 'appDataFolder' para que sea invisible
+export const uploadImageToDrive = async (token: string, base64Image: string): Promise<string> => {
   const metadata = { 
     name: `ticket_${Date.now()}.jpg`, 
     mimeType: 'image/jpeg',
@@ -90,32 +94,33 @@ export const uploadImageToDrive = async (token: string, base64Image: string) => 
   };
 
   const base64Data = base64Image.split(',')[1];
-  const blob = await (await fetch(`data:image/jpeg;base64,${base64Data}`)).blob();
+  const response = await fetch(`data:image/jpeg;base64,${base64Data}`);
+  const blob = await response.blob();
 
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
   form.append('file', blob);
 
-  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+  const res = await fetchWithRetry("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: form
   });
 
   const data = await res.json();
+  if (!data.id) throw new Error("Error al subir imagen");
   return data.id;
 };
 
 /**
  * Guarda o actualiza el archivo JSON principal en la carpeta OCULTA
  */
-export const saveDriveFile = async (token: string, content: any, fileId?: string | null) => {
+export const saveDriveFile = async (token: string, content: AppDB, fileId?: string | null) => {
   const metadata: any = { 
     name: FILE_NAME, 
     mimeType: 'application/json' 
   };
 
-  // Si el archivo es nuevo (POST), le asignamos la carpeta oculta como padre
   if (!fileId) {
     metadata.parents = ['appDataFolder'];
   }
@@ -128,11 +133,12 @@ export const saveDriveFile = async (token: string, content: any, fileId?: string
     ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` 
     : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
 
-  const res = await fetch(url, { 
+  const res = await fetchWithRetry(url, { 
     method: fileId ? 'PATCH' : 'POST', 
     headers: { Authorization: `Bearer ${token}` }, 
     body: form 
   });
 
+  if (!res.ok) throw new Error("Error al guardar en Drive");
   return await res.json();
 };
