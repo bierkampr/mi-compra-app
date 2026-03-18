@@ -12,10 +12,11 @@ import {
   TrendingUp, 
   TrendingDown, 
   Minus,
-  History
+  History,
+  Calendar,
+  ListTodo
 } from 'lucide-react';
 
-// Importaciones de lógica
 import { calculateMatchScore, groupRepeatedProducts } from '../../lib/utils';
 import { searchLocalProducts, getLastPrice } from '../../lib/products';
 
@@ -41,23 +42,18 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isSearchingExtra, setIsSearchingExtra] = useState(false);
   const [showExtraSearchIdx, setShowExtraSearchIdx] = useState<number | null>(null);
 
-  // Estado para guardar los precios históricos cargados desde Supabase
   const [historyPrices, setHistoryPrices] = useState<Record<string, number | null>>({});
 
-  // 1. Inicialización, agrupación y Carga de Historial
   useEffect(() => {
     if (pendingGasto?.productos && !pendingGasto._isGrouped) {
       const grouped = groupRepeatedProducts(pendingGasto.productos);
       setPendingGasto({ ...pendingGasto, productos: grouped, _isGrouped: true });
       
-      // Auto-expandir productos que ya vienen limpios de la IA
       const autoExpand: number[] = [];
       grouped.forEach((p: any, i: number) => {
         if (p.nombre_base.toUpperCase() === p.nombre_ticket.toUpperCase()) autoExpand.push(i);
       });
       setExpandedIndices(autoExpand);
-
-      // Cargar precios históricos para todos los productos detectados
       loadAllHistory(grouped);
     }
   }, [pendingGasto, setPendingGasto]);
@@ -73,7 +69,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     setHistoryPrices(prices);
   };
 
-  // Limpieza total de búsqueda
   const limpiarBusqueda = () => {
     setShowExtraSearchIdx(null);
     setExtraSearchTerm("");
@@ -107,11 +102,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     newProds[productIndex].nombre_base = upperClean;
     
     setPendingGasto({ ...pendingGasto, productos: newProds });
-    
-    // Al cambiar el alias, actualizamos el historial de precio para ese item específico
     const lastP = await getLastPrice(upperClean);
     setHistoryPrices(prev => ({ ...prev, [upperClean]: lastP }));
-
     setExpandedIndices(prev => prev.filter(i => i !== productIndex));
     limpiarBusqueda();
   };
@@ -130,17 +122,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       ...pendingGasto,
       productos: updatedProducts
     });
-    
-    // Cargar historial para el nuevo item
     loadAllHistory(updatedProducts);
-
     setManualProd({ name: '', qty: 1, price: "" });
     setIsManualExpanded(false);
   };
 
-  /**
-   * Renderiza el indicador de comparación de precios
-   */
   const renderPriceComparison = (nombreBase: string, subtotal: number, cantidad: number) => {
     const currentPrice = subtotal / (cantidad || 1);
     const oldPrice = historyPrices[nombreBase.toUpperCase()];
@@ -155,7 +141,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     }
 
     const diff = currentPrice - oldPrice;
-    const threshold = 0.01; // Margen para considerar "igual"
+    const threshold = 0.01;
 
     if (diff > threshold) {
       return (
@@ -182,56 +168,71 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   return (
-    <div className="modal-content-full !pb-6 flex flex-col animate-in slide-in-from-bottom duration-500 no-scrollbar">
-      <header className="flex justify-between items-center mb-6">
-        <h2 className="text-fluid-lg font-black italic tracking-tighter text-brand-primary uppercase">
-          {txt('review.title')}
-        </h2>
-        <button onClick={onCancel} className="btn-icon !bg-transparent border-none">
-          <X size={24} />
+    <div className="modal-content-full !pb-0 flex flex-col animate-in slide-in-from-bottom duration-500 no-scrollbar overflow-hidden">
+      
+      {/* HEADER PULIDO */}
+      <header className="flex justify-between items-center px-8 pt-8 pb-4 shrink-0">
+        <div className="flex flex-col">
+            <h2 className="text-xl font-black italic tracking-tighter text-brand-primary uppercase leading-none">
+              {txt('review.title')}
+            </h2>
+            <p className="text-[8px] font-bold text-brand-muted uppercase tracking-[0.3em] mt-1.5">Verificación de Inteligencia Artificial</p>
+        </div>
+        <button onClick={onCancel} className="btn-icon !bg-white/5 border-none">
+          <X size={20} />
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto space-y-5 pr-1 no-scrollbar pb-20">
-        {/* Cabecera del Gasto */}
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12 relative">
-            <label className="text-small-caps ml-1 mb-1.5 block opacity-60">{txt('review.label_shop')}</label>
-            <div className="relative">
-              <input value={pendingGasto.comercio} onChange={e => setPendingGasto({...pendingGasto, comercio: e.target.value.toUpperCase()})} className="input-premium !py-3 !text-sm uppercase" />
-              <Store size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-muted" />
+      {/* CUERPO CON SCROLL */}
+      <div className="flex-1 overflow-y-auto px-8 space-y-8 no-scrollbar pb-32">
+        
+        {/* INFO PRINCIPAL */}
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-12">
+            <div className="relative group">
+              <label className="text-small-caps ml-1 mb-2 block">{txt('review.label_shop')}</label>
+              <div className="relative">
+                <input value={pendingGasto.comercio} onChange={e => setPendingGasto({...pendingGasto, comercio: e.target.value.toUpperCase()})} className="input-premium pr-12" />
+                <Store size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-muted/40 group-focus-within:text-brand-primary transition-colors" />
+              </div>
             </div>
           </div>
           <div className="col-span-6">
-            <label className="text-small-caps ml-1 mb-1.5 block opacity-60">{txt('review.label_date')}</label>
-            <input value={pendingGasto.fecha} onChange={e => setPendingGasto({...pendingGasto, fecha: e.target.value})} className="input-premium !py-3 !text-center !text-xs" />
+            <label className="text-small-caps ml-1 mb-2 block">{txt('review.label_date')}</label>
+            <div className="relative">
+                <input value={pendingGasto.fecha} onChange={e => setPendingGasto({...pendingGasto, fecha: e.target.value})} className="input-premium !text-center !pr-4" />
+                <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted/20" />
+            </div>
           </div>
           <div className="col-span-6">
-            <label className="text-small-caps ml-1 mb-1.5 block opacity-60">{txt('review.label_total')}</label>
-            <input type="number" value={pendingGasto.total} onChange={e => setPendingGasto({...pendingGasto, total: e.target.value})} className="input-premium !py-3 !text-center !text-sm !text-brand-success font-black" />
+            <label className="text-small-caps ml-1 mb-2 block">{txt('review.label_total')}</label>
+            <div className="relative">
+                <input type="number" value={pendingGasto.total} onChange={e => setPendingGasto({...pendingGasto, total: e.target.value})} className="input-premium !text-center !text-brand-success !pr-4" />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-success/40 font-black text-xs">€</span>
+            </div>
           </div>
         </div>
 
-        {/* Listado de Productos */}
-        <section className="space-y-2">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-small-caps">{txt('review.products_title')}</h3>
-            <button onClick={() => setIsManualExpanded(!isManualExpanded)} className="text-[9px] font-black uppercase text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10">
-              {isManualExpanded ? `- ${txt('review.close_btn')}` : `+ ${txt('review.add_btn')}`}
+        {/* LISTADO DE PRODUCTOS */}
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-small-caps">{txt('review.products_title')} <span className="text-brand-primary opacity-100">[{pendingGasto.productos?.length || 0}]</span></h3>
+            <button onClick={() => setIsManualExpanded(!isManualExpanded)} className="text-[10px] font-black uppercase text-brand-primary bg-brand-primary/5 px-4 py-2 rounded-xl border border-brand-primary/10 active:scale-95 transition-all">
+              {isManualExpanded ? txt('review.close_btn') : `+ ${txt('review.add_btn')}`}
             </button>
           </div>
 
           {isManualExpanded && (
-            <div className="card-premium !p-3 bg-brand-primary/5 border-brand-primary/20 animate-in zoom-in-95 mb-4">
-              <div className="flex gap-2 mb-2">
-                <input placeholder={txt('review.placeholder_prod')} className="bg-brand-bg/50 p-2.5 rounded-lg text-xs flex-1 outline-none border border-white/5 uppercase" value={manualProd.name} onChange={e => setManualProd({...manualProd, name: e.target.value})} />
-                <input placeholder={txt('review.placeholder_price')} type="number" className="bg-brand-bg/50 p-2.5 rounded-lg text-xs w-20 text-right outline-none border border-white/5 font-black text-brand-success" value={manualProd.price} onChange={e => setManualProd({...manualProd, price: e.target.value})} />
+            <div className="card-premium !p-4 bg-brand-primary/5 border-brand-primary/20 animate-in zoom-in-95 shadow-none">
+              <div className="flex gap-3 mb-3">
+                <input autoFocus placeholder={txt('review.placeholder_prod')} className="bg-brand-bg/50 p-3 rounded-xl text-sm flex-1 outline-none border border-white/5 uppercase font-bold" value={manualProd.name} onChange={e => setManualProd({...manualProd, name: e.target.value})} />
+                <input placeholder={txt('review.placeholder_price')} type="number" className="bg-brand-bg/50 p-3 rounded-xl text-sm w-24 text-right outline-none border border-white/5 font-black text-brand-success" value={manualProd.price} onChange={e => setManualProd({...manualProd, price: e.target.value})} />
               </div>
-              <button onClick={addManualItem} className="btn-primary !py-2 !text-[9px]">{txt('review.manual_ok')}</button>
+              <button onClick={addManualItem} className="btn-primary !py-3">{txt('review.manual_ok')}</button>
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {pendingGasto.productos?.map((p: any, i: number) => {
               const smartSuggestions = db.lista
                 .filter(l => !l.confirmed)
@@ -242,41 +243,43 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               const hasCleanAlias = p.nombre_base.toUpperCase() !== p.nombre_ticket.toUpperCase();
 
               return (
-                <div key={i} className={`flex flex-col transition-all duration-300 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-3' : 'bg-white/[0.02] border-white/[0.04] p-2'}`}>
-                  <button onClick={() => toggleExpand(i)} className="flex items-center gap-3 text-left w-full">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                        <span className="text-[10px] font-black text-brand-primary">{p.cantidad || 1}x</span>
+                <div key={i} className={`flex flex-col transition-all duration-500 rounded-2xl border ${isExpanded ? 'bg-brand-primary/5 border-brand-primary/30 p-4' : 'bg-white/[0.02] border-white/[0.04] p-3'}`}>
+                  <button onClick={() => toggleExpand(i)} className="flex items-center gap-4 text-left w-full group">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-brand-primary text-white' : 'bg-brand-primary/10 text-brand-primary'}`}>
+                        <span className="text-[11px] font-black">{p.cantidad || 1}x</span>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <p className={`text-[11px] font-black uppercase truncate leading-tight ${hasCleanAlias ? 'text-brand-accent' : 'text-white/60 italic'}`}>
+                        <p className={`text-[12px] font-black uppercase truncate leading-tight transition-colors ${hasCleanAlias ? 'text-brand-accent' : 'text-white/60 italic group-hover:text-white/80'}`}>
                             {p.nombre_base}
                         </p>
-                        {hasCleanAlias && <Sparkles size={10} className="text-brand-accent flex-shrink-0" />}
+                        {hasCleanAlias && <Sparkles size={12} className="text-brand-accent animate-pulse shrink-0" />}
                       </div>
                       
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[8px] font-bold text-brand-muted uppercase truncate opacity-30">{p.nombre_ticket}</p>
-                        {/* INDICADOR DE HISTORIAL DE PRECIO */}
+                      <div className="flex items-center gap-3 mt-1 opacity-40">
+                        <p className="text-[8px] font-bold text-brand-muted uppercase truncate max-w-[100px]">{p.nombre_ticket}</p>
                         {renderPriceComparison(p.nombre_base, p.subtotal, p.cantidad)}
                       </div>
                     </div>
-                    <p className="text-xs font-black text-brand-success italic">{Number(p.subtotal).toFixed(2)}€</p>
+                    <div className="text-right">
+                        <p className="text-sm font-black text-brand-success tracking-tighter italic">{Number(p.subtotal).toFixed(2)}€</p>
+                    </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-brand-primary/10 animate-in slide-in-from-top-2 space-y-3">
-                      <p className="text-[8px] font-black uppercase text-brand-primary opacity-60">{txt('review.link_list')}</p>
+                    <div className="mt-4 pt-4 border-t border-white/5 animate-in slide-in-from-top-3 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <ListTodo size={12} className="text-brand-primary" />
+                        <p className="text-[9px] font-black uppercase tracking-wider text-brand-primary/60">{txt('review.link_list')}</p>
+                      </div>
                       
-                      <div className="flex flex-wrap gap-1.5">
-                        {/* Sugerencias de la Lista actual */}
+                      <div className="flex flex-wrap gap-2">
                         {smartSuggestions.map((item, lIdx) => (
-                          <button key={lIdx} onClick={() => setAlias(i, item.name)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase ${item.matchScore > 0 ? 'bg-brand-primary text-white' : 'bg-white/5 text-brand-muted border border-white/5'}`}>
+                          <button key={lIdx} onClick={() => setAlias(i, item.name)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${item.matchScore > 0 ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-brand-muted border border-white/5 hover:bg-white/10'}`}>
                             {item.name}
                           </button>
                         ))}
                         
-                        {/* Buscador de Alias (Catálogo Maestro) */}
                         {showExtraSearchIdx !== i ? (
                             <button 
                                 onClick={() => {
@@ -284,30 +287,31 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                                     setExtraSuggestions([]);
                                     setShowExtraSearchIdx(i);
                                 }} 
-                                className="px-3 py-1.5 bg-brand-secondary/40 rounded-lg text-[9px] font-black text-brand-muted flex items-center gap-1"
+                                className="px-4 py-2 bg-brand-secondary/40 rounded-xl text-[10px] font-black text-brand-muted flex items-center gap-2 border border-white/5 hover:bg-brand-secondary/60 transition-colors"
                             >
-                                <Search size={10} /> {txt('review.other_btn')}
+                                <Search size={12} /> {txt('review.other_btn')}
                             </button>
                         ) : (
-                            <div className="w-full space-y-2 animate-in zoom-in-95">
-                                <input autoFocus value={extraSearchTerm} onChange={(e) => handleExtraSearch(e.target.value)} placeholder={txt('review.search_placeholder')} className="w-full bg-brand-bg/50 border border-brand-primary/30 p-2 rounded-xl text-[10px] uppercase font-bold outline-none" />
+                            <div className="w-full space-y-3 animate-in zoom-in-95 mt-2">
+                                <div className="relative">
+                                    <input autoFocus value={extraSearchTerm} onChange={(e) => handleExtraSearch(e.target.value)} placeholder={txt('review.search_placeholder')} className="w-full bg-brand-bg/80 border border-brand-primary/40 p-3 rounded-xl text-xs uppercase font-bold outline-none shadow-inner" />
+                                    {isSearchingExtra && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-brand-primary" />}
+                                </div>
                                 
-                                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto no-scrollbar">
-                                    {/* Resultados de la Base de Datos */}
+                                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto no-scrollbar p-1">
                                     {extraSuggestions.map((s, sIdx) => (
-                                        <button key={sIdx} onClick={() => setAlias(i, s.nombre_base)} className="px-2 py-1 bg-brand-primary/20 rounded-lg text-[8px] font-black text-white uppercase border border-brand-primary/20">
+                                        <button key={sIdx} onClick={() => setAlias(i, s.nombre_base)} className="px-3 py-1.5 bg-brand-primary/20 rounded-lg text-[9px] font-black text-white uppercase border border-brand-primary/30 hover:bg-brand-primary/40 transition-colors">
                                             {s.nombre_base}
                                         </button>
                                     ))}
 
-                                    {/* BOTÓN MAGICO: Crear nuevo si no existe */}
                                     {extraSearchTerm.length > 2 && (
                                         <button 
                                             onClick={() => setAlias(i, extraSearchTerm)}
-                                            className="w-full mt-1 p-2 bg-brand-accent/10 border border-brand-accent/30 rounded-xl flex items-center justify-center gap-2 text-brand-accent animate-pulse"
+                                            className="w-full p-4 bg-brand-accent/5 border border-brand-accent/20 rounded-2xl flex items-center justify-center gap-3 text-brand-accent active:scale-95 transition-all mt-2"
                                         >
-                                            <PlusCircle size={14} />
-                                            <span className="text-[9px] font-black uppercase">Crear nuevo: {extraSearchTerm}</span>
+                                            <PlusCircle size={18} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Registrar como: {extraSearchTerm}</span>
                                         </button>
                                     )}
                                 </div>
@@ -323,12 +327,19 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </section>
       </div>
 
-      {/* Footer de Acciones */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-brand-bg via-brand-bg to-transparent">
-        <div className="grid grid-cols-2 gap-3">
-            <button onClick={onCancel} className="btn-secondary !bg-brand-danger/5 border-none text-brand-danger !lowercase !text-[10px] font-black">{txt('review.discard_btn')}</button>
-            <button onClick={() => onSave(pendingGasto)} disabled={loading} className="btn-primary !py-4 shadow-xl !bg-brand-success text-brand-bg">
-            {loading ? <Loader2 className="animate-spin" /> : <div className="flex items-center gap-2"><CheckCircle2 size={20} /><span className="text-[11px] font-black tracking-widest uppercase">{txt('review.save_btn')}</span></div>}
+      {/* FOOTER ACCIONES CON BLUR SUTIL */}
+      <div className="shrink-0 p-8 bg-brand-bg/80 backdrop-blur-xl border-t border-white/5 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+        <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
+            <button onClick={onCancel} className="btn-secondary !bg-brand-danger/5 border-none !text-brand-danger !lowercase !text-[11px] font-black hover:bg-brand-danger/10">
+                {txt('review.discard_btn')}
+            </button>
+            <button onClick={() => onSave(pendingGasto)} disabled={loading} className="btn-primary !py-5 shadow-2xl !bg-brand-success !text-brand-bg group">
+                {loading ? <Loader2 className="animate-spin" /> : (
+                    <div className="flex items-center gap-3 transition-transform group-active:scale-90">
+                        <CheckCircle2 size={24} />
+                        <span className="text-[12px] font-black tracking-widest uppercase">{txt('review.save_btn')}</span>
+                    </div>
+                )}
             </button>
         </div>
       </div>

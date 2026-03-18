@@ -5,6 +5,7 @@
 :root {
   --background: 13, 15, 26; /* #0D0F1A */
   --foreground: 255, 255, 255;
+  --brand-primary-rgb: 93, 46, 239;
   font-size: 16px; 
 }
 
@@ -13,8 +14,7 @@
     @apply bg-brand-bg text-white antialiased overflow-x-hidden select-none;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
-    /* Fondo con profundidad para escritorio */
-    background: radial-gradient(circle at 50% 0%, #1a1d2e, #0D0F1A 75%);
+    background: radial-gradient(circle at 50% 0%, #1a1d2e, #0D0F1A 85%);
   }
   
   input, select, textarea {
@@ -25,18 +25,23 @@
 @layer components {
   /* Estructura Principal */
   .app-layout {
-    /* Limitamos el ancho en escritorio para evitar que se estire */
     @apply max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col relative bg-transparent px-[5vw] lg:px-8 pb-44 pt-6 transition-all duration-300;
   }
 
+  /* SISTEMA DE TARJETAS UNIFICADO */
   .card-premium {
-    @apply bg-brand-card border border-white/[0.05] rounded-[1.75rem] p-5 shadow-2xl transition-all duration-300;
+    @apply bg-brand-card border border-white/[0.05] rounded-[2rem] p-5 shadow-2xl transition-all duration-300;
+  }
+
+  .card-glass {
+    @apply bg-white/[0.02] border border-white/[0.05] backdrop-blur-md rounded-[1.75rem] p-4 transition-all duration-300;
   }
 
   .card-clickable {
-    @apply card-premium active:scale-[0.97] hover:border-white/10 cursor-pointer;
+    @apply active:scale-[0.97] hover:border-white/10 cursor-pointer;
   }
 
+  /* TIPOGRAFÍA */
   .heading-1 { 
     @apply text-fluid-2xl font-black italic tracking-tighter text-white uppercase leading-[0.85] mb-2; 
   }
@@ -46,58 +51,63 @@
   }
 
   .text-small-caps { 
-    @apply text-[10px] lg:text-[12px] font-black uppercase tracking-[0.2em] text-brand-muted; 
+    @apply text-[10px] lg:text-[11px] font-black uppercase tracking-[0.25em] text-brand-muted/80; 
   }
   
+  /* BOTONES */
   .btn-primary {
-    @apply w-full py-4 px-6 rounded-2xl bg-brand-primary text-white font-bold 
+    @apply w-full py-4 px-6 rounded-2xl bg-brand-primary text-white font-black 
            transition-all duration-200 active:scale-[0.95] shadow-[0_10px_25px_-5px_rgba(93,46,239,0.4)]
-           flex items-center justify-center gap-3 disabled:opacity-50 text-sm tracking-widest uppercase;
+           flex items-center justify-center gap-3 disabled:opacity-50 text-xs tracking-[0.15em] uppercase;
   }
 
   .btn-secondary {
-    @apply w-full py-4 px-6 rounded-2xl bg-brand-secondary text-white font-semibold 
+    @apply w-full py-4 px-6 rounded-2xl bg-brand-secondary text-white font-bold 
            transition-all duration-200 active:scale-[0.95] border border-white/5
-           flex items-center justify-center gap-3 text-xs tracking-wider uppercase;
+           flex items-center justify-center gap-3 text-[10px] tracking-widest uppercase;
   }
 
   .btn-icon {
-    @apply p-2.5 rounded-xl bg-brand-secondary/50 text-brand-muted hover:text-white 
+    @apply p-3 rounded-2xl bg-brand-secondary/40 text-brand-muted hover:text-white 
            transition-all active:scale-90 border border-white/5 flex items-center justify-center;
   }
 
+  /* INPUTS */
   .input-premium {
-    @apply w-full bg-brand-secondary/30 border border-white/10 rounded-xl p-3.5 
-           text-white placeholder:text-brand-muted/40 outline-none transition-all
-           focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 font-bold;
+    @apply w-full bg-brand-secondary/30 border border-white/10 rounded-2xl p-4 
+           text-white placeholder:text-brand-muted/30 outline-none transition-all
+           focus:border-brand-primary/50 focus:ring-4 focus:ring-brand-primary/10 font-bold text-sm uppercase;
   }
 
+  /* MODALES */
   .modal-overlay {
-    @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 
+    @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 
            animate-in fade-in duration-300;
   }
 
-  /* Modales Estilo Desktop: Flotan al centro, no se estiran */
   .modal-content-full {
     @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-[6vw] overflow-y-auto 
            animate-in slide-in-from-bottom duration-500 ease-out
            lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 
-           lg:w-[800px] lg:h-[85vh] lg:rounded-[3rem] lg:border lg:border-white/10 lg:shadow-[0_0_80px_rgba(0,0,0,0.9)];
+           lg:w-[800px] lg:max-h-[90vh] lg:rounded-[3rem] lg:border lg:border-white/10 lg:shadow-[0_0_80px_rgba(0,0,0,0.9)];
   }
 
+  /* NAVEGACIÓN */
   .nav-bottom {
     @apply fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm
-           bg-brand-card/90 backdrop-blur-2xl rounded-[2rem] px-2 py-2
+           bg-brand-card/90 backdrop-blur-2xl rounded-[2.5rem] px-2 py-2
            flex justify-between items-center z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)]
-           border border-white/[0.05];
+           border border-white/[0.08];
   }
 
+  /* FILAS DE DATOS */
   .list-row {
-    @apply flex justify-between items-center py-3 border-b border-white/[0.03] transition-colors;
+    @apply flex justify-between items-center py-4 border-b border-white/[0.03] transition-colors;
   }
 
-  .shop-row {
-    @apply flex justify-between items-center p-3.5 bg-white/[0.02] rounded-2xl border border-white/[0.03];
+  .row-clickable {
+    @apply w-full flex justify-between items-center p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]
+           hover:bg-white/[0.04] hover:border-white/[0.08] active:scale-[0.98] transition-all;
   }
 
   /* Utilidad para ocultar scrollbars */
