@@ -59,24 +59,25 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * COMPRESIÓN BALANCEADA PARA GEMINI + VERCEL
- * Optimizada para no superar el límite de 4.5MB de Vercel pero manteniendo nitidez.
+ * COMPRESIÓN DE ALTA FIDELIDAD PARA GEMINI
+ * Optimizada para aprovechar la capacidad multilineal de Gemini Flash 1.5/2.0.
+ * Mantenemos un margen para el límite de 4.5MB de Vercel API.
  * 
- * 1 foto: Máx 1200px / Calidad 0.7
- * 2 fotos: Máx 1000px / Calidad 0.6
- * 3 fotos: Máx 900px / Calidad 0.5
+ * 1 foto: Máx 1600px / Calidad 0.85
+ * 2 fotos: Máx 1400px / Calidad 0.8
+ * 3 fotos: Máx 1200px / Calidad 0.75
  */
 export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
   return new Promise((resolve) => {
-    let maxSide = 1200;
-    let quality = 0.7;
+    let maxSide = 1600;
+    let quality = 0.85;
 
     if (photoCount === 2) {
-      maxSide = 1000;
-      quality = 0.6;
+      maxSide = 1400;
+      quality = 0.8;
     } else if (photoCount >= 3) {
-      maxSide = 900;
-      quality = 0.5;
+      maxSide = 1200;
+      quality = 0.75;
     }
 
     const img = new Image();
