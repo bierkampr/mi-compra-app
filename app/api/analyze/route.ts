@@ -3,30 +3,38 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+/**
+ * Handler de servidor para procesar tickets con el modelo Gemini Flash más reciente.
+ * El uso del alias "-latest" garantiza que la app siempre use la versión más optimizada.
+ */
 export async function POST(req: Request) {
   try {
     const { images, prompt } = await req.json();
 
-    // 1. Verificar la API KEY en el servidor
+    // 1. Validar presencia de la API KEY en el servidor (Vercel)
     const serverApiKey = process.env.GEMINI_API_KEY;
 
     if (!serverApiKey) {
+      console.error("ERROR: GEMINI_API_KEY no configurada en las variables de entorno.");
       return NextResponse.json(
-        { error: "API Key de Gemini no configurada en Vercel." }, 
+        { error: "La configuración del servidor no incluye la clave de acceso a la IA." }, 
         { status: 500 }
       );
     }
 
-    // 2. Inicializar Google AI
+    // 2. Inicializar el SDK de Google
     const genAI = new GoogleGenerativeAI(serverApiKey);
     
-    // USAMOS EL MODELO QUE APARECE EN TU LISTA: gemini-2.0-flash
-    // Es más rápido y preciso que el 1.5
+    // Usamos el alias universal para tener siempre la última versión estable
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
+      model: "gemini-flash-latest",
+      generationConfig: { 
+        responseMimeType: "application/json",
+        temperature: 0 // Precisión absoluta para evitar errores en números
+      }
     });
 
-    // 3. Preparar las imágenes
+    // 3. Preparar los datos de imagen (Base64 puro)
     const imageParts = images.map((img: string) => {
       const base64Data = img.includes(",") ? img.split(",")[1] : img;
       return {
@@ -37,10 +45,11 @@ export async function POST(req: Request) {
       };
     });
 
-    // 4. Ejecutar el análisis
-    // Gemini 2.0 maneja mucho mejor el formato JSON nativo
+    // 4. Llamada a la IA con instrucciones de formato estrictas
+    console.log(`[API Analyze] Procesando ticket con gemini-flash-latest...`);
+    
     const result = await model.generateContent([
-      prompt + "\n\nResponde únicamente en formato JSON puro.",
+      prompt + "\n\nResponde estrictamente con un JSON válido. Sin texto introductorio.",
       ...imageParts
     ]);
 
@@ -48,20 +57,26 @@ export async function POST(req: Request) {
     const text = response.text();
 
     if (!text) {
-      throw new Error("La IA devolvió una respuesta vacía.");
+      throw new Error("El modelo no generó ninguna respuesta.");
     }
 
-    // Limpieza de Markdown (por seguridad si la IA lo añade)
+    // 5. Limpieza de formato Markdown y parseo
     const cleanJsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
-    return NextResponse.json(JSON.parse(cleanJsonString));
+    try {
+        const parsed = JSON.parse(cleanJsonString);
+        return NextResponse.json(parsed);
+    } catch (parseError) {
+        console.error("Error al parsear el JSON de la IA:", text);
+        throw new Error("La respuesta de la IA no tiene un formato válido.");
+    }
 
   } catch (error: any) {
-    console.error("--- ERROR EN API ROUTE GEMINI 2.0 ---");
+    console.error("--- FALLO CRÍTICO EN API ROUTE ---");
     console.error(error);
 
     return NextResponse.json(
-      { error: `Error de IA: ${error.message}` }, 
+      { error: `Error en el motor de IA: ${error.message}` }, 
       { status: 500 }
     );
   }
