@@ -118,12 +118,16 @@
   "modals": {
     "logout_confirm": "¿Cerrar sesión? Se borrará el acceso local.",
     "delete_confirm": "¿Eliminar este registro?",
-    "clear_list_msg": "¿Limpiar toda la lista?",
-    "clear_pending_msg": "¿Borrar productos no comprados?",
+    "clear_list_title": "¿LIMPIAR LISTA?",
+    "clear_list_msg": "Esta acción eliminará todos los productos de tu lista de la compra de forma permanente.",
+    "clear_pending_title": "¿BORRAR PENDIENTES?",
+    "clear_pending_msg": "Se eliminarán todos los artículos que aún no has marcado como comprados.",
     "link_list_title": "¿VINCULAR CON LISTA?",
-    "link_list_desc": "Detectamos una lista activa. La IA marcará los productos automáticamente.",
+    "link_list_desc": "Detectamos una lista activa. La IA marcará los productos automáticamente al procesar el ticket.",
     "yes_link": "SÍ, VINCULAR",
-    "no_link": "NO, SOLO TICKET"
+    "no_link": "NO, SOLO TICKET",
+    "accept": "ACEPTAR",
+    "cancel": "CANCELAR"
   },
   "ai": {
     "prompt": "Actúa como un experto extractor de datos de tickets de compra.\n      \n      IMPORTANTE REGLA DE CONTINUIDAD:\n      Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET (un ticket largo fotografiado por trozos). \n      - Une toda la información en un solo objeto JSON.\n      - NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.\n      - Suma los subtotales para verificar el total final.\n\n      LISTA DE PRODUCTOS ESPERADOS: [{{lista}}].\n      FECHA ACTUAL: {{fecha}}.\n\n      REGLAS CRÍTICAS:\n      1. \"comercio\": Debe ser un STRING (ej: \"MERCADONA\"). No uses nombres de empresas legales largas, solo el nombre comercial conocido.\n      2. \"total\": El número final pagado en el ticket.\n      3. \"nombre_base\": Usa el nombre de la LISTA DE PRODUCTOS ESPERADOS si el producto del ticket coincide semánticamente.\n\n      FORMATO JSON ESTRICTO:\n      {\n        \"comercio\": \"string\",\n        \"fecha\": \"DD/MM/AAAA\",\n        \"total\": number,\n        \"productos\": [\n          { \"cantidad\": number, \"nombre_ticket\": \"string\", \"nombre_base\": \"string\", \"subtotal\": number }\n        ]\n      }"

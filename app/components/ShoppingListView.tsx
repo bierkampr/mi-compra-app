@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Camera, Trash2, ListTodo, CheckCircle2, X, Check, Search, Loader2, Eraser, ChevronDown } from 'lucide-react';
 import { searchLocalProducts } from '../../lib/products';
 import { supabase } from '../../lib/supabase';
+import ConfirmModal from './ConfirmModal';
 
 interface ShoppingListViewProps {
   db: { lista: any[] };
@@ -15,6 +16,18 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   const [newItemName, setNewItemName] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'info';
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
   
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -94,17 +107,31 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     await updateAndSync({ ...db, lista: newList });
   };
 
-  const clearAll = async () => {
-    if (confirm(txt('modals.clear_list_msg'))) {
-      await updateAndSync({ ...db, lista: [] });
-    }
+  const clearAll = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: txt('modals.clear_list_title') || "¿LIMPIAR LISTA?",
+      message: txt('modals.clear_list_msg'),
+      type: 'danger',
+      onConfirm: async () => {
+        await updateAndSync({ ...db, lista: [] });
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
-  const clearPending = async () => {
-    if (confirm(txt('modals.clear_pending_msg'))) {
-      const onlyBought = db.lista.filter(li => li.confirmed);
-      await updateAndSync({ ...db, lista: onlyBought });
-    }
+  const clearPending = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: txt('modals.clear_pending_title') || "¿LIMPIAR PENDIENTES?",
+      message: txt('modals.clear_pending_msg'),
+      type: 'info',
+      onConfirm: async () => {
+        const onlyBought = db.lista.filter(li => li.confirmed);
+        await updateAndSync({ ...db, lista: onlyBought });
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const pendingItems = db.lista.filter(li => !li.confirmed);
@@ -231,6 +258,17 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           </div>
         </section>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        confirmText={txt('modals.accept') || "ACEPTAR"}
+        cancelText={txt('modals.cancel') || "CANCELAR"}
+      />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import {
   ChevronRight, ChevronLeft, Info, Trash2, Zap
 } from 'lucide-react';
 import { compressImage } from '../../lib/utils';
+import ConfirmModal from './ConfirmModal';
 
 interface ScannerViewProps {
   db: { lista: any[], gastos: any[], customCategories?: string[] };
@@ -51,25 +52,26 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
             <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white"><ShoppingCart size={80} /></div>
           </button>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setPurchaseMode('mini')} className="card-clickable !p-5 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden">
-                <div className="w-12 h-12 bg-brand-accent/10 rounded-xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform"><Store size={24}/></div>
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => setPurchaseMode('mini')} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+                <div className="w-14 h-14 bg-brand-accent/10 rounded-2xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform"><Store size={28}/></div>
                 <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.mini')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white"><Store size={40} /></div>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Store size={48} /></div>
             </button>
-            <button onClick={() => setPurchaseMode('dining')} className="card-clickable !p-5 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden">
-                <div className="w-12 h-12 bg-orange-400/10 rounded-xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform"><Utensils size={24}/></div>
+            <button onClick={() => setPurchaseMode('dining')} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+                <div className="w-14 h-14 bg-orange-400/10 rounded-2xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform"><Utensils size={28}/></div>
                 <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.dining')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white"><Utensils size={40} /></div>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Utensils size={48} /></div>
             </button>
-            <button onClick={() => setPurchaseMode('health')} className="card-clickable !p-5 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden">
-                <div className="w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Pill size={24}/></div>
+            <button onClick={() => setPurchaseMode('health')} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+                <div className="w-14 h-14 bg-emerald-400/10 rounded-2xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Pill size={28}/></div>
                 <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.health')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white"><Pill size={40} /></div>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Pill size={48} /></div>
             </button>
-            <button onClick={() => setShowOthers(true)} className="card-clickable !p-5 flex flex-col items-center justify-center text-center gap-3 group relative overflow-hidden bg-brand-secondary/20 border-dashed border-white/10">
-                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform"><LayoutGrid size={24}/></div>
+            <button onClick={() => setShowOthers(true)} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-secondary/20 border-dashed border-white/20">
+                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform"><LayoutGrid size={28}/></div>
                 <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.others')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><LayoutGrid size={48} /></div>
             </button>
           </div>
         </div>
@@ -106,6 +108,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [showCamera, setShowCamera] = useState(false);
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -225,7 +228,12 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       {!showCamera && (
         <div className="flex-1 flex flex-col p-6 overflow-y-auto no-scrollbar">
           <div className="flex justify-between items-center mb-8">
-              <button onClick={onCancel} className="btn-icon !bg-white/5 border-none"><X size={24} /></button>
+              <button 
+                onClick={() => tempPhotos.length > 0 ? setShowConfirmCancel(true) : onCancel()} 
+                className="btn-icon !bg-white/5 border-none"
+              >
+                <X size={24} />
+              </button>
               <div className="text-right">
                   <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">{txt('scan.preparation_title')}</h2>
                   <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{txt('scan.preparation_subtitle')}</p>
@@ -352,21 +360,26 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       )}
 
       {/* DIÁLOGO DE VINCULACIÓN (FUERA DE LAS CONDICIONES DE CÁMARA) */}
-      {showListDialog && (
-        <div className="fixed inset-0 bg-brand-bg/95 backdrop-blur-xl z-[6000] flex items-center justify-center p-6">
-           <div className="card-premium max-w-sm w-full text-center space-y-8 !p-10 border-brand-primary/30 shadow-[0_0_50px_rgba(var(--brand-primary-rgb),0.2)] animate-in zoom-in-95 duration-300">
-              <AlertTriangle size={48} className="mx-auto text-brand-primary" />
-              <div className="space-y-2">
-                <h3 className="text-lg font-black uppercase italic tracking-tighter">{txt('modals.link_list_title')}</h3>
-                <p className="text-[10px] font-bold text-brand-muted uppercase leading-relaxed">{txt('modals.link_list_desc')}</p>
-              </div>
-              <div className="space-y-3">
-                <button onClick={() => startAnalysis(true)} className="btn-primary !py-5">{txt('modals.yes_link')}</button>
-                <button onClick={() => startAnalysis(false)} className="btn-secondary !py-5">{txt('modals.no_link')}</button>
-              </div>
-           </div>
-        </div>
-      )}
+      <ConfirmModal 
+        isOpen={showListDialog}
+        title={txt('modals.link_list_title') || "¿VINCULAR CON LISTA?"}
+        message={txt('modals.link_list_desc')}
+        onConfirm={() => startAnalysis(true)}
+        onCancel={() => startAnalysis(false)}
+        confirmText={txt('modals.yes_link') || "SÍ, VINCULAR"}
+        cancelText={txt('modals.no_link') || "NO, SOLO SCAN"}
+      />
+
+      <ConfirmModal 
+        isOpen={showConfirmCancel}
+        title="¿CANCELAR ESCANEO?"
+        message="Se perderán las fotos capturadas."
+        type="danger"
+        onConfirm={onCancel}
+        onCancel={() => setShowConfirmCancel(false)}
+        confirmText="SÍ, CANCELAR"
+        cancelText="CONTINUAR"
+      />
 
       {loading && (
           <div className="fixed inset-0 z-[7000] bg-brand-bg/90 backdrop-blur-xl flex flex-col items-center justify-center gap-6">

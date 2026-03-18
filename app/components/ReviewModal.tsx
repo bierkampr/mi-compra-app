@@ -168,7 +168,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   return (
-    <div className="modal-content-full !pb-0 flex flex-col animate-in slide-in-from-bottom duration-500 no-scrollbar overflow-hidden">
+    <div className="modal-content-full !pb-0 flex flex-col animate-in slide-in-from-bottom duration-500 no-scrollbar">
       
       {/* HEADER PULIDO */}
       <header className="flex justify-between items-center px-8 pt-8 pb-4 shrink-0">

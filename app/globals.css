@@ -86,7 +86,7 @@
   }
 
   .modal-content-full {
-    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col p-[6vw] overflow-y-auto 
+    @apply fixed inset-0 z-[600] bg-brand-bg flex flex-col overflow-hidden 
            animate-in slide-in-from-bottom duration-500 ease-out
            lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 
            lg:w-[800px] lg:max-h-[90vh] lg:rounded-[3rem] lg:border lg:border-white/10 lg:shadow-[0_0_80px_rgba(0,0,0,0.9)];
