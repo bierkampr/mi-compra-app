@@ -2,6 +2,7 @@
 import React from 'react';
 import { LogOut, Download, ChevronLeft, User, ShieldCheck, Database, Sparkles } from 'lucide-react';
 import { exportToCSV } from '@/lib/utils';
+import ConfirmModal from './ConfirmModal';
 
 interface SettingsViewProps {
   user: { name: string };
@@ -12,11 +13,11 @@ interface SettingsViewProps {
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt, onShowHelp }) => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+
   const handleLogout = () => {
-    if (confirm(txt('modals.logout_confirm'))) {
-      localStorage.clear();
-      window.location.reload();
-    }
+    localStorage.clear();
+    window.location.reload();
   };
 
   return (
@@ -121,7 +122,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt
       {/* BOTÓN CERRAR SESIÓN */}
       <div className="pt-4">
         <button 
-          onClick={handleLogout} 
+          onClick={() => setShowLogoutConfirm(true)} 
           className="btn-secondary !py-5 text-brand-danger bg-brand-danger/5 border-brand-danger/10 active:bg-brand-danger active:text-white group"
         >
           <LogOut size={18} className="group-active:translate-x-1 transition-transform" />
@@ -130,6 +131,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt
           </span>
         </button>
       </div>
+
+      <ConfirmModal 
+        isOpen={showLogoutConfirm}
+        title={txt('settings.logout')}
+        message={txt('modals.logout_confirm')}
+        type="danger"
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+        confirmText="SALIR"
+        cancelText="CANCELAR"
+      />
 
       {/* FOOTER VERSIÓN */}
       <div className="text-center pt-8">

@@ -50,6 +50,13 @@ export default function Home() {
             setDb(res.data);
             setFileId(res.id);
             localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
+
+            // Lógica de Tutorial Inteligente: solo si la base de datos está vacía (usuario nuevo)
+            // y no lo ha visto en esta sesión de navegador
+            if (res.data.gastos.length === 0 && res.data.lista.length === 0 && !localStorage.getItem('mi_compra_seen_tour')) {
+                setShowHelp(true);
+                localStorage.setItem('mi_compra_seen_tour', 'true');
+            }
         }
     }, []);
 
@@ -65,17 +72,12 @@ export default function Home() {
             }
         }
 
-        const tkn = localStorage.getItem('gdrive_token');
-        const name = localStorage.getItem('user_name');
-        if (tkn && name) {
-            setUser({ name, loggedIn: true, token: tkn });
-            loadData(tkn);
-            
-            if (!localStorage.getItem('mi_compra_seen_tour')) {
-                setShowHelp(true);
-                localStorage.setItem('mi_compra_seen_tour', 'true');
-            }
-        }
+    const tkn = localStorage.getItem('gdrive_token');
+    const name = localStorage.getItem('user_name');
+    if (tkn && name) {
+        setUser({ name, loggedIn: true, token: tkn });
+        loadData(tkn);
+    }
 
         const handleStatus = () => setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleStatus);
