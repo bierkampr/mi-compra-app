@@ -65,7 +65,17 @@
     "retry_after": "Servidor ocupado. Reintentando en {{sec}}s...",
     "quality_check": "¿Se lee bien el texto?",
     "retry_photo": "Repetir",
-    "confirm_photo": "Usar esta"
+    "confirm_photo": "Usar esta",
+    "preparation_title": "PREPARAR ESCANEO",
+    "preparation_subtitle": "Sube una o dos fotos del ticket",
+    "add_photo": "Añadir Foto",
+    "instructions_title": "💡 CONSEJOS PARA UN MEJOR ESCANEO",
+    "inst_small_title": "Ticket Pequeño",
+    "inst_small_desc": "Una sola foto centrada es suficiente.",
+    "inst_large_title": "Ticket Largo",
+    "inst_large_desc": "Toma 2 fotos: mitad superior y mitad inferior.",
+    "inst_frame_title": "Encuadre",
+    "inst_frame_desc": "Alinea los bordes del ticket con el recuadro."
   },
   "review": {
     "title": "REVISAR COMPRA",
