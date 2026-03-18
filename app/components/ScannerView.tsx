@@ -109,11 +109,25 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- LÓGICA DE CÁMARA ---
+  // Rotador de mensajes de carga
+  useEffect(() => {
+    let interval: any;
+    if (loading) {
+      interval = setInterval(() => {
+        setLoadingStep(prev => (prev + 1) % 4);
+      }, 3000);
+    } else {
+      setLoadingStep(0);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
   useEffect(() => {
     if (showCamera) {
       const startCamera = async () => {
@@ -382,9 +396,32 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       />
 
       {loading && (
-          <div className="fixed inset-0 z-[7000] bg-brand-bg/90 backdrop-blur-xl flex flex-col items-center justify-center gap-6">
-              <Loader2 className="animate-spin text-brand-primary" size={64} strokeWidth={3}/>
-              <p className="text-[10px] font-black text-white uppercase tracking-[0.5em] animate-pulse">{txt('scan.scanning_label')}</p>
+          <div className="fixed inset-0 z-[7000] bg-brand-bg/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
+              <div className="relative mb-8">
+                  <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full animate-pulse" />
+                  <Loader2 className="animate-spin text-brand-primary relative z-10" size={80} strokeWidth={2.5}/>
+              </div>
+              
+              <div className="space-y-4 max-w-xs animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <p className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-2">
+                    {txt('scan.scanning_label')}
+                  </p>
+                  
+                  <div className="h-10 flex items-center justify-center">
+                    <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest leading-relaxed animate-in fade-in zoom-in duration-500 key={loadingStep}">
+                      {loadingStep === 0 && txt('scan.scanning_step_0')}
+                      {loadingStep === 1 && txt('scan.scanning_step_1')}
+                      {loadingStep === 2 && txt('scan.scanning_step_2')}
+                      {loadingStep === 3 && txt('scan.scanning_step_3')}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-1 justify-center pt-4">
+                      {[0,1,2,3].map(i => (
+                          <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${loadingStep === i ? 'bg-brand-primary w-4' : 'bg-white/10'}`} />
+                      ))}
+                  </div>
+              </div>
           </div>
       )}
 
