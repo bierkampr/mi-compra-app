@@ -218,153 +218,142 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     }
   };
 
-  // --- VISTA DE PREPARACIÓN ---
-  if (!showCamera) {
-    return (
-      <div className="fixed inset-0 bg-brand-bg z-[2000] flex flex-col p-6 overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-full duration-500">
-        <div className="flex justify-between items-center mb-8">
-            <button onClick={onCancel} className="btn-icon !bg-white/5 border-none"><X size={24} /></button>
-            <div className="text-right">
-                <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">{txt('scan.preparation_title')}</h2>
-                <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{txt('scan.preparation_subtitle')}</p>
-            </div>
-        </div>
-
-        {/* INSTRUCCIONES RÁPIDAS */}
-        <div className="grid grid-cols-1 gap-3 mb-8">
-            <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 flex items-start gap-4">
-                <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary shrink-0"><Info size={20}/></div>
-                <div>
-                    <h4 className="text-[11px] font-black uppercase text-brand-primary mb-1">{txt('scan.instructions_title')}</h4>
-                    <div className="space-y-3 mt-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full bg-brand-success/20 text-brand-success flex items-center justify-center text-[10px] font-black">1</div>
-                            <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-success">{txt('scan.inst_small_title')}:</span> {txt('scan.inst_small_desc')}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full bg-brand-accent/20 text-brand-accent flex items-center justify-center text-[10px] font-black">2</div>
-                            <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-accent">{txt('scan.inst_large_title')}:</span> {txt('scan.inst_large_desc')}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* MINIATURAS */}
-        <div className="flex-1 space-y-4">
-            <div className="flex flex-wrap gap-4">
-                {tempPhotos.map((img: string, i: number) => (
-                    <div key={i} className="relative w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-white/10 shadow-xl animate-in zoom-in-90">
-                        <img src={img} className="w-full h-full object-cover" />
-                        <button 
-                            onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: number) => idx !== i))}
-                            className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-lg text-white shadow-lg active:scale-90"
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                    </div>
-                ))}
-                
-                {tempPhotos.length < 3 && (
-                    <div className="flex flex-col gap-3">
-                        <button 
-                            onClick={() => setShowCamera(true)}
-                            className="w-28 aspect-[3/4] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-brand-muted hover:border-brand-primary hover:text-brand-primary transition-all active:scale-95"
-                        >
-                            <Camera size={28} />
-                            <span className="text-[9px] font-black uppercase">{txt('scan.take_photo')}</span>
-                        </button>
-                        <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-28 py-3 bg-white/[0.05] border border-white/5 rounded-xl flex items-center justify-center gap-2 text-white active:scale-95 transition-all"
-                        >
-                            <ImageIcon size={16} />
-                            <span className="text-[9px] font-black uppercase">{txt('scan.gallery')}</span>
-                        </button>
-                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-                    </div>
-                )}
-            </div>
-        </div>
-
-        {/* ACCIÓN PRINCIPAL */}
-        <div className="mt-8">
-            <button 
-                disabled={tempPhotos.length === 0 || loading}
-                onClick={handleProcessClick}
-                className="btn-primary !py-6 w-full flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale"
-            >
-                <Zap size={24} className="fill-current" />
-                <span className="text-sm font-black italic uppercase tracking-widest">{txt('scan.process')}</span>
-            </button>
-        </div>
-
-        {loading && (
-            <div className="fixed inset-0 z-[4000] bg-brand-bg/90 backdrop-blur-xl flex flex-col items-center justify-center gap-6">
-                <Loader2 className="animate-spin text-brand-primary" size={64} strokeWidth={3}/>
-                <p className="text-[10px] font-black text-white uppercase tracking-[0.5em] animate-pulse">{txt('scan.scanning_label')}</p>
-            </div>
-        )}
-      </div>
-    );
-  }
-
-  // --- VISTA DE CÁMARA (WEBRTC) ---
   return (
-    <div className="fixed inset-0 bg-black z-[2000] flex flex-col overflow-hidden">
-      <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
-        {!previewPhoto ? (
-          <>
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            
-            {/* PLANTILLA DE ENCUADRE OPTIMIZADA (Más alta) */}
-            <div className="absolute inset-0 pointer-events-none border-x-[40px] border-y-[20px] border-black/70">
-                <div className="w-full h-full border-2 border-dashed border-brand-accent/60 rounded-3xl relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-accent/20 animate-pulse" />
-                    
-                    {/* INDICADOR DE ENCUADRE */}
-                    <div className="absolute -top-10 left-0 right-0 flex justify-center">
-                        <div className="bg-brand-accent text-brand-bg px-4 py-1.5 rounded-full flex items-center gap-2 shadow-xl animate-bounce">
-                             <Sparkles size={14} />
-                             <span className="text-[9px] font-black uppercase tracking-wider">{txt('scan.inst_frame_title')}</span>
-                        </div>
-                    </div>
-
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                        <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] text-center px-6">
-                            {txt('scan.inst_frame_desc')}
-                        </span>
-                    </div>
-                </div>
-            </div>
-          </>
-        ) : (
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-6 gap-6 animate-in zoom-in-95 bg-brand-bg">
-             <h3 className="text-xl font-black italic text-brand-accent uppercase tracking-tighter">{txt('scan.quality_check')}</h3>
-             <img src={previewPhoto} className="max-h-[60vh] rounded-3xl border-2 border-brand-accent shadow-2xl" />
-             <div className="flex gap-4 w-full max-w-xs">
-                <button onClick={() => setPreviewPhoto(null)} className="btn-secondary flex-1 !py-4">{txt('scan.retry_photo')}</button>
-                <button onClick={() => confirmPhoto(previewPhoto)} className="btn-primary flex-1 !py-4 !bg-brand-success text-brand-bg">{txt('scan.confirm_photo')}</button>
-             </div>
+    <div className="fixed inset-0 bg-brand-bg z-[2000] flex flex-col overflow-hidden animate-in slide-in-from-bottom-full duration-500">
+      
+      {/* VISTA DE PREPARACIÓN */}
+      {!showCamera && (
+        <div className="flex-1 flex flex-col p-6 overflow-y-auto no-scrollbar">
+          <div className="flex justify-between items-center mb-8">
+              <button onClick={onCancel} className="btn-icon !bg-white/5 border-none"><X size={24} /></button>
+              <div className="text-right">
+                  <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">{txt('scan.preparation_title')}</h2>
+                  <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{txt('scan.preparation_subtitle')}</p>
+              </div>
           </div>
-        )}
-        <canvas ref={canvasRef} className="hidden" />
-      </div>
 
-      {!previewPhoto && (
-        <div className="bg-brand-bg p-8 flex flex-col items-center gap-6 rounded-t-[3rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-           <div className="flex items-center justify-between w-full max-w-xs">
-              <button onClick={() => setShowCamera(false)} className="btn-icon !bg-white/5 border-none"><ChevronLeft size={24} /></button>
-              <button onClick={takePhoto} className="w-20 h-20 bg-white rounded-full p-1 border-4 border-brand-primary shadow-2xl active:scale-90 transition-all flex items-center justify-center">
-                <div className="w-full h-full bg-white rounded-full border-2 border-black/10" />
+          <div className="grid grid-cols-1 gap-3 mb-8">
+              <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary shrink-0"><Info size={20}/></div>
+                  <div>
+                      <h4 className="text-[11px] font-black uppercase text-brand-primary mb-1">{txt('scan.instructions_title')}</h4>
+                      <div className="space-y-3 mt-4">
+                          <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-full bg-brand-success/20 text-brand-success flex items-center justify-center text-[10px] font-black">1</div>
+                              <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-success">{txt('scan.inst_small_title')}:</span> {txt('scan.inst_small_desc')}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 rounded-full bg-brand-accent/20 text-brand-accent flex items-center justify-center text-[10px] font-black">2</div>
+                              <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-accent">{txt('scan.inst_large_title')}:</span> {txt('scan.inst_large_desc')}</p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <div className="flex-1 space-y-4">
+              <div className="flex flex-wrap gap-4">
+                  {tempPhotos.map((img: string, i: number) => (
+                      <div key={i} className="relative w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-white/10 shadow-xl animate-in zoom-in-90">
+                          <img src={img} className="w-full h-full object-cover" />
+                          <button 
+                              onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: number) => idx !== i))}
+                              className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-lg text-white shadow-lg active:scale-90"
+                          >
+                              <Trash2 size={14} />
+                          </button>
+                      </div>
+                  ))}
+                  
+                  {tempPhotos.length < 3 && (
+                      <div className="flex flex-col gap-3">
+                          <button 
+                              onClick={() => setShowCamera(true)}
+                              className="w-28 aspect-[3/4] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-brand-muted hover:border-brand-primary hover:text-brand-primary transition-all active:scale-95"
+                          >
+                              <Camera size={28} />
+                              <span className="text-[9px] font-black uppercase">{txt('scan.take_photo')}</span>
+                          </button>
+                          <button 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-28 py-3 bg-white/[0.05] border border-white/5 rounded-xl flex items-center justify-center gap-2 text-white active:scale-95 transition-all"
+                          >
+                              <ImageIcon size={16} />
+                              <span className="text-[9px] font-black uppercase">{txt('scan.gallery')}</span>
+                          </button>
+                          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                      </div>
+                  )}
+              </div>
+          </div>
+
+          <div className="mt-8">
+              <button 
+                  disabled={tempPhotos.length === 0 || loading}
+                  onClick={handleProcessClick}
+                  className="btn-primary !py-6 w-full flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale"
+              >
+                  <Zap size={24} className="fill-current" />
+                  <span className="text-sm font-black italic uppercase tracking-widest">{txt('scan.process')}</span>
               </button>
-              <div className="w-12" />
-           </div>
+          </div>
         </div>
       )}
 
+      {/* VISTA DE CÁMARA (WEBRTC) */}
+      {showCamera && (
+        <div className="absolute inset-0 bg-black flex flex-col overflow-hidden">
+          <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+            {!previewPhoto ? (
+              <>
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <div className="absolute inset-0 pointer-events-none border-x-[40px] border-y-[20px] border-black/70">
+                    <div className="w-full h-full border-2 border-dashed border-brand-accent/60 rounded-3xl relative">
+                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-accent/20 animate-pulse" />
+                        <div className="absolute -top-10 left-0 right-0 flex justify-center">
+                            <div className="bg-brand-accent text-brand-bg px-4 py-1.5 rounded-full flex items-center gap-2 shadow-xl animate-bounce">
+                                <Sparkles size={14} />
+                                <span className="text-[9px] font-black uppercase tracking-wider">{txt('scan.inst_frame_title')}</span>
+                            </div>
+                        </div>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                            <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] text-center px-6">
+                                {txt('scan.inst_frame_desc')}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+              </>
+            ) : (
+              <div className="relative w-full h-full flex flex-col items-center justify-center p-6 gap-6 animate-in zoom-in-95 bg-brand-bg">
+                 <h3 className="text-xl font-black italic text-brand-accent uppercase tracking-tighter">{txt('scan.quality_check')}</h3>
+                 <img src={previewPhoto} className="max-h-[60vh] rounded-3xl border-2 border-brand-accent shadow-2xl" />
+                 <div className="flex gap-4 w-full max-w-xs">
+                    <button onClick={() => setPreviewPhoto(null)} className="btn-secondary flex-1 !py-4">{txt('scan.retry_photo')}</button>
+                    <button onClick={() => confirmPhoto(previewPhoto)} className="btn-primary flex-1 !py-4 !bg-brand-success text-brand-bg">{txt('scan.confirm_photo')}</button>
+                 </div>
+              </div>
+            )}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+
+          {!previewPhoto && (
+            <div className="bg-brand-bg p-8 flex flex-col items-center gap-6 rounded-t-[3rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+               <div className="flex items-center justify-between w-full max-w-xs">
+                  <button onClick={() => setShowCamera(false)} className="btn-icon !bg-white/5 border-none"><ChevronLeft size={24} /></button>
+                  <button onClick={takePhoto} className="w-20 h-20 bg-white rounded-full p-1 border-4 border-brand-primary shadow-2xl active:scale-90 transition-all flex items-center justify-center">
+                    <div className="w-full h-full bg-white rounded-full border-2 border-black/10" />
+                  </button>
+                  <div className="w-12" />
+               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* DIÁLOGO DE VINCULACIÓN (FUERA DE LAS CONDICIONES DE CÁMARA) */}
       {showListDialog && (
-        <div className="fixed inset-0 bg-brand-bg/95 backdrop-blur-xl z-[5000] flex items-center justify-center p-6">
+        <div className="fixed inset-0 bg-brand-bg/95 backdrop-blur-xl z-[6000] flex items-center justify-center p-6">
            <div className="card-premium max-w-sm w-full text-center space-y-8 !p-10 border-brand-primary/30 shadow-[0_0_50px_rgba(var(--brand-primary-rgb),0.2)] animate-in zoom-in-95 duration-300">
               <AlertTriangle size={48} className="mx-auto text-brand-primary" />
               <div className="space-y-2">
@@ -378,6 +367,14 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
            </div>
         </div>
       )}
+
+      {loading && (
+          <div className="fixed inset-0 z-[7000] bg-brand-bg/90 backdrop-blur-xl flex flex-col items-center justify-center gap-6">
+              <Loader2 className="animate-spin text-brand-primary" size={64} strokeWidth={3}/>
+              <p className="text-[10px] font-black text-white uppercase tracking-[0.5em] animate-pulse">{txt('scan.scanning_label')}</p>
+          </div>
+      )}
+
     </div>
   );
 };
