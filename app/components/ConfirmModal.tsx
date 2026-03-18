@@ -27,45 +27,45 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <div className="modal-overlay">
-      <div className="card-premium w-full max-w-[90%] lg:max-w-md p-8 relative overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="card-premium w-[92%] max-w-md !p-6 lg:!p-8 relative overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Glow effect */}
         <div className={`absolute -top-24 -left-24 w-48 h-48 blur-[80px] rounded-full opacity-20 ${
           type === 'danger' ? 'bg-brand-danger' : 'bg-brand-primary'
         }`} />
 
-        <div className="relative z-10 space-y-6">
+        <div className="relative z-10 space-y-5 lg:space-y-6">
           <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-2xl ${
+            <div className={`p-3 lg:p-4 rounded-2xl ${
               type === 'danger' ? 'bg-brand-danger/10 text-brand-danger' : 'bg-brand-primary/10 text-brand-primary'
             }`}>
-              {type === 'danger' ? <AlertCircle size={28} /> : <CheckCircle2 size={28} />}
+              {type === 'danger' ? <AlertCircle size={24} className="lg:w-7 lg:h-7" /> : <CheckCircle2 size={24} className="lg:w-7 lg:h-7" />}
             </div>
             <div>
-              <h3 className="heading-2 !text-lg !mb-0">{title}</h3>
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand-muted/40 italic">
+              <h3 className="text-base lg:text-lg font-black uppercase italic tracking-tighter leading-none mb-1">{title}</h3>
+              <p className="text-[9px] font-black uppercase tracking-widest text-brand-muted/40 italic">
                 {type === 'danger' ? 'Acción Crítica' : 'Confirmación'}
               </p>
             </div>
           </div>
 
-          <p className="text-sm font-bold text-white/70 leading-relaxed uppercase tracking-tight">
+          <p className="text-[11px] lg:text-sm font-bold text-white/70 leading-relaxed uppercase tracking-tight">
             {message}
           </p>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2.5 lg:gap-3 pt-2">
             <button 
               onClick={onCancel}
-              className="btn-secondary flex-1 bg-white/5 border-white/10 text-brand-muted hover:text-white"
+              className="btn-secondary !py-3 lg:!py-4 flex-1 bg-white/5 border-white/10 text-brand-muted hover:text-white !text-[9px] lg:!text-[10px]"
             >
-              <X size={16} /> {cancelText}
+              <X size={14} /> {cancelText}
             </button>
             <button 
               onClick={onConfirm}
-              className={`btn-primary flex-[1.5] ${
+              className={`btn-primary !py-3 lg:!py-4 flex-[1.5] !text-[9px] lg:!text-[10px] ${
                 type === 'danger' ? 'bg-brand-danger shadow-brand-danger/20' : ''
               }`}
             >
-              <CheckCircle2 size={16} /> {confirmText}
+              <CheckCircle2 size={14} /> {confirmText}
             </button>
           </div>
         </div>

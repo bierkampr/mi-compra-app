@@ -25,7 +25,7 @@
 @layer components {
   /* Estructura Principal */
   .app-layout {
-    @apply max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col relative bg-transparent px-[5vw] lg:px-8 pb-44 pt-6 transition-all duration-300;
+    @apply max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col relative bg-transparent px-[5vw] lg:px-8 pb-44 pt-4 lg:pt-6 transition-all duration-300;
   }
 
   /* SISTEMA DE TARJETAS UNIFICADO */
@@ -81,8 +81,12 @@
 
   /* MODALES */
   .modal-overlay {
-    @apply fixed inset-0 z-[500] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 
+    @apply fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 
            animate-in fade-in duration-300;
+    height: 100vh;
+    width: 100vw;
+    top: 0;
+    left: 0;
   }
 
   .modal-content-full {

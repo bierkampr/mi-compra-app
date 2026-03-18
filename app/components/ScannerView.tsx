@@ -52,26 +52,26 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
             <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white"><ShoppingCart size={80} /></div>
           </button>
 
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => setPurchaseMode('mini')} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
-                <div className="w-14 h-14 bg-brand-accent/10 rounded-2xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform"><Store size={28}/></div>
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.mini')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Store size={48} /></div>
+          <div className="grid grid-cols-2 gap-2.5 lg:gap-4">
+            <button onClick={() => setPurchaseMode('mini')} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+                <div className="w-11 h-11 lg:w-14 lg:h-14 bg-brand-accent/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform"><Store size={22} className="lg:w-7 lg:h-7" /></div>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.mini')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Store size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
-            <button onClick={() => setPurchaseMode('dining')} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
-                <div className="w-14 h-14 bg-orange-400/10 rounded-2xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform"><Utensils size={28}/></div>
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.dining')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Utensils size={48} /></div>
+            <button onClick={() => setPurchaseMode('dining')} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+                <div className="w-11 h-11 lg:w-14 lg:h-14 bg-orange-400/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform"><Utensils size={22} className="lg:w-7 lg:h-7" /></div>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.dining')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Utensils size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
-            <button onClick={() => setPurchaseMode('health')} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
-                <div className="w-14 h-14 bg-emerald-400/10 rounded-2xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Pill size={28}/></div>
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.health')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Pill size={48} /></div>
+            <button onClick={() => setPurchaseMode('health')} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+                <div className="w-11 h-11 lg:w-14 lg:h-14 bg-emerald-400/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Pill size={22} className="lg:w-7 lg:h-7" /></div>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.health')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Pill size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
-            <button onClick={() => setShowOthers(true)} className="card-premium card-clickable !p-6 flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden bg-brand-secondary/20 border-dashed border-white/20">
-                <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform"><LayoutGrid size={28}/></div>
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.others')}</h2>
-                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><LayoutGrid size={48} /></div>
+            <button onClick={() => setShowOthers(true)} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-secondary/20 border-dashed border-white/20">
+                <div className="w-11 h-11 lg:w-14 lg:h-14 bg-white/5 rounded-xl lg:rounded-2xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform"><LayoutGrid size={22} className="lg:w-7 lg:h-7" /></div>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.others')}</h2>
+                <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><LayoutGrid size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
           </div>
         </div>
