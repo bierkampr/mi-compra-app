@@ -3,52 +3,76 @@
 const fs = require('fs');
 const path = require('path');
 
-// Configuración de carpetas y archivos a incluir/excluir
 const CONFIG = {
-  directorios: ['app', 'lib', 'locales'], // Carpetas donde buscará recursivamente
+  directorios: ['app', 'lib', 'locales', 'public'],
   archivosRaiz: [
     'package.json',
+    'package-lock.json',
     'tailwind.config.js',
     'postcss.config.js',
     'postcss.config.mjs',
     'next.config.mjs',
     'next.config.ts',
+    'next-env.d.ts',
     'tsconfig.json',
     'eslint.config.mjs',
     'README.md',
-    '.env.local' // Ten cuidado: esto incluye tus llaves secretas
+    '.env.local'
   ],
-  extensionesPermitidas: ['.ts', '.tsx', '.js', '.mjs', '.json', '.css', '.md'],
-  excluir: ['node_modules', '.next', '.git', 'package-lock.json', 'favicon.ico']
+  extensionesPermitidas: [
+    '.ts', '.tsx', '.js', '.mjs', '.json',
+    '.css', '.md', '.d.ts', '.jsx'
+  ],
+  excluir: [
+    'node_modules',
+    '.next',
+    '.git',
+    'favicon.ico',
+    'aud.js',
+    'subir.js'
+  ]
 };
 
 let contenidoTotal = "=== PROYECTO: MI COMPRA APP - AUDITORÍA COMPLETA ===\n";
 contenidoTotal += "Fecha de exportación: " + new Date().toLocaleString() + "\n";
-contenidoTotal += "Estructura detectada automáticamente desde la raíz.\n";
 contenidoTotal += "================================================\n\n";
 
-// Función para obtener archivos recursivamente
+// 🔍 Detectar si archivo es texto
+function esArchivoTexto(ruta) {
+  try {
+    const buffer = fs.readFileSync(ruta);
+    return !buffer.includes(0); // si tiene null byte → binario
+  } catch {
+    return false;
+  }
+}
+
+// 📂 Recorrido recursivo
 function obtenerArchivos(dir, listaArchivos = []) {
   const files = fs.readdirSync(dir);
+
   files.forEach(file => {
-    const name = path.join(dir, file);
-    if (fs.statSync(name).isDirectory()) {
-      if (!CONFIG.excluir.includes(file)) {
-        obtenerArchivos(name, listaArchivos);
-      }
+    const fullPath = path.join(dir, file);
+
+    // ❌ excluir
+    if (CONFIG.excluir.includes(file)) return;
+
+    if (fs.statSync(fullPath).isDirectory()) {
+      obtenerArchivos(fullPath, listaArchivos);
     } else {
-      const ext = path.extname(name);
-      if (CONFIG.extensionesPermitidas.includes(ext) && !CONFIG.excluir.includes(file)) {
-        // Convertir a ruta relativa para el log
-        const rutaRelativa = path.relative(process.cwd(), name);
+      const ext = path.extname(fullPath);
+
+      if (CONFIG.extensionesPermitidas.includes(ext)) {
+        const rutaRelativa = path.relative(process.cwd(), fullPath);
         listaArchivos.push(rutaRelativa);
       }
     }
   });
+
   return listaArchivos;
 }
 
-// 1. Recopilar todos los archivos
+// 🧠 1. Recopilar archivos
 let todosLosArchivos = [...CONFIG.archivosRaiz];
 
 CONFIG.directorios.forEach(dir => {
@@ -58,32 +82,40 @@ CONFIG.directorios.forEach(dir => {
   }
 });
 
-// Eliminar duplicados si los hubiera
+// eliminar duplicados
 todosLosArchivos = [...new Set(todosLosArchivos)];
 
-// 2. Leer y concatenar contenido
+// 📄 2. Leer contenido
 todosLosArchivos.forEach(archivo => {
   const fullPath = path.join(process.cwd(), archivo);
-  
-  if (fs.existsSync(fullPath) && fs.lstatSync(fullPath).isFile()) {
+
+  if (
+    fs.existsSync(fullPath) &&
+    fs.lstatSync(fullPath).isFile() &&
+    esArchivoTexto(fullPath)
+  ) {
     try {
       const contenido = fs.readFileSync(fullPath, 'utf8');
+
       contenidoTotal += `\n\n/* --- INICIO ARCHIVO: ${archivo} --- */\n\n`;
       contenidoTotal += contenido;
       contenidoTotal += `\n\n/* --- FIN ARCHIVO: ${archivo} --- */\n`;
-      console.log(`✅ Procesado: ${archivo}`);
+
+      console.log(`✅ ${archivo}`);
     } catch (err) {
       console.log(`❌ Error leyendo: ${archivo}`);
     }
   }
 });
 
+// 💾 3. Guardar archivo final
 const outputPath = 'PROYECTO_COMPLETO.txt';
+
 try {
   fs.writeFileSync(outputPath, contenidoTotal);
   console.log(`\n🚀 ¡EXTRACCIÓN EXITOSA!`);
-  console.log(`Se han procesado ${todosLosArchivos.length} archivos.`);
+  console.log(`Archivos procesados: ${todosLosArchivos.length}`);
   console.log(`Archivo generado: ${outputPath}`);
 } catch (error) {
-  console.error(`❌ Error al escribir el archivo final: ${error.message}`);
+  console.error(`❌ Error al escribir: ${error.message}`);
 }

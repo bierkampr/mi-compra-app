@@ -1,16 +1,27 @@
 /* --- ARCHIVO: lib/config.ts --- */
 
-// Client ID de Google para la autenticación
+/**
+ * Identificador de cliente para la autenticación con Google.
+ * Este ID es público por naturaleza en el flujo OAuth2.
+ */
 export const CLIENT_ID = "384386855540-b9gs1nuqt7jnd61bnh4881a7bk9ldcp1.apps.googleusercontent.com";
 
-// Cargamos las llaves desde el entorno de ejecución (process.env)
-// En Vercel se configuran en el Dashboard. Localmente en .env.local
-export const MISTRAL_API_KEY = process.env.NEXT_PUBLIC_MISTRAL_API_KEY || "";
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
-
-// Nombre del archivo en Google Drive
+/**
+ * Nombre del archivo JSON que se guarda de forma privada
+ * en el espacio AppData del Google Drive del usuario.
+ */
 export const FILE_NAME = "mi_compra_data.json";
 
-// Configuración de Supabase
+/**
+ * Configuración de Supabase (Catálogo Global y Precios).
+ * Se leen de variables de entorno para evitar exposición en el código fuente.
+ */
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+/**
+ * NOTA DE SEGURIDAD:
+ * Las llaves de GEMINI y MISTRAL han sido eliminadas de este archivo.
+ * Ahora se gestionan exclusivamente en 'app/api/analyze/route.ts'
+ * utilizando process.env del lado del servidor para máxima protección.
+ */
