@@ -1,9 +1,7 @@
 /* --- ARCHIVO: lib/gemini.ts --- */
 
 /**
- * Envía las imágenes al backend propio (/api/analyze).
- * No enviamos la API KEY en el cuerpo para mayor seguridad, 
- * el servidor la tomará de sus propias variables de entorno.
+ * Envía las imágenes al backend propio (/api/analyze) para procesarlas con Gemini 2.0.
  */
 export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string) => {
   try {
@@ -16,7 +14,7 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       };
     }
 
-    console.log("[Gemini Lib] Llamando al puente de servidor...");
+    console.log("[Gemini Lib] Iniciando análisis con el nuevo motor 2.0...");
     
     const response = await fetch("/api/analyze", {
         method: "POST",
@@ -24,17 +22,17 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
         body: JSON.stringify({
             images: base64Images,
             prompt: customPrompt
-            // Ya no enviamos la apiKey aquí por seguridad
         })
     });
 
     if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: "Error en el servidor" }));
-        throw new Error(errData.error || `Error ${response.status}`);
+        const errData = await response.json().catch(() => ({ error: "Error de servidor" }));
+        throw new Error(errData.error || `Error HTTP: ${response.status}`);
     }
 
     const result = await response.json();
 
+    // Normalización de datos extraídos
     let finalComercio = "SIN NOMBRE";
     if (result.comercio) {
       if (typeof result.comercio === 'string' && result.comercio.trim() !== "") {
@@ -58,7 +56,7 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
     };
 
   } catch (error: any) {
-    console.error("Error en analyzeReceipt:", error);
-    throw new Error(error.message || "Fallo en el análisis del ticket.");
+    console.error("Error en analyzeReceipt (Gemini 2.0):", error);
+    throw new Error(error.message || "No se pudo analizar el ticket. Inténtalo de nuevo.");
   }
 };

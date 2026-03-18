@@ -7,26 +7,26 @@ export async function POST(req: Request) {
   try {
     const { images, prompt } = await req.json();
 
-    // LEEMOS LA LLAVE DIRECTAMENTE DESDE EL SERVIDOR (SEGURIDAD TOTAL)
+    // 1. Verificar la API KEY en el servidor
     const serverApiKey = process.env.GEMINI_API_KEY;
 
     if (!serverApiKey) {
-      console.error("ERROR: GEMINI_API_KEY no encontrada en las variables de entorno del servidor.");
       return NextResponse.json(
-        { error: "Configuración incompleta en el servidor (API Key faltante)." }, 
+        { error: "API Key de Gemini no configurada en Vercel." }, 
         { status: 500 }
       );
     }
 
+    // 2. Inicializar Google AI
     const genAI = new GoogleGenerativeAI(serverApiKey);
+    
+    // USAMOS EL MODELO QUE APARECE EN TU LISTA: gemini-2.0-flash
+    // Es más rápido y preciso que el 1.5
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: { 
-        responseMimeType: "application/json",
-        temperature: 0.1 
-      }
+      model: "gemini-2.0-flash",
     });
 
+    // 3. Preparar las imágenes
     const imageParts = images.map((img: string) => {
       const base64Data = img.includes(",") ? img.split(",")[1] : img;
       return {
@@ -37,16 +37,31 @@ export async function POST(req: Request) {
       };
     });
 
-    const result = await model.generateContent([prompt, ...imageParts]);
+    // 4. Ejecutar el análisis
+    // Gemini 2.0 maneja mucho mejor el formato JSON nativo
+    const result = await model.generateContent([
+      prompt + "\n\nResponde únicamente en formato JSON puro.",
+      ...imageParts
+    ]);
+
     const response = await result.response;
     const text = response.text();
 
-    return NextResponse.json(JSON.parse(text));
+    if (!text) {
+      throw new Error("La IA devolvió una respuesta vacía.");
+    }
+
+    // Limpieza de Markdown (por seguridad si la IA lo añade)
+    const cleanJsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    return NextResponse.json(JSON.parse(cleanJsonString));
 
   } catch (error: any) {
-    console.error("Error en API Gemini:", error);
+    console.error("--- ERROR EN API ROUTE GEMINI 2.0 ---");
+    console.error(error);
+
     return NextResponse.json(
-      { error: error.message || "Error interno al procesar con Gemini" }, 
+      { error: `Error de IA: ${error.message}` }, 
       { status: 500 }
     );
   }
