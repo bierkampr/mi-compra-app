@@ -396,7 +396,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       />
 
       {loading && (
-          <div className="fixed inset-0 z-[7000] bg-brand-bg/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
+          <div className="fixed inset-0 z-[9000] bg-brand-bg/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
               <div className="relative mb-8">
                   <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full animate-pulse" />
                   <Loader2 className="animate-spin text-brand-primary relative z-10" size={80} strokeWidth={2.5}/>
@@ -408,7 +408,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                   </p>
                   
                   <div className="h-10 flex items-center justify-center">
-                    <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest leading-relaxed animate-in fade-in zoom-in duration-500 key={loadingStep}">
+                    <p key={loadingStep} className="text-[10px] font-bold text-brand-muted uppercase tracking-widest leading-relaxed animate-in fade-in zoom-in duration-500">
                       {loadingStep === 0 && txt('scan.scanning_step_0')}
                       {loadingStep === 1 && txt('scan.scanning_step_1')}
                       {loadingStep === 2 && txt('scan.scanning_step_2')}
