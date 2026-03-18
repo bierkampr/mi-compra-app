@@ -59,23 +59,23 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * COMPRESIÓN DE ALTA LEGIBILIDAD PARA IA
- * Ajustamos los límites para no perder nitidez en los caracteres.
+ * COMPRESIÓN BALANCEADA PARA GEMINI + VERCEL
+ * Optimizada para no superar el límite de 4.5MB de Vercel pero manteniendo nitidez.
  * 
- * 1 foto: Máx 1000px / Calidad 0.7
- * 2 fotos: Máx 850px / Calidad 0.6
- * 3 fotos: Máx 750px / Calidad 0.5
+ * 1 foto: Máx 1200px / Calidad 0.7
+ * 2 fotos: Máx 1000px / Calidad 0.6
+ * 3 fotos: Máx 900px / Calidad 0.5
  */
 export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
   return new Promise((resolve) => {
-    let maxSide = 1000;
+    let maxSide = 1200;
     let quality = 0.7;
 
     if (photoCount === 2) {
-      maxSide = 850;
+      maxSide = 1000;
       quality = 0.6;
     } else if (photoCount >= 3) {
-      maxSide = 750;
+      maxSide = 900;
       quality = 0.5;
     }
 
@@ -86,6 +86,7 @@ export const compressImage = (base64Str: string, photoCount: number = 1): Promis
       let width = img.width;
       let height = img.height;
 
+      // Escalado proporcional basado en el lado más largo
       if (width > height) {
         if (width > maxSide) {
           height *= maxSide / width;
@@ -108,21 +109,19 @@ export const compressImage = (base64Str: string, photoCount: number = 1): Promis
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
-      // FILTRO DE MEJORA DE TEXTO (Grises de alto contraste)
+      // FILTRO DE CLARIDAD TEXTUAL (Optimizado para Gemini)
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
-        // Conversión a escala de grises ponderada
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
         
-        // Ajuste de curvas de contraste para resaltar tinta negra sobre papel blanco
-        // No es binarización pura para no pixelar las letras
+        // Suavizamos el contraste para no pixelar caracteres pequeños
         let v = gray;
-        if (gray < 140) {
-            v = gray * 0.6; // Oscurecer más lo que ya es oscuro (tinta)
+        if (gray < 130) {
+            v = gray * 0.8; // Oscurece tinta
         } else {
-            v = Math.min(255, gray * 1.2); // Aclarar más el fondo
+            v = Math.min(255, gray * 1.1); // Limpia papel
         }
         
         data[i] = data[i+1] = data[i+2] = v;

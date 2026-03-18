@@ -1,22 +1,12 @@
 /* --- ARCHIVO: lib/gemini.ts --- */
 
-import { MISTRAL_API_KEY } from "./config";
-
 /**
- * Función auxiliar para esperar un tiempo determinado (ms)
+ * Envía las imágenes al backend propio (/api/analyze).
+ * No enviamos la API KEY en el cuerpo para mayor seguridad, 
+ * el servidor la tomará de sus propias variables de entorno.
  */
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * Envía las imágenes de los tickets a Mistral AI (Pixtral) para su análisis.
- * Incluye gestión de errores robusta y reintentos automáticos para Error 429.
- */
-export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string, attempt: number = 0): Promise<any> => {
+export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string) => {
   try {
-    if (!MISTRAL_API_KEY) {
-      throw new Error("La llave de API de Mistral no está configurada.");
-    }
-
     if (mode === 'manual') {
       return { 
         comercio: "INGRESO MANUAL", 
@@ -26,68 +16,24 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       };
     }
 
-    const url = "https://api.mistral.ai/v1/chat/completions";
-
-    const imageContent = base64Images.map(img => ({
-      type: "image_url",
-      image_url: { url: img }
-    }));
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { 
-        "Authorization": `Bearer ${MISTRAL_API_KEY}`, 
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        "model": "pixtral-12b-2409",
-        "messages": [
-          { 
-            "role": "user", 
-            "content": [
-              { "type": "text", "text": customPrompt }, 
-              ...imageContent
-            ] 
-          }
-        ],
-        "response_format": { "type": "json_object" },
-        "temperature": 0
-      }),
-      keepalive: false 
+    console.log("[Gemini Lib] Llamando al puente de servidor...");
+    
+    const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            images: base64Images,
+            prompt: customPrompt
+            // Ya no enviamos la apiKey aquí por seguridad
+        })
     });
 
-    // --- MANEJO DE ERROR 429 (RATE LIMIT) CON REINTENTO MÁS LARGO ---
-    if (response.status === 429 && attempt < 2) {
-      // Esperamos 5s en el primer intento y 10s en el segundo
-      const waitTime = attempt === 0 ? 5000 : 10000;
-      console.warn(`Error 429: Servidor saturado. Reintentando en ${waitTime/1000}s...`);
-      await sleep(waitTime);
-      return analyzeReceipt(base64Images, mode, customPrompt, attempt + 1);
-    }
-
     if (!response.ok) {
-      let errorMessage = `Error ${response.status}`;
-      try {
-        const errorJson = await response.json();
-        if (response.status === 429) {
-          errorMessage = "Límite de tokens de visión excedido. Intenta con menos fotos o fotos más cercanas.";
-        } else {
-          errorMessage = errorJson.error?.message || errorMessage;
-        }
-      } catch (e) {
-        errorMessage = "Error de conexión con la IA.";
-      }
-      throw new Error(errorMessage);
+        const errData = await response.json().catch(() => ({ error: "Error en el servidor" }));
+        throw new Error(errData.error || `Error ${response.status}`);
     }
 
-    const data = await response.json();
-
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-      throw new Error("La IA devolvió una respuesta vacía.");
-    }
-
-    const result = JSON.parse(data.choices[0].message.content);
+    const result = await response.json();
 
     let finalComercio = "SIN NOMBRE";
     if (result.comercio) {
@@ -110,8 +56,9 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
         subtotal: Number(p.subtotal) || 0
       }))
     };
+
   } catch (error: any) {
-    console.error("DEBUG IA ERROR:", error);
-    throw new Error(error.message || "Error al procesar el ticket.");
+    console.error("Error en analyzeReceipt:", error);
+    throw new Error(error.message || "Fallo en el análisis del ticket.");
   }
 };

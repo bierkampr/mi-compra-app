@@ -101,41 +101,44 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   );
 };
 
-// --- SUB-COMPONENTE: CAPTURA CON RECORTE MATEMÁTICO EXACTO ---
+// --- SUB-COMPONENTE: CAPTURA OPTIMIZADA ---
 ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, setShowListDialog, showListDialog, onCancel, txt, activeTab }) => {
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Iniciar cámara con solicitud de Alta Resolución (1080p)
   useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment', 
+            width: { ideal: 1920 }, 
+            height: { ideal: 1080 } 
+          }, 
+          audio: false 
+        });
+        setCapturedStream(stream);
+      } catch (err) {
+        alert(txt('scan.camera_error'));
+      }
+    };
     startCamera();
-    return () => stopCamera();
+    return () => {
+      if (capturedStream) {
+        capturedStream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
 
+  // Reconectar stream al video cada vez que se cierra la previsualización
   useEffect(() => {
     if (videoRef.current && capturedStream && !previewPhoto) {
         videoRef.current.srcObject = capturedStream;
     }
   }, [previewPhoto, capturedStream]);
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, 
-        audio: false 
-      });
-      setCapturedStream(stream);
-    } catch (err) {
-      alert(txt('scan.camera_error'));
-    }
-  };
-
-  const stopCamera = () => {
-    if (capturedStream) {
-      capturedStream.getTracks().forEach(track => track.stop());
-    }
-  };
 
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -144,32 +147,25 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       
       const vW = video.videoWidth;
       const vH = video.videoHeight;
-
       const rect = video.getBoundingClientRect();
       const cssW = rect.width;
       const cssH = rect.height;
 
-      // 1. Calcular el factor de escala de 'object-cover'
-      // El video se escala para cubrir el contenedor, manteniendo el ratio
+      // Cálculo de escala 'object-cover'
       const scale = Math.max(cssW / vW, cssH / vH);
-
-      // 2. Calcular dimensiones del video proyectado en el CSS
       const renderedW = vW * scale;
       const renderedH = vH * scale;
-
-      // 3. Calcular el desplazamiento (centrado) del video respecto al contenedor
       const offsetX = (renderedW - cssW) / 2;
       const offsetY = (renderedH - cssH) / 2;
 
-      // 4. Definir el área del recuadro en coordenadas CSS
-      // El borde negro es de 40px en todos los lados
+      // Definición del área del recuadro (Borde 40px)
       const borderSize = 40;
       const cropX_css = borderSize;
       const cropY_css = borderSize;
       const cropW_css = cssW - (borderSize * 2);
       const cropH_css = cssH - (borderSize * 2);
 
-      // 5. Traducir coordenadas CSS a píxeles reales del origen del video
+      // Conversión a píxeles reales
       const sx = (cropX_css + offsetX) / scale;
       const sy = (cropY_css + offsetY) / scale;
       const sWidth = cropW_css / scale;
@@ -181,7 +177,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        // Capturamos con buena calidad inicial
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         setPreviewPhoto(dataUrl);
       }
     }
@@ -189,6 +186,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
   const confirmPhoto = async () => {
     if (previewPhoto) {
+      // Compresión balanceada para Gemini
       const compressed = await compressImage(previewPhoto, tempPhotos.length + 1);
       setTempPhotos((prev: any) => [...prev, compressed]);
       setPreviewPhoto(null);
@@ -199,7 +197,9 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   };
 
   const handleProcessClick = () => {
-    stopCamera();
+    if (capturedStream) {
+        capturedStream.getTracks().forEach(track => track.stop());
+    }
     if (activeTab === 'list') startAnalysis(true);
     else {
       const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
