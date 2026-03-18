@@ -194,6 +194,21 @@ export default function Home() {
         setActiveTab(tab);
     };
 
+    const [loadingStep, setLoadingStep] = useState(0);
+
+    // Rotador de mensajes de carga
+    useEffect(() => {
+        let interval: any;
+        if (loading) {
+            interval = setInterval(() => {
+                setLoadingStep(prev => (prev + 1) % 4);
+            }, 3000);
+        } else {
+            setLoadingStep(0);
+        }
+        return () => clearInterval(interval);
+    }, [loading]);
+
     const stats = useMemo(() => {
         const y = currentViewDate.getFullYear();
         const m = currentViewDate.getMonth();
@@ -325,8 +340,32 @@ export default function Home() {
             )}
 
             {loading && (
-                <div className="fixed inset-0 z-[2000] bg-brand-bg/60 backdrop-blur-md flex items-center justify-center">
-                    <Loader2 className="animate-spin text-brand-primary" size={48} strokeWidth={3}/>
+                <div className="fixed inset-0 z-[9000] bg-brand-bg/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 bg-brand-primary/20 blur-3xl rounded-full animate-pulse" />
+                        <Loader2 className="animate-spin text-brand-primary relative z-10" size={80} strokeWidth={2.5}/>
+                    </div>
+                    
+                    <div className="space-y-4 max-w-xs animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <p className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-2">
+                            {txt('scan.scanning_label')}
+                        </p>
+                        
+                        <div className="h-10 flex items-center justify-center">
+                            <p key={loadingStep} className="text-[10px] font-bold text-brand-muted uppercase tracking-widest leading-relaxed animate-in fade-in zoom-in duration-500">
+                                {loadingStep === 0 && txt('scan.scanning_step_0')}
+                                {loadingStep === 1 && txt('scan.scanning_step_1')}
+                                {loadingStep === 2 && txt('scan.scanning_step_2')}
+                                {loadingStep === 3 && txt('scan.scanning_step_3')}
+                            </p>
+                        </div>
+
+                        <div className="flex gap-1 justify-center pt-4">
+                            {[0,1,2,3].map(i => (
+                                <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${loadingStep === i ? 'bg-brand-primary w-4' : 'bg-white/10'}`} />
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
