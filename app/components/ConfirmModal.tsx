@@ -35,37 +35,37 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         <div className="relative z-10 space-y-5 lg:space-y-6">
           <div className="flex items-center gap-4">
-            <div className={`p-3 lg:p-4 rounded-2xl ${
+            <div className={`p-3 lg:p-4 rounded-2xl shrink-0 ${
               type === 'danger' ? 'bg-brand-danger/10 text-brand-danger' : 'bg-brand-primary/10 text-brand-primary'
             }`}>
               {type === 'danger' ? <AlertCircle size={24} className="lg:w-7 lg:h-7" /> : <CheckCircle2 size={24} className="lg:w-7 lg:h-7" />}
             </div>
-            <div>
-              <h3 className="text-base lg:text-lg font-black uppercase italic tracking-tighter leading-none mb-1">{title}</h3>
-              <p className="text-[9px] font-black uppercase tracking-widest text-brand-muted/40 italic">
+            <div className="min-w-0">
+              <h3 className="text-base lg:text-lg font-black uppercase italic tracking-tighter leading-none mb-1 truncate">{title}</h3>
+              <p className="text-[9px] font-black uppercase tracking-widest text-brand-muted/40 italic truncate">
                 {type === 'danger' ? 'Acción Crítica' : 'Confirmación'}
               </p>
             </div>
           </div>
 
-          <p className="text-[11px] lg:text-sm font-bold text-white/70 leading-relaxed uppercase tracking-tight">
+          <p className="text-[11px] lg:text-sm font-bold text-white/70 leading-relaxed uppercase tracking-tight line-clamp-3">
             {message}
           </p>
 
-          <div className="flex gap-2.5 lg:gap-3 pt-2">
+          <div className="flex gap-2.5 lg:gap-3 pt-2 items-stretch">
             <button 
               onClick={onCancel}
-              className="btn-secondary !py-3 lg:!py-4 flex-1 bg-white/5 border-white/10 text-brand-muted hover:text-white !text-[9px] lg:!text-[10px]"
+              className="btn-secondary !py-3 lg:!py-4 flex-1 bg-white/5 border-white/10 text-brand-muted hover:text-white !text-[9px] lg:!text-[11px] !px-2 leading-none"
             >
-              <X size={14} /> {cancelText}
+              <span className="truncate w-full block text-center">{cancelText}</span>
             </button>
             <button 
               onClick={onConfirm}
-              className={`btn-primary !py-3 lg:!py-4 flex-[1.5] !text-[9px] lg:!text-[10px] ${
+              className={`btn-primary !py-3 lg:!py-4 flex-[1.4] !text-[9px] lg:!text-[11px] !px-2 leading-none ${
                 type === 'danger' ? 'bg-brand-danger shadow-brand-danger/20' : ''
               }`}
             >
-              <CheckCircle2 size={14} /> {confirmText}
+              <span className="truncate w-full block text-center">{confirmText}</span>
             </button>
           </div>
         </div>
