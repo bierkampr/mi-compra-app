@@ -161,9 +161,9 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       const offsetX = (renderedW - cssW) / 2;
       const offsetY = (renderedH - cssH) / 2;
 
-      // Área de corte MÁS LARGA verticalmente (Borde lateral 40px, superior/inferior 60px)
+      // Área de corte MÁS LARGA verticalmente (Borde lateral 40px, superior/inferior 20px para maximizar)
       const marginH = 40;
-      const marginV = 60;
+      const marginV = 20;
       const cropX_css = marginH;
       const cropY_css = marginV;
       const cropW_css = cssW - (marginH * 2);
@@ -206,11 +206,15 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   };
 
   const handleProcessClick = () => {
-    if (activeTab === 'list') startAnalysis(true);
-    else {
+    if (activeTab === 'list') {
+      startAnalysis(true);
+    } else {
       const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
-      if (hasListItems) setShowListDialog(true);
-      else startAnalysis(false);
+      if (hasListItems) {
+        setShowListDialog(true);
+      } else {
+        startAnalysis(false);
+      }
     }
   };
 
@@ -313,8 +317,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             
-            {/* PLANTILLA DE ENCUADRE OPTIMIZADA */}
-            <div className="absolute inset-0 pointer-events-none border-x-[40px] border-y-[60px] border-black/70">
+            {/* PLANTILLA DE ENCUADRE OPTIMIZADA (Más alta) */}
+            <div className="absolute inset-0 pointer-events-none border-x-[40px] border-y-[20px] border-black/70">
                 <div className="w-full h-full border-2 border-dashed border-brand-accent/60 rounded-3xl relative">
                     <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-brand-accent/20 animate-pulse" />
                     
@@ -360,8 +364,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       )}
 
       {showListDialog && (
-        <div className="modal-overlay z-[3000] !p-6">
-           <div className="card-premium max-w-sm w-full text-center space-y-8 !p-12 border-brand-primary/20">
+        <div className="fixed inset-0 bg-brand-bg/95 backdrop-blur-xl z-[5000] flex items-center justify-center p-6">
+           <div className="card-premium max-w-sm w-full text-center space-y-8 !p-10 border-brand-primary/30 shadow-[0_0_50px_rgba(var(--brand-primary-rgb),0.2)] animate-in zoom-in-95 duration-300">
               <AlertTriangle size={48} className="mx-auto text-brand-primary" />
               <div className="space-y-2">
                 <h3 className="text-lg font-black uppercase italic tracking-tighter">{txt('modals.link_list_title')}</h3>
