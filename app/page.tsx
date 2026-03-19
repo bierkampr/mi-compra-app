@@ -106,6 +106,7 @@ export default function Home() {
         if (isOffline || loading) return;
 
         if (purchaseMode === 'manual') {
+            // Seteamos el gasto pendiente primero
             setPendingGasto({
                 comercio: "NUEVA COMPRA",
                 fecha: new Date().toLocaleDateString('es-ES'),
@@ -113,10 +114,11 @@ export default function Home() {
                 productos: [],
                 usedList: useList
             });
+            // Cerramos cualquier diálogo y NO activamos loading
+            setShowListDialog(false);
             return;
         }
 
-        // Solo mostramos loading si NO es manual
         setLoading(true);
         setShowListDialog(false);
 
