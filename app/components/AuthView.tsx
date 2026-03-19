@@ -49,18 +49,19 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
   };
 
   return (
-    <main className="app-layout justify-center items-center text-center relative overflow-hidden">
+    <main className="app-layout !justify-start lg:!justify-center items-center text-center relative overflow-hidden pt-20 lg:pt-0">
       {/* Círculos de fondo dinámicos */}
       <div className="absolute top-[-10%] left-[-20%] w-[80%] h-[40%] bg-brand-primary/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-20%] w-[80%] h-[40%] bg-brand-accent/10 rounded-full blur-[120px]" />
 
-      <div className="relative z-10 w-full flex flex-col items-center">
-        <div className="relative mb-16">
-          <div className="w-28 h-28 bg-brand-primary rounded-[3rem] mx-auto flex items-center justify-center shadow-[0_25px_60px_-15px_rgba(93,46,239,0.5)] rotate-12 animate-in zoom-in duration-1000">
-            <ShoppingCart className="text-white" size={56} strokeWidth={2.5} />
+      <div className="relative z-10 w-full flex flex-col items-center mt-10 lg:mt-0">
+        <div className="relative mb-12 lg:mb-16">
+          <div className="w-24 h-24 lg:w-28 lg:h-28 bg-brand-primary rounded-[2.5rem] lg:rounded-[3rem] mx-auto flex items-center justify-center shadow-[0_25px_60px_-15px_rgba(93,46,239,0.5)] rotate-12 animate-in zoom-in duration-1000">
+            <ShoppingCart className="text-white lg:hidden" size={48} strokeWidth={2.5} />
+            <ShoppingCart className="text-white hidden lg:block" size={56} strokeWidth={2.5} />
           </div>
-          <div className="absolute -right-2 -bottom-2 w-10 h-10 bg-brand-accent rounded-3xl flex items-center justify-center shadow-2xl animate-bounce duration-[2000ms]">
-              <div className="w-3 h-3 bg-brand-bg rounded-full animate-pulse" />
+          <div className="absolute -right-2 -bottom-2 w-8 h-8 lg:w-10 lg:h-10 bg-brand-accent rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl animate-bounce duration-[2000ms]">
+              <div className="w-2 h-2 lg:w-3 lg:h-3 bg-brand-bg rounded-full animate-pulse" />
           </div>
         </div>
 

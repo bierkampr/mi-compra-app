@@ -44,12 +44,14 @@ const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, 
             <Info size={18} />
           </button>
 
-          <button 
-            onClick={() => setActiveTab('settings')} 
-            className={`btn-icon !p-2 ${activeTab === 'settings' ? 'text-brand-primary border-brand-primary/30 bg-brand-primary/5' : ''}`}
-          >
-            <Settings size={18} />
-          </button>
+          {activeTab !== 'settings' && (
+            <button 
+              onClick={() => setActiveTab('settings')} 
+              className="btn-icon !p-2"
+            >
+              <Settings size={18} />
+            </button>
+          )}
           
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-primary to-indigo-600 flex items-center justify-center font-black text-white border border-white/10 shadow-lg text-sm">
             {user.name ? user.name[0].toUpperCase() : <User size={16} />}

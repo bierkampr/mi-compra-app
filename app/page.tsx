@@ -116,6 +116,7 @@ export default function Home() {
             return;
         }
 
+        // Solo mostramos loading si NO es manual
         setLoading(true);
         setShowListDialog(false);
 

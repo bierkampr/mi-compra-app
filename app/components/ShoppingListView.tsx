@@ -145,16 +145,23 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted/50">
           {isSearching ? <Loader2 size={18} className="animate-spin text-brand-primary" /> : <Search size={18} />}
         </div>
-        <input 
-          value={newItemName} 
-          onChange={(e) => handleSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addToList()}
-          placeholder={txt('list.placeholder')} 
-          className="input-premium pl-12 pr-16 shadow-2xl" 
-        />
-        <button onClick={() => addToList()} className="absolute right-2 top-2 p-3 bg-brand-primary rounded-xl text-white shadow-lg active:scale-90 transition-all">
-          <Plus size={20} strokeWidth={3}/>
-        </button>
+        <div className="relative">
+          <input 
+            value={newItemName} 
+            onChange={(e) => handleSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addToList()}
+            placeholder={txt('list.placeholder')} 
+            className="input-premium pl-12 pr-14 shadow-2xl" 
+          />
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+            <button 
+              onClick={() => addToList()} 
+              className="p-2.5 lg:p-3 bg-brand-primary rounded-xl text-white shadow-lg active:scale-90 transition-all flex items-center justify-center"
+            >
+              <Plus size={20} strokeWidth={3}/>
+            </button>
+          </div>
+        </div>
 
         {suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-3 card-premium !p-2 z-[200] border-brand-primary/30 shadow-[0_25px_60px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 overflow-hidden">
