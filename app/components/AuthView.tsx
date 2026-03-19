@@ -49,41 +49,41 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
   };
 
   return (
-    <main className="app-layout !justify-between lg:!justify-center items-center text-center relative overflow-hidden pt-12 lg:pt-0">
+    <main className="app-layout justify-center items-center text-center relative overflow-hidden pt-4 lg:pt-0">
       {/* Círculos de fondo dinámicos */}
       <div className="absolute top-[-10%] left-[-20%] w-[80%] h-[40%] bg-brand-primary/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-20%] w-[80%] h-[40%] bg-brand-accent/10 rounded-full blur-[120px]" />
 
-      <div className="relative z-10 w-full flex flex-col items-center lg:mt-0">
-        <div className="relative mb-12 lg:mb-16">
-          <div className="w-24 h-24 lg:w-28 lg:h-28 bg-brand-primary rounded-[2.5rem] lg:rounded-[3rem] mx-auto flex items-center justify-center shadow-[0_25px_60px_-15px_rgba(93,46,239,0.5)] rotate-12 animate-in zoom-in duration-1000">
-            <ShoppingCart className="text-white lg:hidden" size={48} strokeWidth={2.5} />
+      <div className="relative z-10 w-full flex flex-col items-center">
+        <div className="relative mb-8 lg:mb-16">
+          <div className="w-20 h-20 lg:w-28 lg:h-28 bg-brand-primary rounded-[2rem] lg:rounded-[3rem] mx-auto flex items-center justify-center shadow-[0_25px_60px_-15px_rgba(93,46,239,0.5)] rotate-12 animate-in zoom-in duration-1000">
+            <ShoppingCart className="text-white lg:hidden" size={40} strokeWidth={2.5} />
             <ShoppingCart className="text-white hidden lg:block" size={56} strokeWidth={2.5} />
           </div>
-          <div className="absolute -right-2 -bottom-2 w-8 h-8 lg:w-10 lg:h-10 bg-brand-accent rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl animate-bounce duration-[2000ms]">
+          <div className="absolute -right-1 -bottom-1 w-7 h-7 lg:w-10 lg:h-10 bg-brand-accent rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl animate-bounce duration-[2000ms]">
               <div className="w-2 h-2 lg:w-3 lg:h-3 bg-brand-bg rounded-full animate-pulse" />
           </div>
         </div>
 
-        <div className="space-y-6 mb-20 px-4">
-          <div className="space-y-2">
-            <h1 className="heading-1 !text-6xl lg:!text-7xl tracking-tighter leading-[0.8] mb-0">
+        <div className="space-y-4 lg:space-y-6 mb-12 lg:mb-20 px-4">
+          <div className="space-y-1 lg:space-y-2">
+            <h1 className="heading-1 text-5xl lg:text-7xl tracking-tighter leading-[0.8] mb-0">
               {txt('auth.title')}
             </h1>
-            <h1 className="heading-1 !text-6xl lg:!text-7xl tracking-tighter leading-[0.8] text-brand-primary drop-shadow-2xl">
+            <h1 className="heading-1 text-5xl lg:text-7xl tracking-tighter leading-[0.8] text-brand-primary drop-shadow-2xl">
               {txt('auth.app')}
             </h1>
           </div>
           <div className="flex items-center justify-center gap-3">
-            <div className="h-px w-8 bg-white/10" />
-            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-brand-muted">
+            <div className="h-px w-6 lg:w-8 bg-white/10" />
+            <p className="text-[9px] lg:text-[11px] font-black uppercase tracking-[0.5em] text-brand-muted">
               {txt('auth.subtitle')}
             </p>
-            <div className="h-px w-8 bg-white/10" />
+            <div className="h-px w-6 lg:w-8 bg-white/10" />
           </div>
         </div>
 
-        <div className="w-full max-w-xs space-y-4 mb-8">
+        <div className="w-full max-w-xs space-y-4">
           <button 
             onClick={handleLogin} 
             className="w-full group relative flex items-center bg-white text-black font-bold py-3.5 lg:py-4 px-6 rounded-2xl transition-all duration-300 active:scale-95 shadow-[0_15px_30px_-10px_rgba(255,255,255,0.3)]"
