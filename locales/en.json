@@ -56,6 +56,7 @@
     "camera_error": "Error accessing camera",
     "instructions_camera": "Frame the receipt within the box",
     "scanning_label": "SCANNING...",
+    "saving_label": "SAVING...",
     "step_top": "TOP PART (Logo & Date)",
     "step_middle": "MIDDLE PART (Items)",
     "step_bottom": "BOTTOM PART (Totals)",
@@ -66,7 +67,15 @@
     "retry_after": "Server busy. Retrying in {{sec}}s...",
     "quality_check": "Is the text legible?",
     "retry_photo": "Retry",
-    "confirm_photo": "Use this"
+    "confirm_photo": "Use this",
+    "scanning_step_0": "Connecting with Artificial Intelligence...",
+    "scanning_step_1": "Processing high-resolution images...",
+    "scanning_step_2": "Extracting items and prices...",
+    "scanning_step_3": "Verifying total consistency...",
+    "saving_step_0": "Uploading high-resolution images...",
+    "saving_step_1": "Syncing with Google Drive...",
+    "saving_step_2": "Updating product catalog...",
+    "saving_step_3": "Preparing summary view..."
   },
   "review": {
     "title": "REVIEW PURCHASE",

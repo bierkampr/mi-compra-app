@@ -12,7 +12,7 @@ interface ScannerViewProps {
   db: { lista: any[], gastos: any[], customCategories?: string[] };
   updateAndSync: (newDb: any) => Promise<void>;
   setPurchaseMode: (mode: string | null) => void;
-  startAnalysis: (useList: boolean) => void; 
+  startAnalysis: (useList: boolean, forceManual?: boolean) => void; 
   txt: (key: string) => string;
 }
 
@@ -96,7 +96,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
         </div>
       )}
 
-      <button onClick={() => { setPurchaseMode('manual'); startAnalysis(false); }} className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-brand-muted font-black text-[10px] uppercase hover:text-white transition-all active:scale-95">
+      <button onClick={() => { setPurchaseMode('manual'); startAnalysis(false, true); }} className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-brand-muted font-black text-[10px] uppercase hover:text-white transition-all active:scale-95">
         <Edit3 size={18}/> <span className="text-[10px] font-black uppercase tracking-[0.2em]">{txt('scan.manual')}</span>
       </button>
     </div>
@@ -109,25 +109,11 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- LÓGICA DE CÁMARA ---
-  // Rotador de mensajes de carga
-  useEffect(() => {
-    let interval: any;
-    if (loading) {
-      interval = setInterval(() => {
-        setLoadingStep(prev => (prev + 1) % 4);
-      }, 3000);
-    } else {
-      setLoadingStep(0);
-    }
-    return () => clearInterval(interval);
-  }, [loading]);
-
   useEffect(() => {
     if (showCamera) {
       const startCamera = async () => {

@@ -26,6 +26,7 @@ export default function Home() {
     const [user, setUser] = useState<UserState>({ name: '', loggedIn: false, token: '' });
     const [activeTab, setActiveTab] = useState('home');
     const [loading, setLoading] = useState(false);
+    const [loadingType, setLoadingType] = useState<'ai' | 'save'>('ai');
     const [showHelp, setShowHelp] = useState(false);
 
     // Estructura inicial del DB
@@ -72,12 +73,12 @@ export default function Home() {
             }
         }
 
-    const tkn = localStorage.getItem('gdrive_token');
-    const name = localStorage.getItem('user_name');
-    if (tkn && name) {
-        setUser({ name, loggedIn: true, token: tkn });
-        loadData(tkn);
-    }
+        const tkn = localStorage.getItem('gdrive_token');
+        const name = localStorage.getItem('user_name');
+        if (tkn && name) {
+            setUser({ name, loggedIn: true, token: tkn });
+            loadData(tkn);
+        }
 
         const handleStatus = () => setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleStatus);
@@ -102,11 +103,11 @@ export default function Home() {
     };
 
     // --- LÓGICA DE PROCESAMIENTO IA ---
-    const startAnalysis = async (useList: boolean) => {
+    const startAnalysis = async (useList: boolean, forceManual: boolean = false) => {
         if (isOffline || loading) return;
 
-        if (purchaseMode === 'manual') {
-            // Seteamos el gasto pendiente primero
+        // Si es manual (detectado por estado o por parámetro para evitar stale state)
+        if (purchaseMode === 'manual' || forceManual) {
             setPendingGasto({
                 comercio: "NUEVA COMPRA",
                 fecha: new Date().toLocaleDateString('es-ES'),
@@ -114,11 +115,11 @@ export default function Home() {
                 productos: [],
                 usedList: useList
             });
-            // Cerramos cualquier diálogo y NO activamos loading
             setShowListDialog(false);
             return;
         }
 
+        setLoadingType('ai');
         setLoading(true);
         setShowListDialog(false);
 
@@ -140,6 +141,7 @@ export default function Home() {
 
     const saveConfirmedGasto = async (finalGasto: any) => {
         if (loading) return;
+        setLoadingType('save');
         setLoading(true);
         try {
             // OPTIMIZACIÓN: Subida de imágenes en paralelo
@@ -353,15 +355,26 @@ export default function Home() {
                     
                     <div className="space-y-4 max-w-xs animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <p className="text-[11px] font-black text-white uppercase tracking-[0.4em] mb-2">
-                            {txt('scan.scanning_label')}
+                            {loadingType === 'ai' ? txt('scan.scanning_label') : txt('scan.saving_label')}
                         </p>
                         
                         <div className="h-10 flex items-center justify-center">
                             <p key={loadingStep} className="text-[10px] font-bold text-brand-muted uppercase tracking-widest leading-relaxed animate-in fade-in zoom-in duration-500">
-                                {loadingStep === 0 && txt('scan.scanning_step_0')}
-                                {loadingStep === 1 && txt('scan.scanning_step_1')}
-                                {loadingStep === 2 && txt('scan.scanning_step_2')}
-                                {loadingStep === 3 && txt('scan.scanning_step_3')}
+                                {loadingType === 'ai' ? (
+                                    <>
+                                        {loadingStep === 0 && txt('scan.scanning_step_0')}
+                                        {loadingStep === 1 && txt('scan.scanning_step_1')}
+                                        {loadingStep === 2 && txt('scan.scanning_step_2')}
+                                        {loadingStep === 3 && txt('scan.scanning_step_3')}
+                                    </>
+                                ) : (
+                                    <>
+                                        {loadingStep === 0 && txt('scan.saving_step_0')}
+                                        {loadingStep === 1 && txt('scan.saving_step_1')}
+                                        {loadingStep === 2 && txt('scan.saving_step_2')}
+                                        {loadingStep === 3 && txt('scan.saving_step_3')}
+                                    </>
+                                )}
                             </p>
                         </div>
 
