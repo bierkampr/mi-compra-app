@@ -103,7 +103,7 @@ export default function Home() {
     };
 
     // --- LÓGICA DE PROCESAMIENTO IA ---
-    const startAnalysis = async (useList: boolean, forceManual: boolean = false) => {
+    const startAnalysis = async (useList: boolean, forceManual: boolean = false, ocrText: string = "") => {
         if (isOffline || loading) return;
 
         // Si es manual (detectado por estado o por parámetro para evitar stale state)
@@ -129,7 +129,7 @@ export default function Home() {
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
 
-            const res = await analyzeReceipt(tempPhotos, purchaseMode || 'super', promptFinal);
+            const res = await analyzeReceipt(ocrText, purchaseMode || 'super', promptFinal);
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
         } catch (err: any) { 
             alert(err.message); 

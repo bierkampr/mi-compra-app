@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     // 1. Recepción de datos del cliente
-    const { images, prompt } = await req.json();
+    const { text, prompt } = await req.json();
 
     // 2. Acceso seguro a la API KEY (Configurada en el Dashboard de Vercel)
     const serverApiKey = process.env.GEMINI_API_KEY;
@@ -41,46 +41,39 @@ export async function POST(req: Request) {
       }
     });
 
-    // 4. Transformación de imágenes para el SDK
-    if (!images || !Array.isArray(images)) {
-      throw new Error("Formato de imágenes no válido.");
-    }
-
-    const imageParts = images.map((img: string) => {
-      // Extraemos el contenido base64 puro eliminando el encabezado de data:image/jpeg
-      const base64Data = img.includes(",") ? img.split(",")[1] : img;
-      return {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Data
-        }
-      };
-    });
-
-    // 5. Ejecución del análisis OCR y estructuración
-    console.log(`[Gemini 3 Flash] Analizando ticket con ${images.length} capturas...`);
+    // 4. Ejecución del análisis OCR y estructuración
+    console.log(`[Gemini 3 Flash] Analizando TEXTO OCR del ticket...`);
     
     const result = await model.generateContent([
-      prompt + "\n\nResponde estrictamente con un JSON válido siguiendo la estructura solicitada.",
-      ...imageParts
+      `Analiza el siguiente texto extraído de un ticket de compra mediante OCR. 
+      Corrige posibles errores de lectura (como confusiones entre O y 0, o l y 1) basándote en el contexto de productos y precios.
+      
+      TEXTO DEL TICKET:
+      """
+      ${text}
+      """
+      
+      ${prompt}
+      
+      Responde estrictamente con un JSON válido siguiendo la estructura solicitada.`
     ]);
 
     const response = await result.response;
-    const text = response.text();
+    const iaText = response.text();
 
-    if (!text) {
+    if (!iaText) {
       throw new Error("La IA no generó una respuesta válida.");
     }
 
     // 6. Limpieza y validación del JSON
     // Eliminamos posibles bloques de markdown que la IA pudiera incluir por error
-    const cleanJsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const cleanJsonString = iaText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     try {
         const parsedData = JSON.parse(cleanJsonString);
         return NextResponse.json(parsedData);
     } catch (parseError) {
-        console.error("Error al parsear respuesta de IA:", text);
+        console.error("Error al parsear respuesta de IA:", iaText);
         return NextResponse.json(
             { error: "La respuesta de la IA tiene un formato inválido." }, 
             { status: 500 }

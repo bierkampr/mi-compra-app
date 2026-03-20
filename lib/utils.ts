@@ -150,3 +150,89 @@ export const exportToCSV = (gastos: any[]) => {
   link.setAttribute("download", `mis_gastos_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
 };
+
+/**
+ * PREPROCESADO AVANZADO PARA OCR (CLIENT-SIDE)
+ * Aplica escalado, escala de grises, contraste dinámico y threshold.
+ */
+export const preprocessForOCR = (base64Str: string, mode: 'high' | 'moderate' = 'high'): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      // Escalado 2x para mejorar precisión de OCR
+      const scale = 2;
+      const width = img.width * scale;
+      const height = img.height * scale;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return resolve(base64Str);
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      // Threshold dinámico basado en el modo
+      const threshold = mode === 'high' ? 120 : 150;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        // Escala de grises (Luminosidad)
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // Contraste y Threshold (Binarización Blanco/Negro)
+        // Si es más oscuro que el threshold, negro puro; si no, blanco puro.
+        const v = gray < threshold ? 0 : 255;
+        
+        data[i] = data[i+1] = data[i+2] = v;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.9));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+};
+
+/**
+ * LIMPIEZA INTELIGENTE DE TEXTO OCR
+ */
+export const cleanOCRText = (text: string): string => {
+  return text
+    .split('\n')
+    .map(line => {
+      let cleanLine = line.trim();
+      
+      // 1. Correcciones comunes de caracteres
+      // "0" <-> "O" en contextos numéricos
+      // "1" <-> "l" / "|"
+      cleanLine = cleanLine
+        .replace(/([0-9])O/g, '$10')
+        .replace(/O([0-9])/g, '0$1')
+        .replace(/([0-9])l/g, '$11')
+        .replace(/l([0-9])/g, '1$1')
+        .replace(/\|/g, '1');
+
+      // 2. Normalización de precios (0,80 -> 0.80)
+      cleanLine = cleanLine.replace(/(\d+),(\d{2})\b/g, '$1.$2');
+
+      // 3. Eliminar caracteres basura manteniendo lo relevante
+      cleanLine = cleanLine.replace(/[^\w\s.,€$*%+-/]/g, '');
+
+      return cleanLine;
+    })
+    // 4. Eliminar líneas vacías o irrelevantes
+    .filter(line => line.length > 3 || (line.length > 0 && /\d/.test(line)))
+    .join('\n');
+};

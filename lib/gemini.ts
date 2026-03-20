@@ -5,7 +5,7 @@
  * No utiliza llaves de API directamente por seguridad; se comunica con 
  * la ruta interna /api/analyze que gestiona Gemini 3 Flash Preview.
  */
-export const analyzeReceipt = async (base64Images: string[], mode: string, customPrompt: string) => {
+export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt: string) => {
   try {
     // 1. Omitir procesamiento de IA si el usuario eligió entrada manual
     if (mode === 'manual') {
@@ -17,7 +17,7 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
       };
     }
 
-    console.log("[Gemini Lib] Solicitando análisis al puente de servidor (Gemini 3 Flash)...");
+    console.log("[Gemini Lib] Solicitando análisis de TEXTO OCR al servidor...");
     
     // 2. Realizar la petición a nuestra API interna en Next.js
     // No enviamos llaves aquí, el servidor las tiene protegidas.
@@ -25,7 +25,7 @@ export const analyzeReceipt = async (base64Images: string[], mode: string, custo
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            images: base64Images,
+            text: ocrText,
             prompt: customPrompt
         })
     });

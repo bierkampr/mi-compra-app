@@ -3,16 +3,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, ShoppingCart, Store, Utensils, Pill, LayoutGrid, Edit3, X, Loader2, 
   AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag, 
-  ChevronRight, ChevronLeft, Info, Trash2, Zap
+  ChevronRight, ChevronLeft, Info, Trash2, Zap, Brain
 } from 'lucide-react';
-import { compressImage } from '../../lib/utils';
+import { compressImage, preprocessForOCR, cleanOCRText } from '../../lib/utils';
 import ConfirmModal from './ConfirmModal';
+import { createWorker } from 'tesseract.js';
 
 interface ScannerViewProps {
   db: { lista: any[], gastos: any[], customCategories?: string[] };
   updateAndSync: (newDb: any) => Promise<void>;
   setPurchaseMode: (mode: string | null) => void;
-  startAnalysis: (useList: boolean, forceManual?: boolean) => void; 
+  startAnalysis: (useList: boolean, forceManual?: boolean, ocrText?: string) => void; 
   txt: (key: string) => string;
 }
 
@@ -109,6 +110,9 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [isOcrRunning, setIsOcrRunning] = useState(false);
+  const [lastExtractedText, setLastExtractedText] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -208,16 +212,49 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     }
   };
 
-  const handleProcessClick = () => {
-    if (activeTab === 'list') {
-      startAnalysis(true);
-    } else {
-      const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
-      if (hasListItems) {
-        setShowListDialog(true);
-      } else {
-        startAnalysis(false);
+  const handleProcessClick = async () => {
+    setIsOcrRunning(true);
+    setOcrProgress(0);
+    
+    try {
+      let combinedText = "";
+      const worker = await createWorker('spa');
+      
+      for (let i = 0; i < tempPhotos.length; i++) {
+        // PIPELINE MULTI-PROCESADO (A y B)
+        const imgA = await preprocessForOCR(tempPhotos[i], 'high');
+        const imgB = await preprocessForOCR(tempPhotos[i], 'moderate');
+        
+        // Ejecución OCR
+        const { data: { text: textA } } = await worker.recognize(imgA);
+        const { data: { text: textB } } = await worker.recognize(imgB);
+        
+        // Elegimos la versión con más contenido (heurística simple de precisión)
+        const bestText = textA.length > textB.length ? textA : textB;
+        combinedText += bestText + "\n";
+        
+        setOcrProgress(Math.round(((i + 1) / tempPhotos.length) * 100));
       }
+      
+      await worker.terminate();
+      const finalCleanText = cleanOCRText(combinedText);
+      setLastExtractedText(finalCleanText);
+
+      if (activeTab === 'list') {
+        startAnalysis(true, false, finalCleanText);
+      } else {
+        const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
+        if (hasListItems) {
+          setShowListDialog(true);
+        } else {
+          startAnalysis(false, false, finalCleanText);
+        }
+      }
+    } catch (err) {
+      console.error("OCR Error:", err);
+      alert("Error procesando el texto del ticket. Inténtalo de nuevo.");
+    } finally {
+      setIsOcrRunning(false);
     }
   };
 
@@ -297,12 +334,23 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
           <div className="mt-8">
               <button 
-                  disabled={tempPhotos.length === 0 || loading}
+                  disabled={tempPhotos.length === 0 || loading || isOcrRunning}
                   onClick={handleProcessClick}
-                  className="btn-primary !py-6 w-full flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale"
+                  className="btn-primary !py-6 w-full flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale overflow-hidden relative"
               >
-                  <Zap size={24} className="fill-current" />
-                  <span className="text-sm font-black italic uppercase tracking-widest">{txt('scan.process')}</span>
+                  {isOcrRunning ? (
+                    <>
+                      <div className="absolute inset-0 bg-brand-primary/20 animate-pulse" />
+                      <div className="absolute bottom-0 left-0 h-1 bg-white/40 transition-all duration-500" style={{ width: `${ocrProgress}%` }} />
+                      <Brain size={24} className="animate-bounce" />
+                      <span className="text-sm font-black italic uppercase tracking-widest">PROCESANDO OCR ({ocrProgress}%)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={24} className="fill-current" />
+                      <span className="text-sm font-black italic uppercase tracking-widest">{txt('scan.process')}</span>
+                    </>
+                  )}
               </button>
           </div>
         </div>
@@ -364,8 +412,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         isOpen={showListDialog}
         title={txt('modals.link_list_title') || "¿VINCULAR CON LISTA?"}
         message={txt('modals.link_list_desc')}
-        onConfirm={() => startAnalysis(true)}
-        onCancel={() => startAnalysis(false)}
+        onConfirm={() => startAnalysis(true, false, lastExtractedText)}
+        onCancel={() => startAnalysis(false, false, lastExtractedText)}
         confirmText={txt('modals.yes_link') || "SÍ, VINCULAR"}
         cancelText={txt('modals.no_link') || "NO, SOLO SCAN"}
       />
