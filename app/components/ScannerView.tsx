@@ -1,19 +1,18 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Camera, ShoppingCart, Store, Utensils, Pill, LayoutGrid, Edit3, X, Loader2, 
-  AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag, 
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Camera, ShoppingCart, Store, Utensils, Pill, LayoutGrid, Edit3, X, Loader2,
+  AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag,
   ChevronRight, ChevronLeft, Info, Trash2, Zap, Brain
-} from 'lucide-react';
-import { compressImage, preprocessForOCR, cleanOCRText } from '../../lib/utils';
-import ConfirmModal from './ConfirmModal';
-import { createWorker } from 'tesseract.js';
+} from "lucide-react";
+import { compressImage, preprocessForOCR, cleanOCRText } from "../../lib/utils";
+import ConfirmModal from "./ConfirmModal";
 
 interface ScannerViewProps {
   db: { lista: any[], gastos: any[], customCategories?: string[] };
   updateAndSync: (newDb: any) => Promise<void>;
   setPurchaseMode: (mode: string | null) => void;
-  startAnalysis: (useList: boolean, forceManual?: boolean, ocrText?: string) => void; 
+  startAnalysis: (useList: boolean, forceManual?: boolean, ocrText?: string) => void;
   txt: (key: string) => string;
 }
 
@@ -36,42 +35,42 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   return (
     <div className="space-y-6 py-4 animate-in slide-in-from-bottom-8 duration-500 no-scrollbar max-w-2xl mx-auto">
       <div className="text-center px-1 lg:mb-6">
-        <h2 className="heading-1 !text-3xl lg:!text-4xl uppercase font-black italic">{txt('scan.title')}</h2>
-        <p className="text-[10px] font-bold text-brand-muted uppercase tracking-[0.3em]">{txt('scan.subtitle')}</p>
+        <h2 className="heading-1 !text-3xl lg:!text-4xl uppercase font-black italic">{txt("scan.title")}</h2>
+        <p className="text-[10px] font-bold text-brand-muted uppercase tracking-[0.3em]">{txt("scan.subtitle")}</p>
       </div>
 
       {!showOthers ? (
         <div className="space-y-3">
-          <button onClick={() => setPurchaseMode('super')} className="card-clickable w-full !p-6 lg:!p-8 flex items-center gap-6 group overflow-hidden relative">
+          <button onClick={() => setPurchaseMode("super")} className="card-clickable w-full !p-6 lg:!p-8 flex items-center gap-6 group overflow-hidden relative">
             <div className="w-14 h-14 bg-brand-primary/10 rounded-2xl flex items-center justify-center text-brand-primary group-hover:scale-110 transition-transform">
               <ShoppingCart size={32} strokeWidth={2.5}/>
             </div>
             <div className="text-left relative z-10">
-              <h2 className="text-sm lg:text-lg font-black uppercase tracking-widest text-white">{txt('scan.super')}</h2>
+              <h2 className="text-sm lg:text-lg font-black uppercase tracking-widest text-white">{txt("scan.super")}</h2>
               <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">Grandes superficies</p>
             </div>
             <div className="absolute -right-2 -bottom-2 opacity-[0.03] text-white"><ShoppingCart size={80} /></div>
           </button>
 
           <div className="grid grid-cols-2 gap-2.5 lg:gap-4">
-            <button onClick={() => setPurchaseMode('mini')} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+            <button onClick={() => setPurchaseMode("mini")} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
                 <div className="w-11 h-11 lg:w-14 lg:h-14 bg-brand-accent/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform"><Store size={22} className="lg:w-7 lg:h-7" /></div>
-                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.mini')}</h2>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt("scan.mini")}</h2>
                 <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Store size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
-            <button onClick={() => setPurchaseMode('dining')} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+            <button onClick={() => setPurchaseMode("dining")} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
                 <div className="w-11 h-11 lg:w-14 lg:h-14 bg-orange-400/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform"><Utensils size={22} className="lg:w-7 lg:h-7" /></div>
-                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.dining')}</h2>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt("scan.dining")}</h2>
                 <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Utensils size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
-            <button onClick={() => setPurchaseMode('health')} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
+            <button onClick={() => setPurchaseMode("health")} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-card/40 border-white/[0.08]">
                 <div className="w-11 h-11 lg:w-14 lg:h-14 bg-emerald-400/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Pill size={22} className="lg:w-7 lg:h-7" /></div>
-                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.health')}</h2>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt("scan.health")}</h2>
                 <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><Pill size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
             <button onClick={() => setShowOthers(true)} className="card-premium card-clickable !p-4 lg:!p-6 flex flex-col items-center justify-center text-center gap-3 lg:gap-4 group relative overflow-hidden bg-brand-secondary/20 border-dashed border-white/20">
                 <div className="w-11 h-11 lg:w-14 lg:h-14 bg-white/5 rounded-xl lg:rounded-2xl flex items-center justify-center text-brand-muted group-hover:scale-110 transition-transform"><LayoutGrid size={22} className="lg:w-7 lg:h-7" /></div>
-                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt('scan.others')}</h2>
+                <h2 className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-white">{txt("scan.others")}</h2>
                 <div className="absolute -right-2 -bottom-2 opacity-[0.05] text-white"><LayoutGrid size={40} className="lg:w-12 lg:h-12" /></div>
             </button>
           </div>
@@ -97,8 +96,8 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
         </div>
       )}
 
-      <button onClick={() => { setPurchaseMode('manual'); startAnalysis(false, true); }} className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-brand-muted font-black text-[10px] uppercase hover:text-white transition-all active:scale-95">
-        <Edit3 size={18}/> <span className="text-[10px] font-black uppercase tracking-[0.2em]">{txt('scan.manual')}</span>
+      <button onClick={() => { setPurchaseMode("manual"); startAnalysis(false, true); }} className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-brand-muted font-black text-[10px] uppercase hover:text-white transition-all active:scale-95">
+        <Edit3 size={18}/> <span className="text-[10px] font-black uppercase tracking-[0.2em]">{txt("scan.manual")}</span>
       </button>
     </div>
   );
@@ -122,18 +121,18 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     if (showCamera) {
       const startCamera = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-              facingMode: 'environment', 
-              width: { ideal: 1920 }, 
-              height: { ideal: 1080 } 
-            }, 
-            audio: false 
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            },
+            audio: false
           });
           setCapturedStream(stream);
           if (videoRef.current) videoRef.current.srcObject = stream;
         } catch (err) {
-          alert(txt('scan.camera_error'));
+          alert(txt("scan.camera_error"));
           setShowCamera(false);
         }
       };
@@ -155,7 +154,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      
+
       const vW = video.videoWidth;
       const vH = video.videoHeight;
       const rect = video.getBoundingClientRect();
@@ -184,10 +183,10 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       canvas.width = sWidth;
       canvas.height = sHeight;
 
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
         setPreviewPhoto(dataUrl);
       }
     }
@@ -215,72 +214,35 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const handleProcessClick = async () => {
     setIsOcrRunning(true);
     setOcrProgress(0);
-    
+
     try {
-      let combinedText = "";
-      const worker = await createWorker('spa');
-      
-      for (let i = 0; i < tempPhotos.length; i++) {
-        // PIPELINE MULTI-PROCESADO (A y B)
-        // Ejecución OCR en la imagen original (ya que compressImage no hace nada)
-        // Tesseract puede manejar imágenes de alta resolución directamente
-        const { data: { text: ocrResultText } } = await worker.recognize(tempPhotos[i]);
-        combinedText += ocrResultText + "\n";
-        
-        setOcrProgress(Math.round(((i + 1) / tempPhotos.length) * 100));
-      }
-      
-      await worker.terminate();
-      const finalCleanText = cleanOCRText(combinedText);
+      // Como el OCR ahora es en el servidor, simplemente pasamos las imágenes directamente
+      // y el servidor se encargará de la transcripción. No necesitamos tesseract.js aquí.
+      // Por lo tanto, el texto extraído localmente es una simulación o se elimina esta parte.
 
-      // Lógica de selección/combinación avanzada
-      // Filtrar líneas duplicadas y priorizar aquellas con números/precios
-      const lines = finalCleanText.split("\n");
-      const processedLines: string[] = [];
-      const seenLines = new Set<string>();
+      // En este punto, `tempPhotos` contiene las imágenes Base64.
+      // La llamada a `startAnalysis` ya no necesitará `ocrText` si la IA lo hace en el backend.
+      // Sin embargo, para mantener la compatibilidad y no romper la interfaz, mantendremos `lastExtractedText`
+      // y `ocrProgress` como indicadores visuales si se desea, aunque la lógica real de OCR se mueva.
 
-      for (const line of lines) {
-          const hasNumber = /\d/.test(line);
-          const hasPrice = /\d[.,]\d{2}/.test(line);
-          const hasCurrency = /[€$]/.test(line);
-          
-          // Evitar líneas muy cortas a menos que contengan precios o sean muy relevantes
-          if (line.length < 3 && !hasPrice && !hasCurrency) continue;
+      // Simulamos el progreso si no hay OCR local, o lo eliminamos completamente.
+      // Para no romper la UI, dejaremos un progreso rápido y un texto de "procesado" si no hay OCR real aquí.
+      setOcrProgress(100);
+      setLastExtractedText("Texto procesado por el servidor de IA."); // Simulación
 
-          // Priorizar líneas con más información o números
-          if (hasPrice || hasCurrency || hasNumber) {
-              // Normalizar la línea para detectar duplicados (ignorando espacios extra, etc.)
-              const normalizedLine = line.toLowerCase().replace(/\s+/g, " ").trim();
-              if (!seenLines.has(normalizedLine)) {
-                  processedLines.push(line);
-                  seenLines.add(normalizedLine);
-              }
-          } else if (line.length > 5) { // Incluir líneas de texto más largas sin números
-              const normalizedLine = line.toLowerCase().replace(/\s+/g, " ").trim();
-              if (!seenLines.has(normalizedLine)) {
-                  processedLines.push(line);
-                  seenLines.add(normalizedLine);
-              }
-          }
-      }
-
-      // Re-unir el texto con una heurística de ordenación o simplemente en el orden de aparición original
-      const finalCombinedText = processedLines.join("\n");
-      setLastExtractedText(finalCombinedText);
-
-      if (activeTab === 'list') {
-        startAnalysis(true, false, finalCleanText);
+      if (activeTab === "list") {
+        startAnalysis(true, false);
       } else {
         const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
         if (hasListItems) {
           setShowListDialog(true);
         } else {
-          startAnalysis(false, false, finalCleanText);
+          startAnalysis(false, false);
         }
       }
     } catch (err) {
-      console.error("OCR Error:", err);
-      alert("Error procesando el texto del ticket. Inténtalo de nuevo.");
+      console.error("Error en el procesamiento:", err);
+      alert("Error procesando el ticket. Inténtalo de nuevo.");
     } finally {
       setIsOcrRunning(false);
     }
@@ -288,20 +250,20 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
   return (
     <div className="fixed inset-0 bg-brand-bg z-[2000] flex flex-col overflow-hidden animate-in slide-in-from-bottom-full duration-500">
-      
+
       {/* VISTA DE PREPARACIÓN */}
       {!showCamera && (
         <div className="flex-1 flex flex-col p-6 overflow-y-auto no-scrollbar">
           <div className="flex justify-between items-center mb-8">
-              <button 
-                onClick={() => tempPhotos.length > 0 ? setShowConfirmCancel(true) : onCancel()} 
+              <button
+                onClick={() => tempPhotos.length > 0 ? setShowConfirmCancel(true) : onCancel()}
                 className="btn-icon !bg-white/5 border-none"
               >
                 <X size={24} />
               </button>
               <div className="text-right">
-                  <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">{txt('scan.preparation_title')}</h2>
-                  <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{txt('scan.preparation_subtitle')}</p>
+                  <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">{txt("scan.preparation_title")}</h2>
+                  <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">{txt("scan.preparation_subtitle")}</p>
               </div>
           </div>
 
@@ -309,15 +271,15 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
               <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 flex items-start gap-4">
                   <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary shrink-0"><Info size={20}/></div>
                   <div>
-                      <h4 className="text-[11px] font-black uppercase text-brand-primary mb-1">{txt('scan.instructions_title')}</h4>
+                      <h4 className="text-[11px] font-black uppercase text-brand-primary mb-1">{txt("scan.instructions_title")}</h4>
                       <div className="space-y-3 mt-4">
                           <div className="flex items-center gap-3">
                               <div className="w-6 h-6 rounded-full bg-brand-success/20 text-brand-success flex items-center justify-center text-[10px] font-black">1</div>
-                              <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-success">{txt('scan.inst_small_title')}:</span> {txt('scan.inst_small_desc')}</p>
+                              <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-success">{txt("scan.inst_small_title")}:</span> {txt("scan.inst_small_desc")}</p>
                           </div>
                           <div className="flex items-center gap-3">
                               <div className="w-6 h-6 rounded-full bg-brand-accent/20 text-brand-accent flex items-center justify-center text-[10px] font-black">2</div>
-                              <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-accent">{txt('scan.inst_large_title')}:</span> {txt('scan.inst_large_desc')}</p>
+                              <p className="text-[10px] font-bold text-white uppercase"><span className="text-brand-accent">{txt("scan.inst_large_title")}:</span> {txt("scan.inst_large_desc")}</p>
                           </div>
                       </div>
                   </div>
@@ -329,7 +291,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                   {tempPhotos.map((img: string, i: number) => (
                       <div key={i} className="relative w-28 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-white/10 shadow-xl animate-in zoom-in-90">
                           <img src={img} className="w-full h-full object-cover" />
-                          <button 
+                          <button
                               onClick={() => setTempPhotos((prev: any) => prev.filter((_: any, idx: number) => idx !== i))}
                               className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-lg text-white shadow-lg active:scale-90"
                           >
@@ -337,22 +299,22 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                           </button>
                       </div>
                   ))}
-                  
+
                   {tempPhotos.length < 3 && (
                       <div className="flex flex-col gap-3">
-                          <button 
+                          <button
                               onClick={() => setShowCamera(true)}
                               className="w-28 aspect-[3/4] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-brand-muted hover:border-brand-primary hover:text-brand-primary transition-all active:scale-95"
                           >
                               <Camera size={28} />
-                              <span className="text-[9px] font-black uppercase">{txt('scan.take_photo')}</span>
+                              <span className="text-[9px] font-black uppercase">{txt("scan.take_photo")}</span>
                           </button>
-                          <button 
+                          <button
                               onClick={() => fileInputRef.current?.click()}
                               className="w-28 py-3 bg-white/[0.05] border border-white/5 rounded-xl flex items-center justify-center gap-2 text-white active:scale-95 transition-all"
                           >
                               <ImageIcon size={16} />
-                              <span className="text-[9px] font-black uppercase">{txt('scan.gallery')}</span>
+                              <span className="text-[9px] font-black uppercase">{txt("scan.gallery")}</span>
                           </button>
                           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                       </div>
@@ -361,7 +323,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
           </div>
 
           <div className="mt-8">
-              <button 
+              <button
                   disabled={tempPhotos.length === 0 || loading || isOcrRunning}
                   onClick={handleProcessClick}
                   className="btn-primary !py-6 w-full flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale overflow-hidden relative"
@@ -371,12 +333,12 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                       <div className="absolute inset-0 bg-brand-primary/20 animate-pulse" />
                       <div className="absolute bottom-0 left-0 h-1 bg-white/40 transition-all duration-500" style={{ width: `${ocrProgress}%` }} />
                       <Brain size={24} className="animate-bounce" />
-                      <span className="text-sm font-black italic uppercase tracking-widest">PROCESANDO OCR ({ocrProgress}%)</span>
+                      <span className="text-sm font-black italic uppercase tracking-widest">PROCESANDO IA ({ocrProgress}%)</span>
                     </>
                   ) : (
                     <>
                       <Zap size={24} className="fill-current" />
-                      <span className="text-sm font-black italic uppercase tracking-widest">{txt('scan.process')}</span>
+                      <span className="text-sm font-black italic uppercase tracking-widest">{txt("scan.process")}</span>
                     </>
                   )}
               </button>
@@ -397,12 +359,12 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                         <div className="absolute -top-10 left-0 right-0 flex justify-center">
                             <div className="bg-brand-accent text-brand-bg px-4 py-1.5 rounded-full flex items-center gap-2 shadow-xl animate-bounce">
                                 <Sparkles size={14} />
-                                <span className="text-[9px] font-black uppercase tracking-wider">{txt('scan.inst_frame_title')}</span>
+                                <span className="text-[9px] font-black uppercase tracking-wider">{txt("scan.inst_frame_title")}</span>
                             </div>
                         </div>
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                             <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] text-center px-6">
-                                {txt('scan.inst_frame_desc')}
+                                {txt("scan.inst_frame_desc")}
                             </span>
                         </div>
                     </div>
@@ -410,11 +372,11 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
               </>
             ) : (
               <div className="relative w-full h-full flex flex-col items-center justify-center p-6 gap-6 animate-in zoom-in-95 bg-brand-bg">
-                 <h3 className="text-xl font-black italic text-brand-accent uppercase tracking-tighter">{txt('scan.quality_check')}</h3>
+                 <h3 className="text-xl font-black italic text-brand-accent uppercase tracking-tighter">{txt("scan.quality_check")}</h3>
                  <img src={previewPhoto} className="max-h-[60vh] rounded-3xl border-2 border-brand-accent shadow-2xl" />
                  <div className="flex gap-4 w-full max-w-xs">
-                    <button onClick={() => setPreviewPhoto(null)} className="btn-secondary flex-1 !py-4">{txt('scan.retry_photo')}</button>
-                    <button onClick={() => confirmPhoto(previewPhoto)} className="btn-primary flex-1 !py-4 !bg-brand-success text-brand-bg">{txt('scan.confirm_photo')}</button>
+                    <button onClick={() => setPreviewPhoto(null)} className="btn-secondary flex-1 !py-4">{txt("scan.retry_photo")}</button>
+                    <button onClick={() => confirmPhoto(previewPhoto)} className="btn-primary flex-1 !py-4 !bg-brand-success text-brand-bg">{txt("scan.confirm_photo")}</button>
                  </div>
               </div>
             )}
@@ -436,17 +398,17 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       )}
 
       {/* DIÁLOGO DE VINCULACIÓN (FUERA DE LAS CONDICIONES DE CÁMARA) */}
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={showListDialog}
-        title={txt('modals.link_list_title') || "¿VINCULAR CON LISTA?"}
-        message={txt('modals.link_list_desc')}
+        title={txt("modals.link_list_title") || "¿VINCULAR CON LISTA?"}
+        message={txt("modals.link_list_desc")}
         onConfirm={() => startAnalysis(true, false, lastExtractedText)}
         onCancel={() => startAnalysis(false, false, lastExtractedText)}
-        confirmText={txt('modals.yes_link') || "SÍ, VINCULAR"}
-        cancelText={txt('modals.no_link') || "NO, SOLO SCAN"}
+        confirmText={txt("modals.yes_link") || "SÍ, VINCULAR"}
+        cancelText={txt("modals.no_link") || "NO, SOLO SCAN"}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={showConfirmCancel}
         title="¿CANCELAR ESCANEO?"
         message="Se perderán las fotos capturadas."
