@@ -1,13 +1,11 @@
 /* --- ARCHIVO: lib/gemini.ts --- */
 
 /**
- * Cliente encargado de solicitar el análisis de tickets al servidor.
- * No utiliza llaves de API directamente por seguridad; se comunica con 
- * la ruta interna /api/analyze que gestiona el modelo de IA (Mistral).
+ * v2.0: Se elimina la dependencia de OCR local.
+ * Envía las imágenes capturadas directamente al pipeline distribuido del servidor.
  */
-export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt: string) => {
+export const analyzeReceipt = async (images: string[], mode: string, customPrompt: string) => {
   try {
-    // 1. Omitir procesamiento de IA si el usuario eligió entrada manual
     if (mode === 'manual') {
       return { 
         comercio: "INGRESO MANUAL", 
@@ -17,45 +15,28 @@ export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt
       };
     }
 
-    console.log("[AI Lib] Solicitando análisis de TEXTO OCR al servidor...");
+    console.log("[V2.0] Enviando imágenes al Pipeline de Servidor...");
     
-    // 2. Realizar la petición a nuestra API interna en Next.js
-    // No enviamos llaves aquí, el servidor las tiene protegidas.
     const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            text: ocrText,
-            prompt: customPrompt
+            images: images, // Array de base64
+            prompt: customPrompt,
+            mode: mode
         })
     });
 
-    // 3. Gestión de errores de comunicación
     if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: "Error de red" }));
         throw new Error(errData.error || `Error en el servidor: ${response.status}`);
     }
 
-    // 4. Obtención del resultado procesado por la IA
     const result = await response.json();
 
-    // 5. NORMALIZACIÓN DE LA RESPUESTA (Limpieza Pro-UI)
-    // Garantizamos que el comercio sea siempre un string limpio y en mayúsculas
-    let finalComercio = "SIN NOMBRE";
-    
-    if (result.comercio) {
-      if (typeof result.comercio === 'string' && result.comercio.trim() !== "") {
-        finalComercio = result.comercio;
-      } else if (typeof result.comercio === 'object') {
-        // Fallback: Si la IA devuelve un objeto accidentalmente, extraemos el primer valor útil
-        const found = Object.values(result.comercio).find(v => typeof v === 'string' && v.length > 0);
-        if (found) finalComercio = found as string;
-      }
-    }
-
-    // 6. Estructura final estricta para el resto de la aplicación
+    // Normalización de seguridad
     return {
-      comercio: finalComercio.toUpperCase().trim(),
+      comercio: (result.comercio || "DESCONOCIDO").toUpperCase().trim(),
       fecha: result.fecha || new Date().toLocaleDateString("es-ES"),
       total: Number(result.total) || 0,
       productos: (result.productos || []).map((p: any) => ({
@@ -67,10 +48,7 @@ export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt
     };
 
   } catch (error: any) {
-    console.error("--- ERROR EN analyzeReceipt (AI Lib) ---");
-    console.error(error);
-    
-    // Propagamos el mensaje para que ScannerView lo muestre en un alert
-    throw new Error(error.message || "No se pudo procesar el ticket. Inténtalo de nuevo.");
+    console.error("Error en analyzeReceipt v2.0:", error);
+    throw new Error(error.message || "No se pudo procesar el ticket con la nueva IA.");
   }
 };

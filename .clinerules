@@ -1,0 +1,16 @@
+# Normas de Trabajo para 'Mi Compra App'
+
+1. **Lectura Obligatoria:** Antes de empezar cualquier tarea o análisis, lee `IA_INSTRUCTIONS.md`. Contiene la arquitectura real auditada y las reglas de diseño para evitar redundancia en la lectura de archivos.
+
+2. **Entrega de Código:** Entrega siempre archivos completos al realizar modificaciones. Nunca fragmentos, resúmenes o elipses de código.
+
+3. **Ciclo de Sincronización (Git):** Después de realizar cambios satisfactorios en el código de la aplicación (archivos `.tsx`, `.ts`, `.json`, `.css`), la IA DEBE realizar automáticamente un `git add .`, `git commit -m "Descripción clara del cambio"` y `git push origin main`. No realices push para cambios solo en documentación o instrucciones internas (`.clinerules`, `IA_INSTRUCTIONS.md`).
+
+4. **Estilo y Layout:**
+    - Utiliza Tailwind CSS con clases de utilidad (evita CSS personalizado).
+    - Implementa tipografía fluida con `clamp()` o clases de utilidad `text-fluid-*`.
+    - Respeta la jerarquía de `z-index` definida en `IA_INSTRUCTIONS.md`.
+
+5. **Lógica Offline-First:** Cualquier cambio en los datos debe guardarse primero en `localStorage` (`mi_compra_cache_db`) y luego intentar la sincronización con Google Drive mediante el flujo `updateAndSync`.
+
+6. **Seguridad:** Nunca incrustes API Keys directamente. Las claves de servidor deben manejarse exclusivamente en `app/api/` usando `process.env`.
