@@ -64,7 +64,7 @@ const callMistralVision = async (apiKey: string, images: string[], instruction: 
         { type: "text", text: instruction },
         ...images.map((img: string) => ({
           type: "image_url",
-          image_url: { url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}` }
+          image_url: { url: img.startsWith("data:") ? img : `data:image/jpeg;base64,${img}` }
         }))
       ]
     }
@@ -96,8 +96,8 @@ const callGeminiVision = async (apiKey: string, image: string, instruction: stri
   const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
 
   const base64ToGenerativePart = (base64String: string) => {
-    const parts = base64String.split(';base64,');
-    const mimeType = parts[0].split(':')[1];
+    const parts = base64String.split(";base64,");
+    const mimeType = parts[0].split(":")[1];
     const data = parts[1];
     return { inlineData: { data, mimeType } };
   };
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
   try {
     const { images, prompt, mode } = await req.json();
 
-    if (mode === 'manual') {
+    if (mode === "manual") {
       return NextResponse.json({ comercio: "MANUAL", productos: [], total: 0 });
     }
 
@@ -232,25 +232,25 @@ export async function POST(req: Request) {
                 }
               }
             }
-          } else {
-            // Si no hay claves de Mistral desde el principio, intentamos con Gemini
-            let geminiApiKey = getGeminiApiKey(geminiApiKeyIndex);
-            if (geminiApiKey) {
-              try {
-                console.log(`No hay claves de Mistral. Intentando transcripción de imagen ${index + 1} con Gemini...`);
-                const rawTranscription = await callGeminiVision(geminiApiKey, img, `Transcribe literalmente la imagen ${index + 1} de este ticket de compra. Mantén los precios al lado de sus productos.`);
-                transcriptionAttempted = true;
-                return rawTranscription;
-              } catch (geminiError: any) {
-                console.error(`Fallo en Gemini para imagen ${index + 1}, intentando con otra clave:`, geminiError.message);
-                geminiApiKeyIndex++;
-                if (!getGeminiApiKey(geminiApiKeyIndex)) {
-                  throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
-                }
+          }
+        } else {
+          // Si no hay claves de Mistral desde el principio, intentamos con Gemini
+          let geminiApiKey = getGeminiApiKey(geminiApiKeyIndex);
+          if (geminiApiKey) {
+            try {
+              console.log(`No hay claves de Mistral. Intentando transcripción de imagen ${index + 1} con Gemini...`);
+              const rawTranscription = await callGeminiVision(geminiApiKey, img, `Transcribe literalmente la imagen ${index + 1} de este ticket de compra. Mantén los precios al lado de sus productos.`);
+              transcriptionAttempted = true;
+              return rawTranscription;
+            } catch (geminiError: any) {
+              console.error(`Fallo en Gemini para imagen ${index + 1}, intentando con otra clave:`, geminiError.message);
+              geminiApiKeyIndex++;
+              if (!getGeminiApiKey(geminiApiKeyIndex)) {
+                throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
               }
-            } else {
-              throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
             }
+          } else {
+            throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
           }
         }
         // Esto no debería ser alcanzado si la lógica es correcta y siempre hay un throw
@@ -263,17 +263,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Número de imágenes no soportado. Máximo 3." }, { status: 400 });
     }
 
-    const combinedTranscription = Array.from(new Set(allRawTranscriptions.join('\n').split('\n'))).join('\n');
+    const combinedTranscription = Array.from(new Set(allRawTranscriptions.join("\n").split("\n"))).join("\n");
 
     if (!combinedTranscription.trim()) {
       throw new Error("Ningún modelo de visión pudo extraer texto.");
     }
 
-    // --- PASO B: RAZONAMIENTO (Groq / Llama 3.3 70B o Gemini Pro como fallback) ---
-    console.log("[V2.0 Pipeline] Paso B: Iniciando Razonamiento y Validación...");
+    // --- PASO B: RAZONAMIENTO (Groq / Llama 3.3 70B como sintetizador) ---
+    console.log("[V2.0 Pipeline] Paso B: Iniciando Razonamiento y Validación con Groq...");
 
     let groqApiKeyIndex = 0;
-    let geminiApiKeyIndexForReasoning = 0; // Usar un índice separado para Gemini Pro
     let reasoningAttempted = false;
     let finalResult: string | undefined;
 
@@ -281,7 +280,6 @@ export async function POST(req: Request) {
       let groqApiKey = getGroqApiKey(groqApiKeyIndex);
       if (groqApiKey) {
         try {
-          console.log("Intentando razonamiento con Groq...");
           const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -293,7 +291,7 @@ export async function POST(req: Request) {
               messages: [
                 {
                   role: "system",
-                  content: "Eres un experto contable. Tu salida debe ser exclusivamente JSON. Debes asegurar que la suma de subtotales de los productos coincida con el total indicado. Si hay discrepancias, prioriza el total del ticket y ajusta los subtotales de forma lógica."
+                  content: "Sintetiza texto de tickets en JSON. Asegura coherencia de totales y ajusta productos si hay discrepancias. Formato: {comercio, fecha, total, productos: [{cantidad, nombre_ticket, subtotal}]}."
                 },
                 {
                   role: "user",
@@ -305,80 +303,32 @@ export async function POST(req: Request) {
             })
           });
 
+          if (!groqResponse.ok) {
+            const errorData = await groqResponse.json();
+            console.error("Error en Groq API:", errorData);
+            if (groqResponse.status === 429 || groqResponse.status >= 500) {
+              throw new Error(`Groq API error (status: ${groqResponse.status}), intentando con otra clave.`);
+            } else {
+              throw new Error(errorData.error?.message || "Error desconocido al razonar con Groq.");
+            }
+          }
+
           const groqData = await groqResponse.json();
-          if (!groqResponse.ok || !groqData.choices?.[0]?.message?.content) {
-            throw new Error(groqData.error?.message || "Error al razonar con Groq.");
+          if (!groqData.choices?.[0]?.message?.content) {
+            throw new Error("Groq no pudo generar un contenido válido.");
           }
           finalResult = groqData.choices[0].message.content;
           reasoningAttempted = true;
           break;
         } catch (error: any) {
-          console.error("Fallo en Groq, intentando con otra clave o fallback a Gemini Pro:", error.message);
+          console.error("Fallo en Groq, intentando con otra clave:", error.message);
           groqApiKeyIndex++;
           if (!getGroqApiKey(groqApiKeyIndex)) {
-            // Si no hay más claves de Groq, intentamos con Gemini Pro
-            let geminiProApiKey = getGeminiApiKey(geminiApiKeyIndexForReasoning);
-            if (geminiProApiKey) {
-              try {
-                console.log("Fallo en todas las claves de Groq. Intentando razonamiento con Gemini Pro...");
-                const genAI = new GoogleGenerativeAI(geminiProApiKey);
-                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-                const result = await model.generateContent([
-                  { role: "system", content: "Eres un experto contable. Tu salida debe ser exclusivamente JSON. Debes asegurar que la suma de subtotales de los productos coincida con el total indicado. Si hay discrepancias, prioriza el total del ticket y ajusta los subtotales de forma lógica." },
-                  { role: "user", content: `${prompt} \n\n TEXTO TRANSCRITO: \n ${combinedTranscription}` }
-                ]);
-                const response = await result.response;
-                const text = response.text();
-                if (!text) {
-                  throw new Error("Error al razonar con Gemini Pro.");
-                }
-                finalResult = text;
-                reasoningAttempted = true;
-                break;
-              } catch (geminiProError: any) {
-                console.error("Fallo en Gemini Pro, intentando con otra clave:", geminiProError.message);
-                geminiApiKeyIndexForReasoning++;
-                if (!getGeminiApiKey(geminiApiKeyIndexForReasoning)) {
-                  throw new Error("Todas las APIs de razonamiento han fallado.");
-                }
-              }
-            } else {
-              throw new Error("Todas las APIs de razonamiento han fallado.");
-            }
+            throw new Error("Todas las claves de Groq han fallado para el razonamiento.");
           }
         }
       } else {
-        // Si no hay claves de Groq desde el principio, intentamos con Gemini Pro
-        let geminiProApiKey = getGeminiApiKey(geminiApiKeyIndexForReasoning);
-        if (geminiProApiKey) {
-          try {
-            console.log("No hay claves de Groq. Intentando razonamiento con Gemini Pro...");
-            const genAI = new GoogleGenerativeAI(geminiProApiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-            const result = await model.generateContent([
-              { role: "system", content: "Eres un experto contable. Tu salida debe ser exclusivamente JSON. Debes asegurar que la suma de subtotales de los productos coincida con el total indicado. Si hay discrepancias, prioriza el total del ticket y ajusta los subtotales de forma lógica." },
-              { role: "user", content: `${prompt} \n\n TEXTO TRANSCRITO: \n ${combinedTranscription}` }
-            ]);
-            const response = await result.response;
-            const text = response.text();
-            if (!text) {
-              throw new Error("Error al razonar con Gemini Pro.");
-            }
-            finalResult = text;
-            reasoningAttempted = true;
-            break;
-          } catch (geminiProError: any) {
-            console.error("Fallo en Gemini Pro, intentando con otra clave:", geminiProError.message);
-            geminiApiKeyIndexForReasoning++;
-            if (!getGeminiApiKey(geminiApiKeyIndexForReasoning)) {
-              throw new Error("Todas las APIs de razonamiento han fallado.");
-            }
-          }
-        } else {
-          throw new Error("Todas las APIs de razonamiento han fallado.");
-        }
+        throw new Error("No hay claves de Groq disponibles para el razonamiento.");
       }
     }
 
