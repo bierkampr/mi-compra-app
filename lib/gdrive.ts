@@ -41,10 +41,15 @@ const logoutForced = () => {
 
 /**
  * Helper para realizar fetch con reintentos y renovación automática de token
+ * Para FormData, necesitamos un generador de cuerpo porque el FormData se consume al enviarlo.
  */
-async function fetchWithRetry(url: string, options: RequestInit, retries = 1): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, bodyFactory?: () => any, retries = 1): Promise<Response> {
   try {
-    const res = await fetch(url, options);
+    const currentOptions = { ...options };
+    if (bodyFactory) {
+      currentOptions.body = bodyFactory();
+    }
+    const res = await fetch(url, currentOptions);
     
     if (res.status === 401) {
       // Intentamos renovar el token
@@ -58,6 +63,9 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 1): P
             'Authorization': `Bearer ${newToken}`
           }
         };
+        if (bodyFactory) {
+            newOptions.body = bodyFactory();
+        }
         return fetch(url, newOptions);
       } else {
         logoutForced();
@@ -66,11 +74,11 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 1): P
     }
 
     if (!res.ok && retries > 0) {
-      return fetchWithRetry(url, options, retries - 1);
+      return fetchWithRetry(url, options, bodyFactory, retries - 1);
     }
     return res;
   } catch (err) {
-    if (retries > 0) return fetchWithRetry(url, options, retries - 1);
+    if (retries > 0) return fetchWithRetry(url, options, bodyFactory, retries - 1);
     throw err;
   }
 }
@@ -99,7 +107,7 @@ export const getDriveFile = async (token: string): Promise<{ id: string | null; 
       return { id: fileId, data: jsonData };
     }
 
-    return { id: null, data: { gastos: [], lista: [], customCategories: [] } };
+    return { id: null, data: { gastos: [], lista: [], customCategories: [ } };
   } catch (e) {
     console.error("Error al obtener archivo de Drive:", e);
     return { id: null, data: { gastos: [], lista: [], customCategories: [] } };
@@ -133,52 +141,61 @@ export const uploadImageToDrive = async (token: string, base64Image: string): Pr
     parents: ['appDataFolder'] 
   };
 
+  const createFormData = () => {
   const base64Data = base64Image.split(',')[1];
-  const response = await fetch(`data:image/jpeg;base64,${base64Data}`);
-  const blob = await response.blob();
-
+    const byteString = atob(base64Data);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i = byteString.charCodeAt(i);
+    const blob = new Blob([ab, { type: 'image/jpeg' });
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
   form.append('file', blob);
+    return form;
+};
 
-  const res = await fetchWithRetry("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form
-  });
+  const res = await fetchWithRetry(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+    createFormData
+  );
 
   const data = await res.json();
   if (!data.id) throw new Error("Error al subir imagen");
   return data.id;
-};
+  };
 
 /**
  * Guarda o actualiza el archivo JSON principal en la carpeta OCULTA
  */
 export const saveDriveFile = async (token: string, content: AppDB, fileId?: string | null) => {
-  const metadata: any = { 
-    name: FILE_NAME, 
-    mimeType: 'application/json' 
+  const metadata: any = {
+    name: FILE_NAME,
+    mimeType: 'application/json'
   };
 
   if (!fileId) {
     metadata.parents = ['appDataFolder'];
   }
 
+  const createFormData = () => {
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
   form.append('file', new Blob([JSON.stringify(content)], { type: 'application/json' }));
+    return form;
+};
 
-  const url = fileId 
-    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` 
+  const url = fileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
     : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
 
-  const res = await fetchWithRetry(url, { 
-    method: fileId ? 'PATCH' : 'POST', 
-    headers: { Authorization: `Bearer ${token}` }, 
-    body: form 
-  });
+  const res = await fetchWithRetry(
+    url,
+    { method: fileId ? 'PATCH' : 'POST', headers: { Authorization: `Bearer ${token}` } },
+    createFormData
+  );
 
   if (!res.ok) throw new Error("Error al guardar en Drive");
   return await res.json();
 };
+

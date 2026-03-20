@@ -11,12 +11,16 @@ export const analyzeReceipt = async (images: string[], mode: string, customPromp
         comercio: "INGRESO MANUAL", 
         fecha: new Date().toLocaleDateString("es-ES"), 
         total: 0, 
-        productos: [] 
+        productos: [
       };
     }
 
-    console.log("[V2.0] Enviando imágenes al Pipeline de Servidor...");
+    console.log("[V2.0] Enviando imágenes al Pipeline de Servidor...", images);
     
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      throw new Error("No hay imágenes válidas para enviar al pipeline.");
+    }
+
     const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
