@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Importación mantenida por si acaso, pero no usada activamente
 
 const getMistralApiKey = (index: number = 0): string | undefined => {
   let key;
@@ -12,11 +12,14 @@ const getMistralApiKey = (index: number = 0): string | undefined => {
       if (key) return key;
     }
     i++;
-    if (i > 5) break;
+    if (i > 5) break; // Límite de búsqueda para evitar bucle infinito
   }
   return undefined;
 };
 
+// Gemini API key retrieval function is no longer needed for this specific task.
+// Keeping it commented out for potential future use or reference.
+/*
 const getGeminiApiKey = (index: number = 0): string | undefined => {
   let key;
   let i = index;
@@ -28,10 +31,11 @@ const getGeminiApiKey = (index: number = 0): string | undefined => {
       if (key) return key;
     }
     i++;
-    if (i > 5) break;
+    if (i > 5) break; // Límite de búsqueda para evitar bucle infinito
   }
   return undefined;
 };
+*/
 
 const getGroqApiKey = (index: number = 0): string | undefined => {
   let key;
@@ -44,7 +48,7 @@ const getGroqApiKey = (index: number = 0): string | undefined => {
       if (key) return key;
     }
     i++;
-    if (i > 5) break;
+    if (i > 5) break; // Límite de búsqueda para evitar bucle infinito
   }
   return undefined;
 };
@@ -70,7 +74,7 @@ const callMistralVision = async (apiKey: string, images: string[], instruction: 
       "Authorization": `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: "pixtral-large-latest",
+      model: "pixtral-large-latest", // Modelo específico para visión de Mistral
       messages: messages,
       max_tokens: 1000
     })
@@ -79,11 +83,14 @@ const callMistralVision = async (apiKey: string, images: string[], instruction: 
   const data = await response.json();
   if (!response.ok || !data.choices?.[0]?.message?.content) {
     console.error("Error en Mistral Vision:", data);
-    throw new Error(data.error?.message || "Error al transcribir con Mistral.");
+    // Lanzamos un error más específico si el contenido no está presente o la respuesta no es OK
+    throw new Error(data.error?.message || `Mistral API error: ${response.status} - ${data.error?.type || 'Unknown error'}`);
   }
   return data.choices[0].message.content;
 };
 
+// Gemini function removed as it's no longer used for vision processing.
+/*
 const callGeminiVision = async (apiKey: string, image: string, instruction: string) => {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
@@ -106,6 +113,7 @@ const callGeminiVision = async (apiKey: string, image: string, instruction: stri
   }
   return text;
 };
+*/
 
 export async function POST(req: Request) {
   try {
@@ -116,126 +124,85 @@ export async function POST(req: Request) {
     }
 
     if (!images || images.length === 0) {
+      // Este check ya está en el cliente, pero es bueno tenerlo aquí también.
       return NextResponse.json({ error: "No se recibieron imágenes para analizar." }, { status: 400 });
     }
 
     let allRawTranscriptions: string[] = [];
 
-    console.log(`[V2.0 Pipeline] Paso A: Iniciando Visión Distribuida con ${images.length} imágenes...`);
+    console.log(`[V2.0 Pipeline] Paso A: Iniciando Visión SOLO con Mistral...`);
 
     if (images.length === 1) {
       let transcriptionAttempted = false;
       let mistralApiKeyIndex = 0;
-      let geminiApiKeyIndex = 0;
 
       while (!transcriptionAttempted) {
-        let mistralApiKey = getMistralApiKey(mistralApiKeyIndex);
+        const mistralApiKey = getMistralApiKey(mistralApiKeyIndex);
         if (mistralApiKey) {
           try {
+            console.log(`Intentando transcripción con Mistral (1 foto) - Clave ${mistralApiKeyIndex + 1}...`);
             const rawTranscription = await callMistralVision(mistralApiKey, images, "Transcribe literalmente este ticket de compra. Mantén los precios al lado de sus productos.");
             allRawTranscriptions.push(rawTranscription);
             transcriptionAttempted = true;
           } catch (error: any) {
+            console.error(`Fallo en Mistral para 1 foto (Clave ${mistralApiKeyIndex + 1}):`, error.message);
             mistralApiKeyIndex++;
             if (!getMistralApiKey(mistralApiKeyIndex)) {
-              let geminiApiKey = getGeminiApiKey(geminiApiKeyIndex);
-              if (geminiApiKey) {
-                try {
-                  const rawTranscription = await callGeminiVision(geminiApiKey, images[0], "Transcribe literalmente este ticket de compra. Mantén los precios al lado de sus productos.");
-                  allRawTranscriptions.push(rawTranscription);
-                  transcriptionAttempted = true;
-                } catch (geminiError: any) {
-                  geminiApiKeyIndex++;
-                  if (!getGeminiApiKey(geminiApiKeyIndex)) {
-                    throw new Error("Todas las APIs de visión han fallado para 1 foto.");
-                  }
-                }
-              } else {
-                throw new Error("Todas las APIs de visión han fallado para 1 foto.");
-              }
+              // Si no quedan más claves de Mistral, lanzamos el error final.
+              throw new Error("Todas las claves de Mistral han fallado para procesar la imagen.");
             }
           }
         } else {
-          let geminiApiKey = getGeminiApiKey(geminiApiKeyIndex);
-          if (geminiApiKey) {
-            try {
-              const rawTranscription = await callGeminiVision(geminiApiKey, images[0], "Transcribe literalmente este ticket de compra. Mantén los precios al lado de sus productos.");
-              allRawTranscriptions.push(rawTranscription);
-              transcriptionAttempted = true;
-            } catch (geminiError: any) {
-              geminiApiKeyIndex++;
-              if (!getGeminiApiKey(geminiApiKeyIndex)) {
-                throw new Error("Todas las APIs de visión han fallado para 1 foto.");
-              }
-            }
-          } else {
-            throw new Error("Todas las APIs de visión han fallado para 1 foto.");
-          }
+          // Si no hay claves de Mistral disponibles desde el principio.
+          throw new Error("No hay claves de Mistral configuradas.");
         }
       }
     } else if (images.length > 1 && images.length <= 3) {
+      // Procesamos imágenes en paralelo, cada una intentando con Mistral.
       const visionPromises = images.map(async (img: string, index: number) => {
         let transcriptionAttempted = false;
         let mistralApiKeyIndex = 0;
-        let geminiApiKeyIndex = 0;
 
         while (!transcriptionAttempted) {
-          let mistralApiKey = getMistralApiKey(mistralApiKeyIndex);
+          const mistralApiKey = getMistralApiKey(mistralApiKeyIndex);
           if (mistralApiKey) {
             try {
+              console.log(`Intentando transcripción de imagen ${index + 1} con Mistral - Clave ${mistralApiKeyIndex + 1}...`);
               const rawTranscription = await callMistralVision(mistralApiKey, [img], `Transcribe literalmente la imagen ${index + 1} de este ticket de compra. Mantén los precios al lado de sus productos.`);
               transcriptionAttempted = true;
               return rawTranscription;
             } catch (error: any) {
+              console.error(`Fallo en Mistral para imagen ${index + 1} (Clave ${mistralApiKeyIndex + 1}):`, error.message);
               mistralApiKeyIndex++;
               if (!getMistralApiKey(mistralApiKeyIndex)) {
-                let geminiApiKey = getGeminiApiKey(geminiApiKeyIndex);
-                if (geminiApiKey) {
-                  try {
-                    const rawTranscription = await callGeminiVision(geminiApiKey, img, `Transcribe literalmente la imagen ${index + 1} de este ticket de compra. Mantén los precios al lado de sus productos.`);
-                    transcriptionAttempted = true;
-                    return rawTranscription;
-                  } catch (geminiError: any) {
-                    geminiApiKeyIndex++;
-                    if (!getGeminiApiKey(geminiApiKeyIndex)) {
-                      throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
-                    }
-                  }
-                } else {
-                  throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
-                }
+                // Si no quedan más claves de Mistral para esta imagen específica.
+                throw new Error(`Todas las claves de Mistral han fallado para la imagen ${index + 1}.`);
               }
             }
           } else {
-            let geminiApiKey = getGeminiApiKey(geminiApiKeyIndex);
-            if (geminiApiKey) {
-              try {
-                const rawTranscription = await callGeminiVision(geminiApiKey, img, `Transcribe literalmente la imagen ${index + 1} de este ticket de compra. Mantén los precios al lado de sus productos.`);
-                transcriptionAttempted = true;
-                return rawTranscription;
-              } catch (geminiError: any) {
-                geminiApiKeyIndex++;
-                if (!getGeminiApiKey(geminiApiKeyIndex)) {
-                  throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
-                }
-              }
-            } else {
-              throw new Error(`Todas las APIs de visión han fallado para la imagen ${index + 1}.`);
-            }
+            // Si no hay claves de Mistral disponibles para esta imagen.
+            throw new Error(`No hay claves de Mistral disponibles para la imagen ${index + 1}.`);
           }
         }
-        throw new Error(`Fallo desconocido en la transcripción para la imagen ${index + 1}.`);
+        // Si el bucle termina sin éxito (lo cual no debería ocurrir si los throws funcionan)
+        throw new Error(`Fallo desconocido en la transcripción para la imagen ${index + 1} con Mistral.`);
       });
+
       allRawTranscriptions = await Promise.all(visionPromises);
     } else {
+      // Ya cubierto en el check inicial, pero por si acaso.
       return NextResponse.json({ error: "Número de imágenes no soportado. Máximo 3." }, { status: 400 });
     }
 
+    // Verificación final de transcripción combinada
     const combinedTranscription = Array.from(new Set(allRawTranscriptions.join("\n").split("\n"))).join("\n");
     if (!combinedTranscription.trim()) {
-      throw new Error("Ningún modelo de visión pudo extraer texto.");
+      // Si después de todos los intentos Mistral no pudo extraer texto.
+      throw new Error("Mistral no pudo extraer texto válido de las imágenes.");
     }
 
+    // --- PASO B: RAZONAMIENTO (Groq / Llama 3.3 70B como sintetizador) ---
+    // MANTENEMOS GROQ PARA EL RAZONAMIENTO SEGÚN ARQUITECTURA ORIGINAL
     console.log("[V2.0 Pipeline] Paso B: Iniciando Razonamiento y Validación con Groq...");
     let groqApiKeyIndex = 0;
     let reasoningAttempted = false;
@@ -252,15 +219,15 @@ export async function POST(req: Request) {
               "Authorization": `Bearer ${groqApiKey}`
             },
             body: JSON.stringify({
-              model: "llama-3.3-70b-versatile",
+              model: "llama-3.3-70b-versatile", // Modelo de razonamiento
               messages: [
                 {
                   role: "system",
-                  content: "Sintetiza texto de tickets en JSON. Asegura coherencia de totales y ajusta productos si hay discrepancias. Formato: {comercio, fecha, total, productos: [{cantidad, nombre_ticket, subtotal}]}."
+                  content: "Sintetiza texto de tickets en JSON. Asegura coherencia de totales y ajusta productos si hay discrepancias. Formato: {comercio, fecha, total, productos: [{cantidad, nombre_ticket, subtotal}]}. Solo responde con el JSON."
                 },
                 {
                   role: "user",
-                  content: `${prompt} \n\n TEXTO TRANSCRITO: \n ${combinedTranscription}`
+                  content: `${prompt} \n\n TEXTO TRANSCRITO (Mistral): \n ${combinedTranscription}`
                 }
               ],
               temperature: 0.1,
@@ -270,6 +237,7 @@ export async function POST(req: Request) {
 
           if (!groqResponse.ok) {
             const errorData = await groqResponse.json();
+            console.error("Error en Groq API:", errorData);
             if (groqResponse.status === 429 || groqResponse.status >= 500) {
               throw new Error(`Groq API error (status: ${groqResponse.status}), intentando con otra clave.`);
             } else {
@@ -278,10 +246,14 @@ export async function POST(req: Request) {
           }
 
           const groqData = await groqResponse.json();
+          if (!groqData.choices?.[0]?.message?.content) {
+            throw new Error("Groq no pudo generar un contenido válido.");
+          }
           finalResult = groqData.choices[0].message.content;
           reasoningAttempted = true;
           break;
         } catch (error: any) {
+          console.error("Fallo en Groq, intentando con otra clave:", error.message);
           groqApiKeyIndex++;
           if (!getGroqApiKey(groqApiKeyIndex)) {
             throw new Error("Todas las claves de Groq han fallado para el razonamiento.");
@@ -298,7 +270,8 @@ export async function POST(req: Request) {
     return NextResponse.json(JSON.parse(finalResult));
 
   } catch (error: any) {
-    console.error("--- FALLO CRÍTICO PIPELINE V2.0 ---", error);
+    console.error("--- FALLO CRÍTICO PIPELINE (Mistral Vision / Groq Reasoning) ---", error);
+    // Capturamos errores tanto de visión (Mistral) como de razonamiento (Groq).
     return NextResponse.json({ error: error.message || "Error interno en el pipeline" }, { status: 500 });
   }
 }
