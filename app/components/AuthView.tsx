@@ -15,19 +15,31 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
     
     // @ts-ignore
     if (!window.google) {
-      alert("Google SDK no cargado. Reintenta en un momento.");
+      alert("El SDK de Google no se ha cargado todavía. Por favor, refresca la página.");
       setIsLoggingIn(false);
       return;
     }
+
+    console.log("🚀 Iniciando flujo de autenticación...");
+
+    // SEGURIDAD: Si en 40 segundos no hay respuesta, liberamos el botón
+    const safetyTimer = setTimeout(() => {
+      setIsLoggingIn(false);
+      console.warn("⚠️ Tiempo de espera agotado o ventana cerrada por el usuario.");
+    }, 40000);
 
     // @ts-ignore
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: CLIENT_ID,
       scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile",
       ux_mode: 'popup',
+      select_account: true, // Obliga a mostrar el selector de cuentas (más compatible)
       callback: async (response: any) => {
+        // Limpiamos el timer de seguridad al recibir respuesta
+        clearTimeout(safetyTimer);
+
         if (response.code) {
-          console.log("✅ Código recibido de Google. Intercambiando...");
+          console.log("✅ Código de autorización recibido. Intercambiando...");
           try {
             // 1. Intercambio de código por tokens en el servidor
             const tokenRes = await fetch('/api/auth/token', {
@@ -36,58 +48,62 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
               body: JSON.stringify({ code: response.code })
             });
 
-            if (!tokenRes.ok) throw new Error("Error en el intercambio de tokens");
+            if (!tokenRes.ok) throw new Error("Fallo en la respuesta del servidor (/api/auth/token)");
             
             const res = await tokenRes.json();
-            console.log("✅ Tokens obtenidos correctamente");
 
             if (res.access_token) {
-              // Guardamos tokens
+              console.log("✅ Tokens obtenidos. Guardando sesión...");
               localStorage.setItem('gdrive_token', res.access_token);
               if (res.refresh_token) {
                 localStorage.setItem('gdrive_refresh_token', res.refresh_token);
               }
               
-              // 2. Obtener info del usuario para el nombre
-              console.log("🔍 Obteniendo perfil de usuario...");
+              // 2. Obtener información del perfil
               const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { 
                 headers: { Authorization: `Bearer ${res.access_token}` } 
               });
 
               if (userRes.ok) {
                 const info = await userRes.json();
-                localStorage.setItem('user_name', info.name || "Usuario");
+                localStorage.setItem('user_name', info.name);
               } else {
-                localStorage.setItem('user_name', "Usuario"); // Fallback
+                localStorage.setItem('user_name', "Usuario");
               }
 
-              console.log("🚀 Todo listo. Reiniciando app...");
-              // Pequeño delay para asegurar persistencia
-              setTimeout(() => {
-                window.location.reload();
-              }, 300);
+              console.log("🎉 Login exitoso. Recargando...");
+              window.location.reload();
+            } else {
+              throw new Error("No se recibió access_token del servidor");
             }
           } catch (error) {
-            console.error("❌ Error en el proceso de login:", error);
-            alert("Hubo un error al conectar con el servidor. Revisa tu conexión.");
+            console.error("❌ Error en el proceso de tokens:", error);
+            alert("Error al validar la sesión con el servidor.");
             setIsLoggingIn(false);
           }
         } else {
-          console.error("❌ Google no devolvió un código válido");
+          console.error("❌ Google no devolvió un código");
           setIsLoggingIn(false);
         }
       },
       error_callback: (err: any) => {
+        clearTimeout(safetyTimer);
         console.error("❌ Error de Google Sign-In:", err);
         setIsLoggingIn(false);
       }
     });
-    client.requestCode();
+
+    try {
+      client.requestCode();
+    } catch (err) {
+      console.error("❌ Error al abrir el popup de Google:", err);
+      clearTimeout(safetyTimer);
+      setIsLoggingIn(false);
+    }
   };
 
   return (
     <main className="app-layout justify-center items-center text-center relative overflow-hidden pt-4 lg:pt-0">
-      {/* Círculos de fondo decorativos */}
       <div className="absolute top-[-10%] left-[-20%] w-[80%] h-[40%] bg-brand-primary/10 rounded-full blur-[120px] animate-pulse" />
       
       <div className="relative z-10 w-full flex flex-col items-center">
@@ -110,12 +126,12 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
           <button 
             onClick={handleLogin} 
             disabled={isLoggingIn}
-            className="w-full group relative flex items-center bg-white text-black font-bold py-4 px-6 rounded-2xl transition-all duration-300 active:scale-95 shadow-xl disabled:opacity-50"
+            className="w-full group relative flex items-center bg-white text-black font-bold py-4 px-6 rounded-2xl transition-all duration-300 active:scale-95 shadow-xl disabled:opacity-50 min-h-[56px] justify-center"
           >
             {isLoggingIn ? (
-              <Loader2 className="animate-spin mx-auto text-black" size={24} />
+              <Loader2 className="animate-spin text-black" size={24} />
             ) : (
-              <>
+              <div className="flex items-center w-full">
                 <div className="bg-white p-0.5 rounded-lg mr-4">
                   <svg width="20" height="20" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -125,7 +141,7 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
                   </svg>
                 </div>
                 <span className="flex-1 text-center text-sm">{txt('auth.login_btn')}</span>
-              </>
+              </div>
             )}
           </button>
           

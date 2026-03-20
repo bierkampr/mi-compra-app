@@ -1,12 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Obligamos a Next.js a ignorar cualquier cosa fuera de esta carpeta
+  // Ignoramos errores para facilitar el despliegue rápido
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
-  }
+  },
+  // --- CORRECCIÓN DE SEGURIDAD PARA GOOGLE LOGIN ---
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
