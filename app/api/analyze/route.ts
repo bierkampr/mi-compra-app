@@ -1,67 +1,35 @@
 /* --- ARCHIVO: app/api/analyze/route.ts --- */
-
 import { NextResponse } from "next/server";
 
-/**
- * BRIDGE DE SERVIDOR PARA MISTRAL AI
- * Procesa los tickets utilizando el modelo Mistral Large.
- * Esta ruta se ejecuta en el servidor (Vercel) para proteger la API Key y 
- * optimizar el rendimiento y la flexibilidad.
- */
 export async function POST(req: Request) {
   try {
-    // 1. Recepción de datos del cliente
     const { text, prompt } = await req.json();
 
-    // 2. Acceso seguro a la API KEY (Configurada en el Dashboard de Vercel)
+    // 1. Verificación de la API Key
     const mistralApiKey = process.env.MISTRAL_API_KEY;
 
     if (!mistralApiKey) {
-      console.error("CRÍTICO: MISTRAL_API_KEY no encontrada en el servidor.");
+      console.error("❌ ERROR: MISTRAL_API_KEY no configurada en Vercel.");
       return NextResponse.json(
-        { error: "Error de configuración: El servidor no tiene acceso a la IA." }, 
+        { error: "El servidor no tiene configurada la llave de Mistral." }, 
         { status: 500 }
       );
     }
 
-    // 3. Configuración y llamada a la API de Mistral
-    console.log(`[Mistral Large] Analizando TEXTO OCR del ticket...`);
-    
-    const messages = [
-      {
-        role: "system",
-        content: `Eres un asistente experto en analizar tickets de compra. Tu tarea es extraer la información relevante y estructurarla en un JSON.
-                  Corrige posibles errores de OCR (como confusiones entre O y 0, o l y 1) basándote en el contexto de productos y precios.
-                  Siempre responde SÓLO con el JSON solicitado, sin texto adicional, explicaciones o markdown.`
-      },
-      {
-        role: "user",
-        content: `Aquí está el texto extraído de un ticket de compra:
-                  """
-                  ${text}
-                  """
-                  
-                  ${prompt}
-                  
-                  Necesito un JSON estrictamente con la siguiente estructura:
-                  {
-                    "comercio": "[string, nombre del comercio]",
-                    "fecha": "[string, fecha de compra en formato DD/MM/YYYY]",
-                    "total": [number, total de la compra],
-                    "productos": [
-                      {
-                        "cantidad": [number, cantidad del producto],
-                        "nombre_ticket": "[string, nombre tal cual en el ticket]",
-                        "nombre_base": "[string, nombre normalizado/común]",
-                        "subtotal": [number, subtotal del producto]
-                      }
-                    ]
-                  }
-                  Asegúrate de que todos los campos sean del tipo correcto y los números estén en formato numérico (usando "." como separador decimal).`
-      }
-    ];
+    // 2. Validación de entrada
+    if (!text || text.trim().length < 5) {
+      return NextResponse.json(
+        { error: "El texto del OCR está vacío o es demasiado corto." }, 
+        { status: 400 }
+      );
+    }
 
-    const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    console.log(`[Mistral API] Procesando texto OCR (${text.length} caracteres)...`);
+
+    // 3. Llamada a Mistral
+    // Nota: Usamos mistral-small-latest si quieres ahorrar tokens/dinero, 
+    // o mistral-large-latest para máxima precisión.
+    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -69,52 +37,53 @@ export async function POST(req: Request) {
         "Authorization": `Bearer ${mistralApiKey}`
       },
       body: JSON.stringify({
-        model: "mistral-large-latest", // O mistral-medium-latest
-        messages,
-        temperature: 0.1, // Mínima aleatoriedad para datos numéricos precisos
-        response_format: { type: "json_object" } // Forzar respuesta JSON
+        model: "mistral-large-latest", 
+        messages: [
+          {
+            role: "system",
+            content: "Eres un experto en extracción de datos de tickets. Tu salida debe ser estrictamente un objeto JSON válido. No incluyas explicaciones ni markdown."
+          },
+          {
+            role: "user",
+            content: `Analiza este texto de ticket y devuelve un JSON siguiendo este prompt: ${prompt}. \n\n Texto del ticket: ${text}`
+          }
+        ],
+        temperature: 0.1,
+        response_format: { type: "json_object" } // Mistral requiere que el prompt mencione "JSON"
       })
     });
 
-    if (!mistralResponse.ok) {
-      const errorBody = await mistralResponse.json().catch(() => ({ message: "Error desconocido de Mistral" }));
-      console.error("Error de Mistral API:", mistralResponse.status, errorBody);
-      throw new Error(errorBody.message || `Error de la API de Mistral: ${mistralResponse.status}`);
+    // 4. Manejo de errores de la API
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("❌ Error de Mistral AI:", errorData);
+      return NextResponse.json(
+        { error: `Mistral error: ${errorData.message || response.statusText}` }, 
+        { status: response.status }
+      );
     }
 
-    const mistralData = await mistralResponse.json();
-    const iaText = mistralData.choices[0]?.message?.content;
+    const data = await response.json();
+    const resultText = data.choices[0]?.message?.content;
 
-    if (!iaText) {
-      throw new Error("Mistral no generó una respuesta válida.");
+    if (!resultText) {
+      throw new Error("Mistral devolvió una respuesta vacía.");
     }
 
-    // 6. Limpieza y validación del JSON
-    // Eliminamos posibles bloques de markdown que la IA pudiera incluir por error
-    const cleanJsonString = iaText.replace(/```json/g, "").replace(/```/g, "").trim();
-    
+    // 5. Parsear y devolver
     try {
-        const parsedData = JSON.parse(cleanJsonString);
-        return NextResponse.json(parsedData);
-    } catch (parseError) {
-        console.error("Error al parsear respuesta de IA:", iaText);
-        return NextResponse.json(
-            { error: "La respuesta de la IA tiene un formato inválido." }, 
-            { status: 500 }
-        );
+      const parsed = JSON.parse(resultText);
+      return NextResponse.json(parsed);
+    } catch (e) {
+      console.error("❌ Error parseando JSON de Mistral:", resultText);
+      return NextResponse.json({ error: "La IA no devolvió un JSON válido." }, { status: 500 });
     }
 
   } catch (error: any) {
-    console.error("--- FALLO EN PROCESAMIENTO GEMINI 3 ---");
-    console.error(error);
-
-    let message = error.message || "Error interno en el servidor de análisis";
-    
-    // Manejo de errores de cuota o región
-    if (message.includes("429") || message.includes("quota")) {
-        message = "Límite de peticiones alcanzado. Por favor, espera un minuto.";
-    }
-
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("--- FALLO CRÍTICO EN API ANALYZE ---", error);
+    return NextResponse.json(
+      { error: error.message || "Error interno en el servidor" }, 
+      { status: 500 }
+    );
   }
 }
