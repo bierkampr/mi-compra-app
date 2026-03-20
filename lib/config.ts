@@ -21,7 +21,6 @@ export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
 /**
  * NOTA DE SEGURIDAD:
- * Las llaves de GEMINI y MISTRAL han sido eliminadas de este archivo.
- * Ahora se gestionan exclusivamente en 'app/api/analyze/route.ts'
- * utilizando process.env del lado del servidor para máxima protección.
+ * Las claves de API de IA se gestionan exclusivamente en \'app/api/analyze/route.ts\'
+ * utilizando process.env del lado del servidor para máxima protección (ej: MISTRAL_API_KEY).
  */

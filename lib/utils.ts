@@ -63,76 +63,11 @@ export const groupRepeatedProducts = (products: any[]) => {
  * Optimizada para aprovechar la capacidad multilineal de Gemini Flash 1.5/2.0.
  * Mantenemos un margen para el límite de 4.5MB de Vercel API.
  * 
- * 1 foto: Máx 1600px / Calidad 0.85
- * 2 fotos: Máx 1400px / Calidad 0.8
- * 3 fotos: Máx 1200px / Calidad 0.75
+ * La compresión de imágenes se ha eliminado para maximizar la calidad del OCR.
+ * Ahora, `compressImage` simplemente devuelve la imagen original en base64.
  */
-export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
-  return new Promise((resolve) => {
-    let maxSide = 1600;
-    let quality = 0.85;
-
-    if (photoCount === 2) {
-      maxSide = 1400;
-      quality = 0.8;
-    } else if (photoCount >= 3) {
-      maxSide = 1200;
-      quality = 0.75;
-    }
-
-    const img = new Image();
-    img.src = base64Str;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-
-      // Escalado proporcional basado en el lado más largo
-      if (width > height) {
-        if (width > maxSide) {
-          height *= maxSide / width;
-          width = maxSide;
-        }
-      } else {
-        if (height > maxSide) {
-          width *= maxSide / height;
-          height = maxSide;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return resolve(base64Str);
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // FILTRO DE CLARIDAD TEXTUAL (Optimizado para Gemini)
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        
-        // Suavizamos el contraste para no pixelar caracteres pequeños
-        let v = gray;
-        if (gray < 130) {
-            v = gray * 0.8; // Oscurece tinta
-        } else {
-            v = Math.min(255, gray * 1.1); // Limpia papel
-        }
-        
-        data[i] = data[i+1] = data[i+2] = v;
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.onerror = () => resolve(base64Str);
-  });
+export const compressImage = (base64Str: string): Promise<string> => {
+  return Promise.resolve(base64Str);
 };
 
 /**
@@ -209,30 +144,33 @@ export const preprocessForOCR = (base64Str: string, mode: 'high' | 'moderate' = 
  * LIMPIEZA INTELIGENTE DE TEXTO OCR
  */
 export const cleanOCRText = (text: string): string => {
-  return text
-    .split('\n')
-    .map(line => {
-      let cleanLine = line.trim();
-      
-      // 1. Correcciones comunes de caracteres
-      // "0" <-> "O" en contextos numéricos
-      // "1" <-> "l" / "|"
-      cleanLine = cleanLine
-        .replace(/([0-9])O/g, '$10')
-        .replace(/O([0-9])/g, '0$1')
-        .replace(/([0-9])l/g, '$11')
-        .replace(/l([0-9])/g, '1$1')
-        .replace(/\|/g, '1');
+  const lines = text.split("\n");
+  const cleanedLines: string[] = [];
 
-      // 2. Normalización de precios (0,80 -> 0.80)
-      cleanLine = cleanLine.replace(/(\d+),(\d{2})\b/g, '$1.$2');
+  for (const line of lines) {
+    let cleanLine = line.trim();
 
-      // 3. Eliminar caracteres basura manteniendo lo relevante
-      cleanLine = cleanLine.replace(/[^\w\s.,€$*%+-/]/g, '');
+    // 1. Correcciones comunes de caracteres
+    cleanLine = cleanLine
+      .replace(/([0-9])O/g, "$10") // Número seguido de O -> 0
+      .replace(/O([0-9])/g, "0$1") // O seguido de número -> 0
+      .replace(/([0-9])l/g, "$11") // Número seguido de l -> 1
+      .replace(/l([0-9])/g, "1$1") // l seguido de número -> 1
+      .replace(/\|/g, "1")        // | -> 1
+      .replace(/[^\w\s.,€$*%+-/]/g, ""); // Eliminar caracteres basura
 
-      return cleanLine;
-    })
-    // 4. Eliminar líneas vacías o irrelevantes
-    .filter(line => line.length > 3 || (line.length > 0 && /\d/.test(line)))
-    .join('\n');
+    // 2. Normalización de precios (0,80 -> 0.80)
+    cleanLine = cleanLine.replace(/(\d+),(\d{2})\b/g, "$1.$2");
+
+    // 3. Filtrado de líneas vacías o irrelevantes
+    // Una línea se considera relevante si tiene más de 3 caracteres O contiene al menos un número y es más larga que 1 caracter
+    const containsNumber = /\d/.test(cleanLine);
+    const isMeaningful = cleanLine.length > 3 || (containsNumber && cleanLine.length > 1);
+
+    if (isMeaningful) {
+      cleanedLines.push(cleanLine);
+    }
+  }
+
+  return Array.from(new Set(cleanedLines)).join("\n"); // Eliminar duplicados y unir
 };

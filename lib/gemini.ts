@@ -3,7 +3,7 @@
 /**
  * Cliente encargado de solicitar el análisis de tickets al servidor.
  * No utiliza llaves de API directamente por seguridad; se comunica con 
- * la ruta interna /api/analyze que gestiona Gemini 3 Flash Preview.
+ * la ruta interna /api/analyze que gestiona el modelo de IA (Mistral).
  */
 export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt: string) => {
   try {
@@ -11,13 +11,13 @@ export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt
     if (mode === 'manual') {
       return { 
         comercio: "INGRESO MANUAL", 
-        fecha: new Date().toLocaleDateString('es-ES'), 
+        fecha: new Date().toLocaleDateString("es-ES"), 
         total: 0, 
         productos: [] 
       };
     }
 
-    console.log("[Gemini Lib] Solicitando análisis de TEXTO OCR al servidor...");
+    console.log("[AI Lib] Solicitando análisis de TEXTO OCR al servidor...");
     
     // 2. Realizar la petición a nuestra API interna en Next.js
     // No enviamos llaves aquí, el servidor las tiene protegidas.
@@ -56,7 +56,7 @@ export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt
     // 6. Estructura final estricta para el resto de la aplicación
     return {
       comercio: finalComercio.toUpperCase().trim(),
-      fecha: result.fecha || new Date().toLocaleDateString('es-ES'),
+      fecha: result.fecha || new Date().toLocaleDateString("es-ES"),
       total: Number(result.total) || 0,
       productos: (result.productos || []).map((p: any) => ({
         cantidad: Number(p.cantidad) || 1,
@@ -67,7 +67,7 @@ export const analyzeReceipt = async (ocrText: string, mode: string, customPrompt
     };
 
   } catch (error: any) {
-    console.error("--- ERROR EN analyzeReceipt ---");
+    console.error("--- ERROR EN analyzeReceipt (AI Lib) ---");
     console.error(error);
     
     // Propagamos el mensaje para que ScannerView lo muestre en un alert

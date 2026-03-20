@@ -194,8 +194,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   };
 
   const confirmPhoto = async (photo: string) => {
-    const compressed = await compressImage(photo, tempPhotos.length + 1);
-    setTempPhotos((prev: any) => [...prev, compressed]);
+    const processedPhoto = await compressImage(photo);
+    setTempPhotos((prev: any) => [...prev, processedPhoto]);
     setPreviewPhoto(null);
     setShowCamera(false); // Cierra automáticamente tras confirmar
   };
@@ -222,23 +222,51 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       
       for (let i = 0; i < tempPhotos.length; i++) {
         // PIPELINE MULTI-PROCESADO (A y B)
-        const imgA = await preprocessForOCR(tempPhotos[i], 'high');
-        const imgB = await preprocessForOCR(tempPhotos[i], 'moderate');
-        
-        // Ejecución OCR
-        const { data: { text: textA } } = await worker.recognize(imgA);
-        const { data: { text: textB } } = await worker.recognize(imgB);
-        
-        // Elegimos la versión con más contenido (heurística simple de precisión)
-        const bestText = textA.length > textB.length ? textA : textB;
-        combinedText += bestText + "\n";
+        // Ejecución OCR en la imagen original (ya que compressImage no hace nada)
+        // Tesseract puede manejar imágenes de alta resolución directamente
+        const { data: { text: ocrResultText } } = await worker.recognize(tempPhotos[i]);
+        combinedText += ocrResultText + "\n";
         
         setOcrProgress(Math.round(((i + 1) / tempPhotos.length) * 100));
       }
       
       await worker.terminate();
       const finalCleanText = cleanOCRText(combinedText);
-      setLastExtractedText(finalCleanText);
+
+      // Lógica de selección/combinación avanzada
+      // Filtrar líneas duplicadas y priorizar aquellas con números/precios
+      const lines = finalCleanText.split("\n");
+      const processedLines: string[] = [];
+      const seenLines = new Set<string>();
+
+      for (const line of lines) {
+          const hasNumber = /\d/.test(line);
+          const hasPrice = /\d[.,]\d{2}/.test(line);
+          const hasCurrency = /[€$]/.test(line);
+          
+          // Evitar líneas muy cortas a menos que contengan precios o sean muy relevantes
+          if (line.length < 3 && !hasPrice && !hasCurrency) continue;
+
+          // Priorizar líneas con más información o números
+          if (hasPrice || hasCurrency || hasNumber) {
+              // Normalizar la línea para detectar duplicados (ignorando espacios extra, etc.)
+              const normalizedLine = line.toLowerCase().replace(/\s+/g, " ").trim();
+              if (!seenLines.has(normalizedLine)) {
+                  processedLines.push(line);
+                  seenLines.add(normalizedLine);
+              }
+          } else if (line.length > 5) { // Incluir líneas de texto más largas sin números
+              const normalizedLine = line.toLowerCase().replace(/\s+/g, " ").trim();
+              if (!seenLines.has(normalizedLine)) {
+                  processedLines.push(line);
+                  seenLines.add(normalizedLine);
+              }
+          }
+      }
+
+      // Re-unir el texto con una heurística de ordenación o simplemente en el orden de aparición original
+      const finalCombinedText = processedLines.join("\n");
+      setLastExtractedText(finalCombinedText);
 
       if (activeTab === 'list') {
         startAnalysis(true, false, finalCleanText);

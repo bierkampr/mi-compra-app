@@ -1,13 +1,12 @@
 /* --- ARCHIVO: app/api/analyze/route.ts --- */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
 /**
- * BRIDGE DE SERVIDOR PARA GEMINI 3 FLASH PREVIEW
- * Procesa las imágenes de los tickets utilizando el motor más reciente de Google.
+ * BRIDGE DE SERVIDOR PARA MISTRAL AI
+ * Procesa los tickets utilizando el modelo Mistral Large.
  * Esta ruta se ejecuta en el servidor (Vercel) para proteger la API Key y 
- * evitar bloqueos regionales en España/UE.
+ * optimizar el rendimiento y la flexibilidad.
  */
 export async function POST(req: Request) {
   try {
@@ -15,54 +14,79 @@ export async function POST(req: Request) {
     const { text, prompt } = await req.json();
 
     // 2. Acceso seguro a la API KEY (Configurada en el Dashboard de Vercel)
-    const serverApiKey = process.env.GEMINI_API_KEY;
+    const mistralApiKey = process.env.MISTRAL_API_KEY;
 
-    if (!serverApiKey) {
-      console.error("CRÍTICO: GEMINI_API_KEY no encontrada en el servidor.");
+    if (!mistralApiKey) {
+      console.error("CRÍTICO: MISTRAL_API_KEY no encontrada en el servidor.");
       return NextResponse.json(
         { error: "Error de configuración: El servidor no tiene acceso a la IA." }, 
         { status: 500 }
       );
     }
 
-    // 3. Inicialización del SDK de Google Generative AI
-    const genAI = new GoogleGenerativeAI(serverApiKey);
+    // 3. Configuración y llamada a la API de Mistral
+    console.log(`[Mistral Large] Analizando TEXTO OCR del ticket...`);
     
-    /**
-     * Configuramos el modelo 'gemini-flash-latest'.
-     * En marzo de 2026, este alias apunta a Gemini 3 Flash Preview.
-     */
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-flash-latest",
-      generationConfig: { 
-        // Obligamos a la IA a responder en formato JSON puro
-        responseMimeType: "application/json",
-        temperature: 0.1 // Mínima aleatoriedad para datos numéricos precisos
+    const messages = [
+      {
+        role: "system",
+        content: `Eres un asistente experto en analizar tickets de compra. Tu tarea es extraer la información relevante y estructurarla en un JSON.
+                  Corrige posibles errores de OCR (como confusiones entre O y 0, o l y 1) basándote en el contexto de productos y precios.
+                  Siempre responde SÓLO con el JSON solicitado, sin texto adicional, explicaciones o markdown.`
+      },
+      {
+        role: "user",
+        content: `Aquí está el texto extraído de un ticket de compra:
+                  """
+                  ${text}
+                  """
+                  
+                  ${prompt}
+                  
+                  Necesito un JSON estrictamente con la siguiente estructura:
+                  {
+                    "comercio": "[string, nombre del comercio]",
+                    "fecha": "[string, fecha de compra en formato DD/MM/YYYY]",
+                    "total": [number, total de la compra],
+                    "productos": [
+                      {
+                        "cantidad": [number, cantidad del producto],
+                        "nombre_ticket": "[string, nombre tal cual en el ticket]",
+                        "nombre_base": "[string, nombre normalizado/común]",
+                        "subtotal": [number, subtotal del producto]
+                      }
+                    ]
+                  }
+                  Asegúrate de que todos los campos sean del tipo correcto y los números estén en formato numérico (usando "." como separador decimal).`
       }
+    ];
+
+    const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${mistralApiKey}`
+      },
+      body: JSON.stringify({
+        model: "mistral-large-latest", // O mistral-medium-latest
+        messages,
+        temperature: 0.1, // Mínima aleatoriedad para datos numéricos precisos
+        response_format: { type: "json_object" } // Forzar respuesta JSON
+      })
     });
 
-    // 4. Ejecución del análisis OCR y estructuración
-    console.log(`[Gemini 3 Flash] Analizando TEXTO OCR del ticket...`);
-    
-    const result = await model.generateContent([
-      `Analiza el siguiente texto extraído de un ticket de compra mediante OCR. 
-      Corrige posibles errores de lectura (como confusiones entre O y 0, o l y 1) basándote en el contexto de productos y precios.
-      
-      TEXTO DEL TICKET:
-      """
-      ${text}
-      """
-      
-      ${prompt}
-      
-      Responde estrictamente con un JSON válido siguiendo la estructura solicitada.`
-    ]);
+    if (!mistralResponse.ok) {
+      const errorBody = await mistralResponse.json().catch(() => ({ message: "Error desconocido de Mistral" }));
+      console.error("Error de Mistral API:", mistralResponse.status, errorBody);
+      throw new Error(errorBody.message || `Error de la API de Mistral: ${mistralResponse.status}`);
+    }
 
-    const response = await result.response;
-    const iaText = response.text();
+    const mistralData = await mistralResponse.json();
+    const iaText = mistralData.choices[0]?.message?.content;
 
     if (!iaText) {
-      throw new Error("La IA no generó una respuesta válida.");
+      throw new Error("Mistral no generó una respuesta válida.");
     }
 
     // 6. Limpieza y validación del JSON
