@@ -216,29 +216,18 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     setOcrProgress(0);
 
     try {
-      // Como el OCR ahora es en el servidor, simplemente pasamos las imágenes directamente
-      // y el servidor se encargará de la transcripción. No necesitamos tesseract.js aquí.
-      // Por lo tanto, el texto extraído localmente es una simulación o se elimina esta parte.
-
-      // En este punto, `tempPhotos` contiene las imágenes Base64.
-      // La llamada a `startAnalysis` ya no necesitará `ocrText` si la IA lo hace en el backend.
-      // Sin embargo, para mantener la compatibilidad y no romper la interfaz, mantendremos `lastExtractedText`
-      // y `ocrProgress` como indicadores visuales si se desea, aunque la lógica real de OCR se mueva.
-
-      // Simulamos el progreso si no hay OCR local, o lo eliminamos completamente.
-      // Para no romper la UI, dejaremos un progreso rápido y un texto de "procesado" si no hay OCR real aquí.
       setOcrProgress(100);
-      setLastExtractedText("Texto procesado por el servidor de IA."); // Simulación
+      setLastExtractedText("Texto procesado por el servidor de IA.");
+
+      // **CORRECCIÓN APLICADA AQUÍ**
+      // Se asegura que tempPhotos se pase a startAnalysis si existe, independientemente de activeTab.
+      // Se pasa la primera imagen como argumento adicional si está disponible.
+      const imageToAnalyze = tempPhotos.length > 0 ? tempPhotos[0] : undefined;
 
       if (activeTab === "list") {
-        startAnalysis(true, false);
+        startAnalysis(true, false, imageToAnalyze);
       } else {
-        const hasListItems = db.lista.filter((l: any) => !l.confirmed).length > 0;
-        if (hasListItems) {
-          setShowListDialog(true);
-        } else {
-          startAnalysis(false, false);
-        }
+        startAnalysis(false, false, imageToAnalyze);
       }
     } catch (err) {
       console.error("Error en el procesamiento:", err);
