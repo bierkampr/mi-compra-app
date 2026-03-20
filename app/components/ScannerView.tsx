@@ -5,14 +5,17 @@ import {
   AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag,
   ChevronRight, ChevronLeft, Info, Trash2, Zap, Brain
 } from "lucide-react";
-import { compressImage, preprocessForOCR, cleanOCRText } from "../../lib/utils";
+import { compressImage } from "../../lib/utils"; // preprocessForOCR y cleanOCRText ya no son necesarios en el cliente
 import ConfirmModal from "./ConfirmModal";
 
 interface ScannerViewProps {
   db: { lista: any[], gastos: any[], customCategories?: string[] };
   updateAndSync: (newDb: any) => Promise<void>;
   setPurchaseMode: (mode: string | null) => void;
-  startAnalysis: (useList: boolean, forceManual?: boolean, ocrText?: string) => void;
+  // La firma de startAnalysis debe ser capaz de recibir el array de imágenes aquí.
+  // Asumiendo que el segundo parámetro (forceManual) es correcto.
+  // El tercer parámetro ahora debe ser el array de imágenes (string[] | undefined).
+  startAnalysis: (useList: boolean, forceManual?: boolean, images?: string[] | undefined) => void;
   txt: (key: string) => string;
 }
 
@@ -111,7 +114,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [isOcrRunning, setIsOcrRunning] = useState(false);
-  const [lastExtractedText, setLastExtractedText] = useState("");
+  // Renamed to lastImageSent to be more descriptive and allow undefined
+  const [lastImageSent, setLastImageSent] = useState<string | undefined>(undefined); 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,6 +201,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     setTempPhotos((prev: any) => [...prev, processedPhoto]);
     setPreviewPhoto(null);
     setShowCamera(false); // Cierra automáticamente tras confirmar
+    // Guardamos la foto confirmada para posible uso posterior si se cancela el escaneo
+    setLastImageSent(processedPhoto); 
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,17 +223,17 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
     try {
       setOcrProgress(100);
-      setLastExtractedText("Texto procesado por el servidor de IA.");
+      // Limpiamos lastExtractedText, ya que ahora pasamos el array completo de imágenes.
+      // No reseteamos lastImageSent aquí, ya que podría ser necesario para los modales de confirmación.
 
-      // **CORRECCIÓN APLICADA AQUÍ**
-      // Se asegura que tempPhotos se pase a startAnalysis si existe, independientemente de activeTab.
-      // Se pasa la primera imagen como argumento adicional si está disponible.
-      const imageToAnalyze = tempPhotos.length > 0 ? tempPhotos[0] : undefined;
+      const photosToPass = tempPhotos.length > 0 ? tempPhotos : undefined;
 
+      // Se llama a startAnalysis pasando el array de fotos (si existe)
+      // El tercer parámetro ahora espera el array de imágenes.
       if (activeTab === "list") {
-        startAnalysis(true, false, imageToAnalyze);
+        startAnalysis(true, false, photosToPass);
       } else {
-        startAnalysis(false, false, imageToAnalyze);
+        startAnalysis(false, false, photosToPass);
       }
     } catch (err) {
       console.error("Error en el procesamiento:", err);
@@ -365,7 +371,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                  <img src={previewPhoto} className="max-h-[60vh] rounded-3xl border-2 border-brand-accent shadow-2xl" />
                  <div className="flex gap-4 w-full max-w-xs">
                     <button onClick={() => setPreviewPhoto(null)} className="btn-secondary flex-1 !py-4">{txt("scan.retry_photo")}</button>
-                    <button onClick={() => confirmPhoto(previewPhoto)} className="btn-primary flex-1 !py-4 !bg-brand-success text-brand-bg">{txt("scan.confirm_photo")}</button>
+                    <button onClick={() => confirmPhoto(previewPhoto!)} className="btn-primary flex-1 !py-4 !bg-brand-success text-brand-bg">{txt("scan.confirm_photo")}</button>
                  </div>
               </div>
             )}
@@ -391,8 +397,9 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         isOpen={showListDialog}
         title={txt("modals.link_list_title") || "¿VINCULAR CON LISTA?"}
         message={txt("modals.link_list_desc")}
-        onConfirm={() => startAnalysis(true, false, lastExtractedText)}
-        onCancel={() => startAnalysis(false, false, lastExtractedText)}
+        // Ahora se pasa lastImageSent (que puede ser string | undefined) a startAnalysis
+        onConfirm={() => startAnalysis(true, false, lastImageSent ? [lastImageSent] : undefined)} 
+        onCancel={() => startAnalysis(false, false, lastImageSent ? [lastImageSent] : undefined)} 
         confirmText={txt("modals.yes_link") || "SÍ, VINCULAR"}
         cancelText={txt("modals.no_link") || "NO, SOLO SCAN"}
       />
@@ -402,7 +409,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         title="¿CANCELAR ESCANEO?"
         message="Se perderán las fotos capturadas."
         type="danger"
-        onConfirm={onCancel}
+        onConfirm={onCancel} // onCancel está definido en el padre de ScannerView.Capture
         onCancel={() => setShowConfirmCancel(false)}
         confirmText="SÍ, CANCELAR"
         cancelText="CONTINUAR"
