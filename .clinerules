@@ -1,16 +1,45 @@
-# Normas de Trabajo para 'Mi Compra App'
+# REGLAS PERSISTENTES: MI COMPRA APP
 
-1. **Lectura Obligatoria:** Antes de empezar cualquier tarea o análisis, lee `IA_INSTRUCTIONS.md`. Contiene la arquitectura real auditada y las reglas de diseño para evitar redundancia en la lectura de archivos.
+## 1. FLUJO DE TRABAJO OBLIGATORIO
+Eres una IA de desarrollo ejecutándose en un entorno local. Para ahorrar memoria y contexto, NO intentes adivinar cómo funciona el proyecto.
+Antes de escribir o modificar código, DEBES usar la herramienta `read_file` para leer el archivo de documentación correspondiente en la carpeta `/docs/`.
+- Para entender el proyecto: lee `/docs/overview.md`
+- Para estructura y componentes: lee `/docs/architecture.md` y `/docs/modules/components.md`
+- Para base de datos: lee `/docs/database.md`
+- Para backend e IA: lee `/docs/api.md` y `/docs/modules/ai.md`
 
-2. **Entrega de Código:** Entrega siempre archivos completos al realizar modificaciones. Nunca fragmentos, resúmenes o elipses de código.
+## 2. ARQUITECTURA Y ESTADO (OFFLINE-FIRST)
+- Framework: Next.js 15 (App Router) + React 19.
+- Todos los componentes en `/app/components/` deben usar `"use client"`.
+- El estado global de la base de datos (`AppDB`) reside en `app/page.tsx`.
+- NUNCA uses `localStorage` directamente para guardar datos en los componentes hijos.
+- TODA modificación de datos debe llamar a la función `updateAndSync(newDb)` pasada por props, para asegurar la sincronización con Google Drive.
 
-3. **Ciclo de Sincronización (Git):** Después de realizar cambios satisfactorios en el código de la aplicación (archivos `.tsx`, `.ts`, `.json`, `.css`), la IA DEBE realizar automáticamente un `git add .`, `git commit -m "Descripción clara del cambio"` y `git push origin main`. No realices push para cambios solo en documentación o instrucciones internas (`.clinerules`, `IA_INSTRUCTIONS.md`).
+## 3. ESTILOS Y UI (TAILWIND PREMIUM)
+- Fondo principal de la app: ultra-oscuro `#0D0F1A`.
+- Usa SIEMPRE las clases predefinidas en `globals.css`:
+  - Botones principales: `btn-primary`
+  - Botones secundarios: `btn-secondary` o `btn-icon`
+  - Tarjetas y contenedores: `card-premium`
+  - Campos de texto: `input-premium`
+  - Títulos pequeños: `text-small-caps`
 
-4. **Estilo y Layout:**
-    - Utiliza Tailwind CSS con clases de utilidad (evita CSS personalizado).
-    - Implementa tipografía fluida con `clamp()` o clases de utilidad `text-fluid-*`.
-    - Respeta la jerarquía de `z-index` definida en `IA_INSTRUCTIONS.md`.
+## 4. JERARQUÍA Z-INDEX (ESTRICTA)
+Respeta estos niveles para evitar que los elementos se superpongan mal:
+- `z-[9999]`: Modales críticos y overlays de sistema.
+- `z-[9000]`: Spinner de carga global (`Loader2`).
+- `z-[1200]`: `DetailView`.
+- `z-[1100]`: `ReviewModal`.
+- `z-[1000]`: `ScannerView.Capture`.
+- `z-[600]`: Modales de contenido completo.
+- `z-[100]`: Navegación inferior (`nav-bottom`).
 
-5. **Lógica Offline-First:** Cualquier cambio en los datos debe guardarse primero en `localStorage` (`mi_compra_cache_db`) y luego intentar la sincronización con Google Drive mediante el flujo `updateAndSync`.
+## 5. INTERNACIONALIZACIÓN (IDIOMAS)
+- NUNCA escribas texto "quemado" (hardcoded) en la interfaz de usuario.
+- Usa SIEMPRE la función `txt('modulo.llave')` pasada por props.
+- Si creas un nuevo texto, debes usar tus herramientas para añadir la traducción en los archivos `locales/es.json` y `locales/en.json`.
 
-6. **Seguridad:** Nunca incrustes API Keys directamente. Las claves de servidor deben manejarse exclusivamente en `app/api/` usando `process.env`.
+## 6. SEGURIDAD E IA BACKEND
+- Las API Keys (MISTRAL, GROQ) NUNCA deben ir en el cliente.
+- Todo el procesamiento pesado de IA ocurre exclusivamente en el servidor (`app/api/analyze/route.ts`).
+- Las consultas al catálogo general se hacen a Supabase de forma silenciosa.
