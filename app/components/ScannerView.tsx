@@ -5,16 +5,13 @@ import {
   AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag,
   ChevronRight, ChevronLeft, Info, Trash2, Zap, Brain
 } from "lucide-react";
-import { compressImage } from "../../lib/utils"; // preprocessForOCR y cleanOCRText ya no son necesarios en el cliente
+import { compressImage } from "../../lib/utils";
 import ConfirmModal from "./ConfirmModal";
 
 interface ScannerViewProps {
   db: { lista: any[], gastos: any[], customCategories?: string[] };
   updateAndSync: (newDb: any) => Promise<void>;
   setPurchaseMode: (mode: string | null) => void;
-  // La firma de startAnalysis debe ser capaz de recibir el array de imágenes aquí.
-  // Asumiendo que el segundo parámetro (forceManual) es correcto.
-  // El tercer parámetro ahora debe ser el array de imágenes (string[] | undefined).
   startAnalysis: (useList: boolean, forceManual?: boolean, images?: string[] | undefined) => void;
   txt: (key: string) => string;
 }
@@ -114,8 +111,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [isOcrRunning, setIsOcrRunning] = useState(false);
-  // Renamed to lastImageSent to be more descriptive and allow undefined
-  const [lastImageSent, setLastImageSent] = useState<string | undefined>(undefined); 
+  const [lastImageSent, setLastImageSent] = useState<string | undefined>(undefined);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -171,7 +167,6 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
       const offsetX = (renderedW - cssW) / 2;
       const offsetY = (renderedH - cssH) / 2;
 
-      // Área de corte MÁS LARGA verticalmente (Borde lateral 40px, superior/inferior 20px para maximizar)
       const marginH = 40;
       const marginV = 20;
       const cropX_css = marginH;
@@ -197,12 +192,13 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   };
 
   const confirmPhoto = async (photo: string) => {
-    const processedPhoto = await compressImage(photo);
+    // ✅ CORRECCIÓN: pasar el número de foto para que la compresión sea
+    // más agresiva en fotos 2 y 3, evitando rate limits en Mistral
+    const processedPhoto = await compressImage(photo, tempPhotos.length + 1);
     setTempPhotos((prev: any) => [...prev, processedPhoto]);
     setPreviewPhoto(null);
-    setShowCamera(false); // Cierra automáticamente tras confirmar
-    // Guardamos la foto confirmada para posible uso posterior si se cancela el escaneo
-    setLastImageSent(processedPhoto); 
+    setShowCamera(false);
+    setLastImageSent(processedPhoto);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,13 +219,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
 
     try {
       setOcrProgress(100);
-      // Limpiamos lastExtractedText, ya que ahora pasamos el array completo de imágenes.
-      // No reseteamos lastImageSent aquí, ya que podría ser necesario para los modales de confirmación.
-
       const photosToPass = tempPhotos.length > 0 ? tempPhotos : undefined;
 
-      // Se llama a startAnalysis pasando el array de fotos (si existe)
-      // El tercer parámetro ahora espera el array de imágenes.
       if (activeTab === "list") {
         startAnalysis(true, false, photosToPass);
       } else {
@@ -392,14 +383,13 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         </div>
       )}
 
-      {/* DIÁLOGO DE VINCULACIÓN (FUERA DE LAS CONDICIONES DE CÁMARA) */}
+      {/* DIÁLOGO DE VINCULACIÓN */}
       <ConfirmModal
         isOpen={showListDialog}
         title={txt("modals.link_list_title") || "¿VINCULAR CON LISTA?"}
         message={txt("modals.link_list_desc")}
-        // Ahora se pasa lastImageSent (que puede ser string | undefined) a startAnalysis
-        onConfirm={() => startAnalysis(true, false, lastImageSent ? [lastImageSent] : undefined)} 
-        onCancel={() => startAnalysis(false, false, lastImageSent ? [lastImageSent] : undefined)} 
+        onConfirm={() => startAnalysis(true, false, lastImageSent ? [lastImageSent] : undefined)}
+        onCancel={() => startAnalysis(false, false, lastImageSent ? [lastImageSent] : undefined)}
         confirmText={txt("modals.yes_link") || "SÍ, VINCULAR"}
         cancelText={txt("modals.no_link") || "NO, SOLO SCAN"}
       />
@@ -409,7 +399,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
         title="¿CANCELAR ESCANEO?"
         message="Se perderán las fotos capturadas."
         type="danger"
-        onConfirm={onCancel} // onCancel está definido en el padre de ScannerView.Capture
+        onConfirm={onCancel}
         onCancel={() => setShowConfirmCancel(false)}
         confirmText="SÍ, CANCELAR"
         cancelText="CONTINUAR"
