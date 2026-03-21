@@ -59,64 +59,112 @@ export const groupRepeatedProducts = (products: any[]) => {
 };
 
 /**
- * Comprime y optimiza la imagen antes de enviarla a la IA.
- * Reduce el tamaño según el número de foto para evitar rate limits en Mistral.
- * También aplica un filtro de contraste para mejorar la legibilidad del texto.
+ * Renderiza la imagen a un canvas con el maxSide y quality dados,
+ * aplica el filtro de contraste y devuelve el base64 resultante.
+ */
+const renderToCanvas = (
+  img: HTMLImageElement,
+  maxSide: number,
+  quality: number
+): string => {
+  let width = img.width;
+  let height = img.height;
+
+  // Escalar por el lado más largo, sin importar orientación
+  const longest = Math.max(width, height);
+  if (longest > maxSide) {
+    const scale = maxSide / longest;
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return img.src;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, width, height);
+
+  // Filtro de contraste: oscurece la tinta, aclara el fondo
+  // Mejora la lectura del texto sin binarizar (evita pixelado en las letras)
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    const v = gray < 140 ? gray * 0.6 : Math.min(255, gray * 1.2);
+    data[i] = data[i + 1] = data[i + 2] = v;
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  return canvas.toDataURL('image/jpeg', quality);
+};
+
+/**
+ * Compresión inteligente y adaptativa.
  *
- * @param base64Str - Imagen en base64
- * @param photoCount - Número de foto actual (1, 2 o 3). Más fotos = más compresión.
+ * Límites fijos basados en pruebas reales con Mistral:
+ *   - Máximo 1000px en el lado más largo (vertical u horizontal)
+ *   - Máximo 110 KB de peso final
+ *
+ * Estrategia:
+ *   1. Escala a 1000px si la imagen es más grande.
+ *   2. Intenta con calidad 0.78 → si pesa más de 110KB, baja 0.05 por paso.
+ *   3. Si con calidad mínima (0.35) aún pesa demasiado, reduce maxSide 50px y repite.
+ *   4. Siempre devuelve la mejor calidad posible dentro de los límites.
  */
 export const compressImage = (base64Str: string, photoCount: number = 1): Promise<string> => {
+  const MAX_SIDE_PX = 1000;
+  const MAX_SIZE_KB = 110;
+  const MIN_QUALITY  = 0.35;
+  const QUALITY_STEP = 0.05;
+  const MIN_SIDE_PX  = 300;
+
   return new Promise((resolve) => {
-    // Más fotos = más compresión para no saturar la API
-    let maxSide = 1000;
-    let quality = 0.7;
-
-    if (photoCount === 2) {
-      maxSide = 850;
-      quality = 0.6;
-    } else if (photoCount >= 3) {
-      maxSide = 750;
-      quality = 0.5;
-    }
-
     const img = new Image();
     img.src = base64Str;
+
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
+      let maxSide = MAX_SIDE_PX;
+      let quality = 0.78;
 
-      // Redimensionar manteniendo proporción
-      if (width > height) {
-        if (width > maxSide) { height *= maxSide / width; width = maxSide; }
-      } else {
-        if (height > maxSide) { width *= maxSide / height; height = maxSide; }
-      }
+      const tryNext = (): void => {
+        const result = renderToCanvas(img, maxSide, quality);
+        const kb = (result.length * 0.75) / 1024;
 
-      canvas.width = width;
-      canvas.height = height;
+        if (kb <= MAX_SIZE_KB) {
+          // ✅ Dentro del límite — devolver
+          console.log(`[compressImage] OK: ${maxSide}px · q${Math.round(quality * 100)}% · ${Math.round(kb)}KB`);
+          resolve(result);
+          return;
+        }
 
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return resolve(base64Str);
+        // Primero bajar calidad
+        if (quality - QUALITY_STEP >= MIN_QUALITY) {
+          quality = Math.round((quality - QUALITY_STEP) * 100) / 100;
+          tryNext();
+          return;
+        }
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, width, height);
+        // Calidad al mínimo: reducir resolución y resetear calidad
+        if (maxSide - 50 >= MIN_SIDE_PX) {
+          maxSide -= 50;
+          quality = 0.78;
+          tryNext();
+          return;
+        }
 
-      // Filtro de contraste: oscurece la tinta, aclara el fondo
-      // Mejora la lectura del texto sin binarizar (evita pixelado en las letras)
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        const v = gray < 140 ? gray * 0.6 : Math.min(255, gray * 1.2);
-        data[i] = data[i + 1] = data[i + 2] = v;
-      }
-      ctx.putImageData(imageData, 0, 0);
+        // Último recurso: devolver lo que hay aunque supere el límite
+        console.warn(`[compressImage] No se pudo reducir a ${MAX_SIZE_KB}KB. Enviando ${Math.round(kb)}KB.`);
+        resolve(result);
+      };
 
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      tryNext();
     };
+
     img.onerror = () => resolve(base64Str);
   });
 };
