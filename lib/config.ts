@@ -4,7 +4,7 @@
  * Identificador de cliente para la autenticación con Google.
  * Este ID es público por naturaleza en el flujo OAuth2.
  */
-export const CLIENT_ID = "948658882219-v40p55m9sc5s0rutmf811lq4kn4817of.apps.googleusercontent.com";
+export const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "948658882219-v40p55m9sc5s0rutmf811lq4kn4817of.apps.googleusercontent.com";
 
 /**
  * Nombre del archivo JSON que se guarda de forma privada

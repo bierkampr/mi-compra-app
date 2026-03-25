@@ -15,6 +15,7 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
     background: radial-gradient(circle at 50% 0%, #1a1d2e, #0D0F1A 85%);
+    overscroll-behavior: none;
   }
   
   input, select, textarea {
@@ -26,6 +27,8 @@
   /* Estructura Principal */
   .app-layout {
     @apply max-w-md lg:max-w-6xl mx-auto min-h-screen flex flex-col relative bg-transparent px-[5vw] lg:px-8 pb-44 pt-4 lg:pt-6 transition-all duration-300;
+    padding-top: calc(theme('spacing.4') + env(safe-area-inset-top));
+    padding-bottom: calc(theme('spacing.44') + env(safe-area-inset-bottom));
   }
 
   /* SISTEMA DE TARJETAS UNIFICADO */
@@ -98,10 +101,11 @@
 
   /* NAVEGACIÓN */
   .nav-bottom {
-    @apply fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm
+    @apply fixed left-1/2 -translate-x-1/2 w-[90%] max-w-sm
            bg-brand-card/90 backdrop-blur-2xl rounded-[2.5rem] px-2 py-2
            flex justify-between items-center z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)]
            border border-white/[0.08];
+    bottom: calc(theme('spacing.6') + env(safe-area-inset-bottom));
   }
 
   /* FILAS DE DATOS */

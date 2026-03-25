@@ -2,12 +2,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CLIENT_ID } from '@/lib/config';
 import { getDriveFile, saveDriveFile, uploadImageToDrive } from '@/lib/gdrive';
-import { analyzeReceipt } from '@/lib/gemini';
+import { analyzeReceipt } from '@/lib/ai-client';
 import { normalizeStoreName } from '@/lib/utils';
 import { syncProductWithSupabase } from '@/lib/products';
 import { getSystemLanguage, t } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 import { AppDB, Gasto, UserState } from '@/lib/types';
+import { tokenStore } from '@/lib/tokenStore';
 
 // Componentes de la interfaz
 import Navigation from './components/Navigation';
@@ -41,16 +42,18 @@ export default function Home() {
     const [pendingGasto, setPendingGasto] = useState<any>(null);
     const [selectedGasto, setSelectedGasto] = useState<Gasto | null>(null);
     const [showListDialog, setShowListDialog] = useState(false);
+    const [syncTimer, setSyncTimer] = useState<NodeJS.Timeout | null>(null);
 
     const txt = useCallback((key: string) => t(key, lang), [lang]);
 
     // --- CARGA DE DATOS ---
     const loadData = useCallback(async (token: string) => {
-        const res = await getDriveFile(token);
-        if (res) {
-            setDb(res.data);
-            setFileId(res.id);
-            localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
+        try {
+            const res = await getDriveFile(token);
+            if (res) {
+                setDb(res.data);
+                setFileId(res.id);
+                localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
 
             // Lógica de Tutorial Inteligente: solo si la base de datos está vacía (usuario nuevo)
             // y no lo ha visto en esta sesión de navegador
@@ -58,8 +61,12 @@ export default function Home() {
                 setShowHelp(true);
                 localStorage.setItem('mi_compra_seen_tour', 'true');
             }
+            }
+        } catch (e: any) {
+            console.error("Error loading data from Drive:", e);
+            alert("Error al sincronizar con Google Drive: " + (e.message || "Error desconocido"));
         }
-    }, []);
+    }, [lang]);
 
     // --- EFECTOS INICIALES ---
     useEffect(() => {
@@ -73,8 +80,8 @@ export default function Home() {
             }
         }
 
-        const tkn = localStorage.getItem('gdrive_token');
-        const name = localStorage.getItem('user_name');
+        const tkn = tokenStore.getAccessToken() || tokenStore.getRefreshToken(); // Try to get token
+        const name = tokenStore.getUserName();
         if (tkn && name) {
             setUser({ name, loggedIn: true, token: tkn });
             loadData(tkn);
@@ -83,27 +90,64 @@ export default function Home() {
         const handleStatus = () => setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
+        setIsOffline(!navigator.onLine);
+
         return () => {
             window.removeEventListener('online', handleStatus);
             window.removeEventListener('offline', handleStatus);
         };
     }, [loadData]);
 
+    // --- NAVEGACIÓN NATIVA (BACK BUTTON) ---
+    useEffect(() => {
+        const handlePopState = (e: PopStateEvent) => {
+            // Prioridad 1: Cerrar Modales
+            if (showHelp) { setShowHelp(false); return; }
+            if (selectedGasto) { setSelectedGasto(null); return; }
+            if (pendingGasto) { setPendingGasto(null); return; }
+            if (purchaseMode) { setPurchaseMode(null); return; }
+            
+            // Prioridad 2: Volver a Home si estamos en otra pestaña
+            if (activeTab !== 'home') {
+                setActiveTab('home');
+                return;
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [showHelp, selectedGasto, pendingGasto, purchaseMode, activeTab]);
+
+    // Push state al abrir modales o cambiar pestañas
+    useEffect(() => {
+        const hasOpenModal = showHelp || !!selectedGasto || !!pendingGasto || !!purchaseMode || activeTab !== 'home';
+        if (hasOpenModal) {
+            window.history.pushState({ modal: true }, "");
+        }
+    }, [showHelp, selectedGasto, pendingGasto, purchaseMode, activeTab]);
+
     const updateAndSync = async (newDb: AppDB) => {
         setDb(newDb);
         localStorage.setItem('mi_compra_cache_db', JSON.stringify(newDb));
-        if (navigator.onLine && user.token) {
-            try {
-                await saveDriveFile(user.token, newDb, fileId);
-            } catch (e) {
-                console.error("Sync error:", e);
-                // Aquí se podría implementar un sistema de reintentos silencioso
-            }
+        
+        if (navigator.onLine && user.token && fileId) {
+            // Cancelar sync previo si existe (Debounce)
+            if (syncTimer) clearTimeout(syncTimer);
+            
+            const timer = setTimeout(async () => {
+                try {
+                    await saveDriveFile(user.token!, newDb, fileId);
+                } catch (e) {
+                    console.error("Sync error:", e);
+                }
+            }, 1000); // 1 segundo de debounce
+            
+            setSyncTimer(timer);
         }
     };
 
     // --- LÓGICA DE PROCESAMIENTO IA ---
-    const startAnalysis = async (useList: boolean, forceManual: boolean = false, ocrText: string = "") => {
+    const startAnalysis = async (useList: boolean, forceManual: boolean = false, images: string[] = []) => {
         if (isOffline || loading) return;
 
         // Si es manual (detectado por estado o por parámetro para evitar stale state)
@@ -129,7 +173,7 @@ export default function Home() {
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
 
-            const res = await analyzeReceipt(ocrText, purchaseMode || 'super', promptFinal);
+            const res = await analyzeReceipt(images, purchaseMode || 'super', promptFinal);
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
         } catch (err: any) { 
             alert(err.message); 

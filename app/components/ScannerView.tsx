@@ -201,17 +201,25 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     setLastImageSent(processedPhoto);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const result = event.target?.result as string;
-        await confirmPhoto(result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        try {
+            const file = e.target.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const result = event.target?.result as string;
+                        await confirmPhoto(result);
+                    } catch (err: any) {
+                        alert("Error al procesar la imagen: " + err.message);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        } catch (err: any) {
+            alert("Error al subir archivo: " + err.message);
+        }
+    };
 
   const handleProcessClick = async () => {
     setIsOcrRunning(true);

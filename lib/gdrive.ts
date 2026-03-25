@@ -1,8 +1,9 @@
 import { FILE_NAME } from "./config";
 import { AppDB } from "./types";
+import { tokenStore } from "./tokenStore";
 
 const refreshAccessToken = async (): Promise<string | null> => {
-  const refreshToken = localStorage.getItem('gdrive_refresh_token');
+  const refreshToken = tokenStore.getRefreshToken();
   if (!refreshToken) return null;
 
   try {
@@ -13,7 +14,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
     }).then(r => r.json());
 
     if (res.access_token) {
-      localStorage.setItem('gdrive_token', res.access_token);
+      tokenStore.setTokens(res.access_token);
       return res.access_token;
     }
   } catch (error) {
@@ -24,9 +25,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
 const logoutForced = () => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('gdrive_token');
-    localStorage.removeItem('gdrive_refresh_token');
-    localStorage.removeItem('user_name');
+    tokenStore.clearTokens();
     window.location.href = "/";
   }
 };

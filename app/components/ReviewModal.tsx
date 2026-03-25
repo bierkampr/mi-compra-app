@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 import { calculateMatchScore, groupRepeatedProducts } from '../../lib/utils';
-import { searchLocalProducts, getLastPrice } from '../../lib/products';
+import { searchLocalProducts, getBatchPriceHistory, getLastPrice } from '../../lib/products';
 
 interface ReviewModalProps {
   pendingGasto: any;
@@ -59,14 +59,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   }, [pendingGasto, setPendingGasto]);
 
   const loadAllHistory = async (products: any[]) => {
-    const prices: Record<string, number | null> = {};
-    for (const p of products) {
-      if (p.nombre_base) {
-        const lastP = await getLastPrice(p.nombre_base);
-        prices[p.nombre_base.toUpperCase()] = lastP;
-      }
+    try {
+        const names = products.map(p => p.nombre_base).filter(Boolean);
+        if (names.length === 0) return;
+        
+        const prices = await getBatchPriceHistory(names);
+        setHistoryPrices(prices);
+    } catch (e: any) {
+        console.error("Error loading history:", e);
     }
-    setHistoryPrices(prices);
   };
 
   const limpiarBusqueda = () => {

@@ -1,10 +1,59 @@
-# Rutas API (Servidor)
+# 🔌 API Reference
 
-## 1. POST `/api/analyze/route.ts`
-**Propósito:** Pipeline de IA distribuido para procesar fotos de tickets.
-- **Fase A (Visión):** Usa **Mistral** (pixtral-large-latest) para transcribir fotos. Soporta hasta 3 fotos y las une. Tiene sistema de rotación de claves (`MISTRAL_API_KEY_1`, etc.).
-- **Fase B (Razonamiento):** Usa **Groq** (llama-3.3-70b-versatile) para transformar la transcripción de Mistral en un JSON estructurado con comercios, totales y lista de productos.
+Mi Compra App's internal API is designed for specialized server-side operations that require secrets or complex logic.
 
-## 2. Autenticación (`/api/auth/token` y `/api/auth/refresh`)
-- Permiten ocultar el `GOOGLE_CLIENT_SECRET` en el servidor.
-- Intercambian el código OAuth del cliente por `access_token` y `refresh_token` para acceder a Google Drive.
+## 🤖 AI Analysis API
+
+### `POST /api/analyze`
+Processes one or more receipt images and returns a structured JSON object.
+
+-   **Auth Required**: No (handled internally via environment variables).
+-   **Parameters**:
+    -   `images`: `string[]` (Array of Base64-encoded image strings).
+    -   `prompt`: `string` (Custom instructions for the AI).
+    -   `mode`: `"manual" | "super"` (Analysis mode).
+-   **Response**:
+    ```json
+    {
+      "comercio": "string",
+      "fecha": "DD/MM/AAAA",
+      "total": number,
+      "productos": [
+        {
+          "cantidad": number,
+          "nombre_ticket": "string",
+          "nombre_base": "string",
+          "subtotal": number
+        }
+      ]
+    }
+    ```
+-   **Error Codes**:
+    -   `400`: Invalid input (no images, too many images).
+    -   `500`: AI service failure or configuration missing.
+
+## 🔑 Authentication API
+
+### `POST /api/auth/token`
+Exchanges a Google OAuth2 authorization code for access and refresh tokens.
+
+-   **Parameters**:
+    -   `code`: `string` (Authorization code from Google).
+-   **Response**: Standard Google OAuth2 token response (Access Token, Refresh Token, Expires In).
+
+### `POST /api/auth/refresh`
+Uses a refresh token to obtain a new access token.
+
+-   **Parameters**:
+    -   `refresh_token`: `string`.
+-   **Response**: Standard Google OAuth2 refresh response (Access Token, Expires In).
+
+## ⚠️ Error Handling
+
+The API generally returns errors in the following format:
+```json
+{
+  "error": "Descriptive error message"
+}
+```
+If an AI rate limit is hit, the server-side logic automatically manages reattempts with a fallback strategy before returning an error.
