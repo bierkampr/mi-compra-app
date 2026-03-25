@@ -1,7 +1,7 @@
 # 🛡️ Technical Audit Report - Mi Compra App
 
 ## 1. Executive Summary
-Mi Compra App is a well-architected Next.js 15 application that delivers a premium "offline-first" experience. The integration of a distributed AI pipeline for receipt analysis is a standout feature. However, the codebase suffers from significant performance bottlenecks in the review phase (N+1 queries), a complete lack of automated testing, and some security practices that should be hardened for a production environment. The overall health is good, but addressing the high-priority items is critical for scalability and reliability.
+Mi Compra App is a well-architected Next.js 15 application that delivers a premium "offline-first" experience. A full hardening pass (v2.0) was completed in March 2026. The N+1 query bottlenecks, insecure token storage, and hardcoded configuration identifiers have all been resolved. Native iOS/Android behaviors (safe-area, back button, PWA) are now implemented. Remaining improvement areas: automated testing (0% coverage) and moving heavy image processing off the main thread.
 
 ## 2. Tech Stack Summary
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS.
@@ -54,18 +54,16 @@ Mi Compra App is a well-architected Next.js 15 application that delivers a premi
 - **Code Cleanliness**: The code is generally well-organized and uses modern React patterns (hooks, functional components).
 
 ## 7. 🚀 Recommended Next Steps
-1. **Fix N+1 Query**: Refactor `loadAllHistory` to use a single Supabase query.
-2. **Infrastructure**: Add Vitest and write tests for the AI processing logic.
-3. **Refactor**: Extract the main state management from `app/page.tsx` into a custom hook or context provider to reduce file size and complexity.
-4. **Security**: Move the `CLIENT_ID` to environment variables.
+1. **Testing**: Add Vitest for unit tests (especially for `lib/utils.ts`, `lib/products.ts`).
+2. **Refactor**: Extract main state management from `app/page.tsx` into a custom hook or context.
+3. **Performance**: Move heavy image processing in `lib/utils.ts:compressImage` to a Web Worker.
 
 ## 8. 📊 Overall Score
-| Category | Score |
-| :--- | :--- |
-| **Security** | 7/10 |
-| **Quality** | 8/10 |
-| **Performance** | 6/10 |
-| **Architecture** | 7/10 |
-| **Testing** | 0/10 |
-| **TOTAL** | **5.6 / 10** |
-*(Score heavily impacted by 0/10 in Testing)*
+| Category | Score | Notes |
+| :--- | :--- | :--- |
+| **Security** | 8/10 | +1: tokenStore, ENV vars |
+| **Quality** | 8/10 | Error handling improved |
+| **Performance** | 7/10 | +1: N+1 fixed, debounced sync |
+| **Architecture** | 8/10 | +1: Native mobile, safe areas |
+| **Testing** | 0/10 | No change |
+| **TOTAL** | **6.2 / 10** | *(v2.0 Hardening Pass)* |

@@ -28,6 +28,7 @@ The AI pipeline supports up to 5 keys per service for rotation and high availabi
 
 ```env
 # GOOGLE AUTH
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 # SUPABASE
