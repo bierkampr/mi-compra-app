@@ -11,6 +11,7 @@ export const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "9486588822
  * en el espacio AppData del Google Drive del usuario.
  */
 export const FILE_NAME = "mi_compra_data.json";
+export const PRICE_FILE_NAME = "mi_compra_precios.csv";
 
 /**
  * Configuración de Supabase (Catálogo Global y Precios).

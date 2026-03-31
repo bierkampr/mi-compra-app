@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CLIENT_ID } from '@/lib/config';
-import { getDriveFile, saveDriveFile, uploadImageToDrive } from '@/lib/gdrive';
+import { getDriveFile, saveDriveFile, uploadImageToDrive, loadPriceHistoryFromDrive, appendPriceHistoryToDrive, PriceCache, PriceRow } from '@/lib/gdrive';
 import { analyzeReceipt } from '@/lib/ai-client';
 import { normalizeStoreName } from '@/lib/utils';
 import { syncProductWithSupabase } from '@/lib/products';
@@ -34,6 +34,8 @@ export default function Home() {
     // Estructura inicial del DB
     const [db, setDb] = useState<AppDB>({ gastos: [], lista: [], customCategories: [] });
     const [fileId, setFileId] = useState<string | null>(null);
+    const [priceFileId, setPriceFileId] = useState<string | null>(null);
+    const [priceCache, setPriceCache] = useState<PriceCache>({});
     const [isOffline, setIsOffline] = useState(false);
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
 
@@ -50,19 +52,22 @@ export default function Home() {
     // --- CARGA DE DATOS ---
     const loadData = useCallback(async (token: string) => {
         try {
-            const res = await getDriveFile(token);
+            const [res, priceRes] = await Promise.all([
+                getDriveFile(token),
+                loadPriceHistoryFromDrive(token),
+            ]);
             if (res) {
                 setDb(res.data);
                 setFileId(res.id);
                 localStorage.setItem('mi_compra_cache_db', JSON.stringify(res.data));
 
-            // Lógica de Tutorial Inteligente: solo si la base de datos está vacía (usuario nuevo)
-            // y no lo ha visto en esta sesión de navegador
             if (res.data.gastos.length === 0 && res.data.lista.length === 0 && !localStorage.getItem('mi_compra_seen_tour')) {
                 setShowHelp(true);
                 localStorage.setItem('mi_compra_seen_tour', 'true');
             }
             }
+            setPriceFileId(priceRes.fileId);
+            setPriceCache(priceRes.cache);
         } catch (e: any) {
             console.error("Error loading data from Drive:", e);
             alert("Error al sincronizar con Google Drive: " + (e.message || "Error desconocido"));
@@ -197,11 +202,37 @@ export default function Home() {
                 );
             }
 
-            // Sincronización con Supabase (Catálogo maestro)
+            // Sincronización con Supabase (Catálogo maestro: solo alias)
             if (!isOffline) {
                 await Promise.all(
                     finalGasto.productos.map((prod: any) => syncProductWithSupabase(prod, finalGasto.comercio))
                 );
+
+                // Guardar precios en Google Drive CSV
+                const priceRows: PriceRow[] = finalGasto.productos
+                    .filter((p: any) => p.nombre_base && (p.subtotal || p.precio))
+                    .map((p: any) => {
+                        const subtotal = Number(p.subtotal) || Number(p.precio) || 0;
+                        const cantidad = Number(p.cantidad) || 1;
+                        const precioUnit = subtotal / cantidad;
+                        return {
+                            nombre_ticket: (p.nombre_ticket || p.nombre_base).toUpperCase().trim(),
+                            nombre_base: p.nombre_base.toUpperCase().trim(),
+                            precio: precioUnit,
+                            comercio: finalGasto.comercio.toUpperCase().trim(),
+                            fecha: finalGasto.fecha,
+                        } as PriceRow;
+                    });
+
+                if (priceRows.length > 0) {
+                    const newPriceFileId = await appendPriceHistoryToDrive(user.token!, priceFileId, priceRows);
+                    if (newPriceFileId) setPriceFileId(newPriceFileId);
+                    const updatedCache = { ...priceCache };
+                    priceRows.forEach(r => {
+                        updatedCache[r.nombre_base] = { precio: r.precio, comercio: r.comercio };
+                    });
+                    setPriceCache(updatedCache);
+                }
             }
 
             const updatedL = db.lista.map(li => {
@@ -305,21 +336,22 @@ export default function Home() {
                         setCurrentViewDate={setCurrentViewDate} 
                         setSelectedGasto={setSelectedGasto} 
                         setActiveTab={setActiveTab} 
-                        txt={txt} 
-                        lang={lang} 
+                        txt={txt}
+                        lang={lang}
                     />
                 )}
 
-                {activeTab === 'list' && (
+                {activeTab === 'list' && !purchaseMode && (
                     <ShoppingListView 
                         db={db} 
                         updateAndSync={updateAndSync} 
-                        setPurchaseMode={setPurchaseMode} 
+                        setPurchaseMode={setPurchaseMode}
+                        priceCache={priceCache}
                         txt={txt} 
                     />
                 )}
 
-                {activeTab === 'add' && !purchaseMode && (
+                {activeTab === 'scan' && !purchaseMode && (
                     <ScannerView 
                         db={db}
                         updateAndSync={updateAndSync}

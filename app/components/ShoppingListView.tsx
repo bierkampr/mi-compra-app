@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Camera, Trash2, CheckCircle2, X, Check, Search, Loader2, Eraser, ChevronDown } from 'lucide-react';
 import { searchLocalProducts } from '../../lib/products';
 import { supabase } from '../../lib/supabase';
+import { PriceCache } from '../../lib/gdrive';
 import ConfirmModal from './ConfirmModal';
 import HelpTooltip from './HelpTooltip';
 
@@ -10,14 +11,14 @@ interface ShoppingListViewProps {
   db: { lista: any[] };
   updateAndSync: (newDb: any) => Promise<void>;
   setPurchaseMode: (mode: string | null) => void;
+  priceCache?: PriceCache;
   txt: (key: string) => string;
 }
 
-const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, setPurchaseMode, txt }) => {
+const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, setPurchaseMode, priceCache = {}, txt }) => {
   const [newItemName, setNewItemName] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [itemPricesCache, setItemPricesCache] = useState<Record<string, { precio: number; comercio: string | null }>>({});
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -32,44 +33,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   });
   
   const searchRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const fetchMissingPrices = async () => {
-      const missingNames = db.lista
-        .filter(item => !item.confirmed && item.ultimo_precio == null)
-        .map((item: any) => item.name.toUpperCase())
-        .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i);
-
-      if (missingNames.length === 0) return;
-
-      try {
-        const { data } = await supabase
-          .from('productos')
-          .select('nombre_base, producto_detalles(ultimo_precio, ultimo_comercio, fecha_actualizacion)')
-          .in('nombre_base', missingNames);
-
-        if (!data) return;
-
-        const newCache: Record<string, { precio: number; comercio: string | null }> = {};
-        data.forEach((prod: any) => {
-          const detalles: any[] = prod.producto_detalles || [];
-          const latest = detalles.sort((a: any, b: any) =>
-            new Date(b.fecha_actualizacion).getTime() - new Date(a.fecha_actualizacion).getTime()
-          )[0] ?? null;
-          if (latest?.ultimo_precio != null) {
-            newCache[prod.nombre_base] = {
-              precio: Number(latest.ultimo_precio),
-              comercio: latest.ultimo_comercio ?? null,
-            };
-          }
-        });
-        setItemPricesCache(prev => ({ ...prev, ...newCache }));
-      } catch (e) {
-        console.warn('Price cache fetch failed:', e);
-      }
-    };
-    fetchMissingPrices();
-  }, [db.lista]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -294,7 +257,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                   }`}>
                     {item.checked && <Check size={16} className="text-white" strokeWidth={4}/>}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 text-left">
                     <span className={`text-[12px] font-black uppercase tracking-tight truncate block ${
                       item.checked ? 'line-through text-brand-muted' : 'text-white'
                     }`}>
@@ -303,10 +266,10 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                     {(() => {
                       const priceInfo = item.ultimo_precio != null
                         ? { precio: Number(item.ultimo_precio), comercio: item.ultimo_comercio ?? null }
-                        : (itemPricesCache[item.name] ?? null);
+                        : (priceCache[item.name] ?? null);
                       return priceInfo?.precio != null && !item.checked ? (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[9px] font-black text-brand-success">{priceInfo.precio.toFixed(2)}€</span>
+                          <span className="text-[9px] font-black text-brand-success">{Number(priceInfo.precio).toFixed(2)}€</span>
                           {priceInfo.comercio && (
                             <>
                               <span className="text-brand-muted/30 text-[8px]">·</span>
