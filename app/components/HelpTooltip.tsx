@@ -6,9 +6,15 @@ interface HelpTooltipProps {
   title: string;
   content: string;
   align?: 'left' | 'right' | 'center';
+  direction?: 'down' | 'up';
 }
 
-const HelpTooltip: React.FC<HelpTooltipProps> = ({ title, content, align = 'left' }) => {
+const HelpTooltip: React.FC<HelpTooltipProps> = ({
+  title,
+  content,
+  align = 'left',
+  direction = 'down',
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -29,6 +35,15 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ title, content, align = 'left
       ? 'left-1/2 -translate-x-1/2'
       : 'left-0';
 
+  const popoverPositionClass = direction === 'up' ? 'bottom-7' : 'top-7';
+
+  const arrowBaseClass = align === 'right' ? 'right-2' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-2';
+
+  const arrowClass =
+    direction === 'up'
+      ? `absolute -bottom-1.5 w-3 h-3 bg-brand-card border-r border-b border-brand-accent/20 rotate-45 ${arrowBaseClass}`
+      : `absolute -top-1.5 w-3 h-3 bg-brand-card border-l border-t border-brand-accent/20 rotate-45 ${arrowBaseClass}`;
+
   return (
     <div className="relative inline-flex items-center" ref={ref}>
       <button
@@ -47,15 +62,10 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ title, content, align = 'left
 
       {isOpen && (
         <div
-          className={`absolute top-7 ${alignClass} z-[800] w-64 animate-in fade-in zoom-in-95 duration-200`}
+          className={`absolute ${popoverPositionClass} ${alignClass} z-[800] w-64 animate-in fade-in zoom-in-95 duration-200`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Arrow */}
-          <div
-            className={`absolute -top-1.5 w-3 h-3 bg-brand-card border-l border-t border-brand-accent/20 rotate-45 ${
-              align === 'right' ? 'right-2' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-2'
-            }`}
-          />
+          <div className={arrowClass} />
           <div className="card-premium !p-4 !rounded-2xl border-brand-accent/25 shadow-[0_20px_60px_rgba(0,0,0,0.85)]">
             <div className="flex justify-between items-start mb-2 gap-2">
               <p className="text-[9px] font-black uppercase tracking-[0.25em] text-brand-accent leading-tight">

@@ -171,6 +171,8 @@
     "tip_list_input": "Escribe el nombre del producto. La app buscará en el catálogo compartido y te mostrará sugerencias con el último precio que pagaste y en qué tienda.",
     "tip_list_scan_title": "Escanear con Lista Activa",
     "tip_list_scan": "Si tienes productos en la lista, toca este botón para subir el ticket. La IA cruzará lo que compres con tu lista y lo marcará automáticamente.",
+    "tip_list_actions_title": "Botones de Acción",
+    "tip_list_actions": "ESCANEAR TICKET: sube una foto del ticket y la IA marcará automáticamente lo que compraste. LIMPIAR (◇): elimina solo los artículos aún pendientes. PAPELERA: borra por completo toda la lista.",
     "tip_scan_type_title": "Tipo de Establecimiento",
     "tip_scan_type": "Elige el tipo de tienda antes de cargar el ticket. Esto clasifica el gasto en las categorías del panel de inicio.",
     "tip_scan_photos_title": "Cómo Fotografiar el Ticket",

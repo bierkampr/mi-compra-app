@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Download, X, ChevronRight, ChevronLeft, Smartphone } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Smartphone } from 'lucide-react';
 
 interface PWAInstallBannerProps {
   txt: (key: string) => string;
@@ -81,35 +81,44 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
 
   return (
     <>
-      {/* BANNER FLOTANTE */}
+      {/* BANNER FIJO EN LA PARTE SUPERIOR */}
       {!showIOSTutorial && (
-        <div className="fixed bottom-28 left-4 right-4 z-[500] animate-in slide-in-from-bottom-4 duration-500">
-          <div className="card-premium !p-4 border-brand-primary/40 bg-gradient-to-r from-brand-card via-brand-card to-brand-primary/10 shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex items-center gap-3">
-            <div className="w-11 h-11 bg-brand-primary/15 rounded-2xl flex items-center justify-center flex-shrink-0 border border-brand-primary/20">
-              <Smartphone size={20} className="text-brand-primary" />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white leading-tight">
-                {txt('pwa.banner_title')}
-              </p>
-              <p className="text-[8px] font-bold text-brand-muted uppercase tracking-wider mt-0.5 leading-tight truncate">
-                {txt('pwa.banner_desc')}
-              </p>
-            </div>
-
+        <div
+          className="fixed top-0 left-0 right-0 z-[500] animate-in slide-in-from-top-2 duration-400"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
+          <div className="relative bg-gradient-to-r from-[#3d1fc8] via-brand-primary to-[#4318BB] shadow-[0_8px_32px_rgba(93,46,239,0.5)]">
+            {/* BOTÓN PRINCIPAL — toda la barra excepto la X */}
             <button
               onClick={isIOS ? () => setShowIOSTutorial(true) : handleInstall}
-              className="flex-shrink-0 px-4 py-2.5 bg-brand-primary rounded-xl text-white text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all shadow-lg"
+              className="w-full flex items-center gap-3 px-5 py-3.5 pr-14 text-left active:opacity-80 transition-opacity"
             >
-              {isIOS ? txt('pwa.ios_btn') : txt('pwa.install_btn')}
+              <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Smartphone size={16} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white leading-tight">
+                  {txt('pwa.banner_title')}
+                </p>
+                <p className="text-[8px] font-bold text-white/60 uppercase tracking-wider mt-0.5 leading-tight truncate">
+                  {txt('pwa.banner_desc')}
+                </p>
+              </div>
+              <div className="flex-shrink-0 flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
+                <span className="text-[10px] font-black text-white uppercase tracking-wider">
+                  {isIOS ? txt('pwa.ios_btn') : txt('pwa.install_btn')}
+                </span>
+                <ChevronRight size={13} className="text-white/80" />
+              </div>
             </button>
 
+            {/* BOTÓN X — grande y fácil de tocar */}
             <button
               onClick={handleDismiss}
-              className="flex-shrink-0 p-1.5 text-brand-muted/30 hover:text-brand-muted transition-colors"
+              className="absolute top-0 right-0 h-full w-14 flex items-center justify-center text-white/60 hover:text-white active:bg-white/10 transition-all"
+              aria-label="Cerrar"
             >
-              <X size={15} />
+              <X size={20} strokeWidth={2.5} />
             </button>
           </div>
         </div>

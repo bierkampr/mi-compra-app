@@ -158,6 +158,8 @@
     "tip_list_input": "Type the product name. The app searches the shared catalog and shows suggestions with the last price you paid and where.",
     "tip_list_scan_title": "Scan with Active List",
     "tip_list_scan": "If you have products in your list, tap this button to upload the receipt. The AI will cross-check and mark items automatically.",
+    "tip_list_actions_title": "Action Buttons",
+    "tip_list_actions": "SCAN RECEIPT: upload a photo and the AI will mark what you bought. CLEAR (◇): removes only pending items. TRASH: deletes the entire list.",
     "tip_scan_type_title": "Store Type",
     "tip_scan_type": "Choose the store type before uploading the receipt. This classifies the expense into the dashboard categories.",
     "tip_scan_photos_title": "How to Photograph Receipts",

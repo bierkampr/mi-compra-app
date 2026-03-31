@@ -199,7 +199,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <HelpTooltip
               title={txt('help.tip_records_title')}
               content={txt('help.tip_records')}
-              align="right"
+              align="left"
             />
           </div>
         </div>

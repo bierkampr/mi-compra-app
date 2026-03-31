@@ -66,11 +66,17 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     }
   };
 
-  const addToList = async (name?: string) => {
+  const addToList = async (name?: string, precio?: number | null, comercio?: string | null) => {
     const val = (name || newItemName).toUpperCase().trim();
     if (!val) return;
 
-    const newItem = { name: val, checked: false, confirmed: false };
+    const newItem = {
+      name: val,
+      checked: false,
+      confirmed: false,
+      ultimo_precio: precio ?? null,
+      ultimo_comercio: comercio ?? null,
+    };
     const newDb = { 
       ...db, 
       lista: [...(db.lista || []), newItem] 
@@ -170,7 +176,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
               {suggestions.map((s, idx) => (
                 <button 
                   key={idx} 
-                  onClick={() => addToList(s.nombre_base)} 
+                  onClick={() => addToList(s.nombre_base, s.ultimo_precio, s.ultimo_comercio)} 
                   className="w-full text-left px-4 py-3 hover:bg-brand-primary/10 rounded-xl transition-colors flex items-center justify-between gap-3"
                 >
                   <div className="flex-1 min-w-0">
@@ -201,25 +207,28 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
 
       {/* ACCIONES RÁPIDAS PULIDAS */}
       {db.lista.length > 0 && (
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-end">
           <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-[2.5] !py-4 shadow-lg !text-[11px] tracking-[0.2em] gap-2">
             <Camera size={18}/> {txt('list.scan_btn')}
           </button>
-          <HelpTooltip
-            title={txt('help.tip_list_scan_title')}
-            content={txt('help.tip_list_scan')}
-            align="right"
-          />
           
           {pendingItems.length > 0 && (
-            <button onClick={clearPending} className="btn-secondary flex-1 !p-0 bg-brand-primary/5 border-brand-primary/10 text-brand-primary active:scale-95 transition-all">
+            <button onClick={clearPending} className="btn-secondary flex-1 !p-0 h-14 bg-brand-primary/5 border-brand-primary/10 text-brand-primary active:scale-95 transition-all">
                 <Eraser size={18}/>
             </button>
           )}
 
-          <button onClick={clearAll} className="btn-secondary w-14 !p-0 bg-brand-danger/10 text-brand-danger border-none active:scale-95 transition-all">
-            <Trash2 size={20}/>
-          </button>
+          <div className="flex flex-col items-center gap-1.5">
+            <HelpTooltip
+              title={txt('help.tip_list_actions_title')}
+              content={txt('help.tip_list_actions')}
+              align="right"
+              direction="up"
+            />
+            <button onClick={clearAll} className="btn-secondary w-14 !p-0 h-14 bg-brand-danger/10 text-brand-danger border-none active:scale-95 transition-all">
+              <Trash2 size={20}/>
+            </button>
+          </div>
         </div>
       )}
 
@@ -227,10 +236,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <h3 className="text-small-caps">{txt('list.pending')} <span className="text-brand-primary ml-1 opacity-100">[{pendingItems.length}]</span></h3>
-          <HelpTooltip
-            title={txt('help.tip_list_input_title')}
-            content={txt('help.tip_list_input')}
-          />
         </div>
 
         <div className="space-y-3">
@@ -250,11 +255,24 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                   }`}>
                     {item.checked && <Check size={16} className="text-white" strokeWidth={4}/>}
                   </div>
-                  <span className={`text-[12px] font-black uppercase tracking-tight truncate ${
-                    item.checked ? 'line-through text-brand-muted' : 'text-white'
-                  }`}>
-                    {item.name}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-[12px] font-black uppercase tracking-tight truncate block ${
+                      item.checked ? 'line-through text-brand-muted' : 'text-white'
+                    }`}>
+                      {item.name}
+                    </span>
+                    {item.ultimo_precio != null && !item.checked && (
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[9px] font-black text-brand-success">{Number(item.ultimo_precio).toFixed(2)}€</span>
+                        {item.ultimo_comercio && (
+                          <>
+                            <span className="text-brand-muted/30 text-[8px]">·</span>
+                            <span className="text-[9px] font-bold text-brand-muted/50 uppercase truncate max-w-[110px]">{item.ultimo_comercio}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </button>
                 <button onClick={() => removeItem(item)} className="p-4 text-brand-muted/20 hover:text-brand-danger hover:bg-brand-danger/5 rounded-2xl transition-all">
                   <X size={20}/>
