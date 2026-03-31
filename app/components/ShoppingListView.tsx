@@ -17,6 +17,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   const [newItemName, setNewItemName] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [itemPricesCache, setItemPricesCache] = useState<Record<string, { precio: number; comercio: string | null }>>({});
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -31,6 +32,44 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   });
   
   const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchMissingPrices = async () => {
+      const missingNames = db.lista
+        .filter(item => !item.confirmed && item.ultimo_precio == null)
+        .map((item: any) => item.name.toUpperCase())
+        .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i);
+
+      if (missingNames.length === 0) return;
+
+      try {
+        const { data } = await supabase
+          .from('productos')
+          .select('nombre_base, producto_detalles(ultimo_precio, ultimo_comercio, fecha_actualizacion)')
+          .in('nombre_base', missingNames);
+
+        if (!data) return;
+
+        const newCache: Record<string, { precio: number; comercio: string | null }> = {};
+        data.forEach((prod: any) => {
+          const detalles: any[] = prod.producto_detalles || [];
+          const latest = detalles.sort((a: any, b: any) =>
+            new Date(b.fecha_actualizacion).getTime() - new Date(a.fecha_actualizacion).getTime()
+          )[0] ?? null;
+          if (latest?.ultimo_precio != null) {
+            newCache[prod.nombre_base] = {
+              precio: Number(latest.ultimo_precio),
+              comercio: latest.ultimo_comercio ?? null,
+            };
+          }
+        });
+        setItemPricesCache(prev => ({ ...prev, ...newCache }));
+      } catch (e) {
+        console.warn('Price cache fetch failed:', e);
+      }
+    };
+    fetchMissingPrices();
+  }, [db.lista]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -261,17 +300,22 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                     }`}>
                       {item.name}
                     </span>
-                    {item.ultimo_precio != null && !item.checked && (
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[9px] font-black text-brand-success">{Number(item.ultimo_precio).toFixed(2)}€</span>
-                        {item.ultimo_comercio && (
-                          <>
-                            <span className="text-brand-muted/30 text-[8px]">·</span>
-                            <span className="text-[9px] font-bold text-brand-muted/50 uppercase truncate max-w-[110px]">{item.ultimo_comercio}</span>
-                          </>
-                        )}
-                      </div>
-                    )}
+                    {(() => {
+                      const priceInfo = item.ultimo_precio != null
+                        ? { precio: Number(item.ultimo_precio), comercio: item.ultimo_comercio ?? null }
+                        : (itemPricesCache[item.name] ?? null);
+                      return priceInfo?.precio != null && !item.checked ? (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px] font-black text-brand-success">{priceInfo.precio.toFixed(2)}€</span>
+                          {priceInfo.comercio && (
+                            <>
+                              <span className="text-brand-muted/30 text-[8px]">·</span>
+                              <span className="text-[9px] font-bold text-brand-muted/50 uppercase truncate max-w-[110px]">{priceInfo.comercio}</span>
+                            </>
+                          )}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </button>
                 <button onClick={() => removeItem(item)} className="p-4 text-brand-muted/20 hover:text-brand-danger hover:bg-brand-danger/5 rounded-2xl transition-all">
