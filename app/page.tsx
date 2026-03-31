@@ -41,6 +41,7 @@ export default function Home() {
 
     // --- ESTADO FLUJO DE COMPRA ---
     const [purchaseMode, setPurchaseMode] = useState<string | null>(null);
+    const [lastTab, setLastTab] = useState<string>('home');
     const [tempPhotos, setTempPhotos] = useState<string[]>([]);
     const [pendingGasto, setPendingGasto] = useState<any>(null);
     const [selectedGasto, setSelectedGasto] = useState<Gasto | null>(null);
@@ -48,6 +49,15 @@ export default function Home() {
     const [syncTimer, setSyncTimer] = useState<NodeJS.Timeout | null>(null);
 
     const txt = useCallback((key: string) => t(key, lang), [lang]);
+
+    const handleAddClick = () => {
+        if (activeTab === 'add') {
+            setActiveTab(lastTab);
+        } else {
+            setLastTab(activeTab);
+            setActiveTab('add');
+        }
+    };
 
     // --- CARGA DE DATOS ---
     const loadData = useCallback(async (token: string) => {
@@ -322,7 +332,8 @@ export default function Home() {
             <Navigation 
                 user={user} 
                 activeTab={activeTab} 
-                setActiveTab={setActiveTab} 
+                setActiveTab={setActiveTab}
+                onAddClick={handleAddClick}
                 isOffline={isOffline} 
                 txt={txt} 
                 onShowHelp={() => setShowHelp(true)}
@@ -351,7 +362,7 @@ export default function Home() {
                     />
                 )}
 
-                {activeTab === 'scan' && !purchaseMode && (
+                {activeTab === 'add' && !purchaseMode && (
                     <ScannerView 
                         db={db}
                         updateAndSync={updateAndSync}

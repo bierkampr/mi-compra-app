@@ -6,12 +6,13 @@ interface NavigationProps {
   user: { name: string };
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onAddClick: () => void;
   isOffline: boolean;
   txt: (key: string) => string;
-  onShowHelp: () => void; // Nueva prop para activar el tutorial
+  onShowHelp: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, isOffline, txt, onShowHelp }) => {
+const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, onAddClick, isOffline, txt, onShowHelp }) => {
   return (
     <>
       {/* HEADER SUPERIOR */}
@@ -75,7 +76,7 @@ const Navigation: React.FC<NavigationProps> = ({ user, activeTab, setActiveTab, 
 
         <div className="relative -top-5 px-2">
           <button 
-            onClick={() => setActiveTab('add')} 
+            onClick={onAddClick} 
             className={`w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-white shadow-[0_10px_30px_rgba(93,46,239,0.5)] active:scale-90 transition-all ${
               activeTab === 'add' ? 'rotate-45 shadow-brand-primary/20' : ''
             }`}

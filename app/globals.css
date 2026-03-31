@@ -102,9 +102,9 @@
   /* NAVEGACIÓN */
   .nav-bottom {
     @apply fixed left-1/2 -translate-x-1/2 w-[90%] max-w-sm
-           bg-brand-card/90 backdrop-blur-2xl rounded-[2.5rem] px-2 py-2
-           flex justify-between items-center z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)]
-           border border-white/[0.08];
+           bg-black/15 backdrop-blur-2xl rounded-[2.5rem] px-2 py-2
+           flex justify-between items-center z-[100] shadow-[0_4px_24px_rgba(0,0,0,0.25)]
+           border border-white/[0.06];
     bottom: calc(theme('spacing.6') + env(safe-area-inset-bottom));
   }
 

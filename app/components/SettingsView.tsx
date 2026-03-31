@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
-import { LogOut, Download, ChevronLeft, User, ShieldCheck, Database, Sparkles } from 'lucide-react';
+import { LogOut, Download, ChevronLeft, User, ShieldCheck, Database, Sparkles, Smartphone } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 import { exportToCSV } from '@/lib/utils';
 import ConfirmModal from './ConfirmModal';
 
@@ -14,6 +15,7 @@ interface SettingsViewProps {
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt, onShowHelp }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  const { canInstall, isIOS, isInstalled, handleInstall } = usePWAInstall();
 
   const handleLogout = () => {
     localStorage.clear();
@@ -79,6 +81,29 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt
           <ChevronLeft size={16} className="rotate-180 opacity-20" />
         </button>
         
+        {/* Instalar APP */}
+        {canInstall && !isInstalled && (
+          <button
+            onClick={isIOS ? undefined : handleInstall}
+            className="w-full flex items-center justify-between p-5 card-premium bg-brand-primary/8 hover:bg-brand-primary/15 transition-colors border-brand-primary/25"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-brand-primary/20 rounded-xl text-brand-primary">
+                <Smartphone size={20} />
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] font-black uppercase text-white leading-tight">
+                  {txt('pwa.banner_title')}
+                </p>
+                <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">
+                  {isIOS ? 'Compartir → Añadir a inicio' : txt('pwa.banner_desc')}
+                </p>
+              </div>
+            </div>
+            <ChevronLeft size={16} className="rotate-180 text-brand-primary/60" />
+          </button>
+        )}
+
         {/* Exportar CSV */}
         <button 
           onClick={() => exportToCSV(db.gastos)} 
