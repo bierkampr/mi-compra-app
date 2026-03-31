@@ -1,17 +1,15 @@
 "use client";
-import React, { useState } from 'react';
-import { 
-  X, 
-  ChevronRight, 
-  ChevronLeft, 
-  LayoutGrid, 
-  Plus, 
-  History, 
-  Settings, 
-  BarChart3, 
-  Camera, 
+import React from 'react';
+import {
+  X,
+  BarChart3,
+  Camera,
   CheckCircle2,
-  Sparkles
+  Settings,
+  Plus,
+  Star,
+  FileText,
+  BookOpen,
 } from 'lucide-react';
 
 interface HelpModalProps {
@@ -19,126 +17,155 @@ interface HelpModalProps {
   txt: (key: string) => string;
 }
 
-const HelpModal: React.FC<HelpModalProps> = ({ onClose, txt }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+interface TipItem {
+  label: string;
+  text: string;
+}
 
-  const steps = [
+interface HelpSection {
+  icon: React.ReactNode;
+  color: string;
+  accent: string;
+  title: string;
+  tips: TipItem[];
+}
+
+const HelpModal: React.FC<HelpModalProps> = ({ onClose, txt }) => {
+  const sections: HelpSection[] = [
     {
+      icon: <BarChart3 size={20} />,
+      color: 'bg-brand-primary/10',
+      accent: 'text-brand-primary border-brand-primary/20',
       title: txt('help.home_title'),
-      desc: txt('help.home_desc'),
-      icon: <BarChart3 size={40} className="text-brand-primary" />,
-      color: "bg-brand-primary/10"
+      tips: [
+        { label: txt('help.tip_spend_card_title'), text: txt('help.tip_spend_card') },
+        { label: txt('help.tip_records_title'), text: txt('help.tip_records') },
+      ],
     },
     {
-      title: txt('help.nav_title'),
-      desc: txt('help.nav_desc'),
-      icon: (
-        <div className="flex gap-2">
-            <LayoutGrid size={24} className="text-brand-muted" />
-            <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center -top-2 relative shadow-lg">
-                <Plus size={24} className="text-white" />
-            </div>
-            <History size={24} className="text-brand-muted" />
-        </div>
-      ),
-      color: "bg-brand-secondary/30"
-    },
-    {
-      title: txt('help.scanner_title'),
-      desc: txt('help.scanner_desc'),
-      icon: <Camera size={40} className="text-brand-accent" />,
-      color: "bg-brand-accent/10"
-    },
-    {
+      icon: <CheckCircle2 size={20} />,
+      color: 'bg-brand-success/10',
+      accent: 'text-brand-success border-brand-success/20',
       title: txt('help.list_title'),
-      desc: txt('help.list_desc'),
-      icon: <CheckCircle2 size={40} className="text-brand-success" />,
-      color: "bg-brand-success/10"
+      tips: [
+        { label: txt('help.tip_list_input_title'), text: txt('help.tip_list_input') },
+        { label: txt('help.tip_list_scan_title'), text: txt('help.tip_list_scan') },
+      ],
     },
     {
+      icon: <Camera size={20} />,
+      color: 'bg-brand-accent/10',
+      accent: 'text-brand-accent border-brand-accent/20',
+      title: txt('help.scanner_title'),
+      tips: [
+        { label: txt('help.tip_scan_type_title'), text: txt('help.tip_scan_type') },
+        { label: txt('help.tip_scan_photos_title'), text: txt('help.tip_scan_photos') },
+      ],
+    },
+    {
+      icon: <FileText size={20} />,
+      color: 'bg-orange-400/10',
+      accent: 'text-orange-400 border-orange-400/20',
+      title: txt('review.title'),
+      tips: [
+        { label: txt('help.tip_review_title'), text: txt('help.tip_review') },
+      ],
+    },
+    {
+      icon: <Settings size={20} />,
+      color: 'bg-white/5',
+      accent: 'text-brand-muted border-white/10',
       title: txt('help.settings_title'),
-      desc: txt('help.settings_desc'),
-      icon: <Settings size={40} className="text-brand-muted" />,
-      color: "bg-white/5"
-    }
+      tips: [
+        { label: txt('help.tip_settings_export_title'), text: txt('help.tip_settings_export') },
+      ],
+    },
   ];
 
-  const next = () => {
-    if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1);
-    else onClose();
-  };
-
-  const prev = () => {
-    if (currentStep > 0) setCurrentStep(currentStep - 1);
-  };
-
   return (
-    <div className="modal-overlay !p-6 z-[3000]">
-      <div className="card-premium max-w-sm w-full relative overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col min-h-[450px]">
-        
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-brand-accent" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-muted">
-                {txt('help.onboarding_title')}
-            </span>
+    <div className="modal-overlay !p-0 z-[3000] items-end sm:items-center">
+      <div className="w-full max-w-md bg-brand-card rounded-t-[2.5rem] sm:rounded-[2.5rem] border border-white/[0.06] shadow-[0_-20px_80px_rgba(0,0,0,0.9)] animate-in slide-in-from-bottom duration-400 flex flex-col max-h-[88vh]">
+
+        {/* HANDLE + HEADER */}
+        <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-white/[0.05]">
+          <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mb-5" />
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-brand-accent/10 rounded-xl flex items-center justify-center">
+                <BookOpen size={15} className="text-brand-accent" />
+              </div>
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white">
+                  {txt('help.onboarding_title')}
+                </p>
+                <p className="text-[8px] font-bold text-brand-muted uppercase tracking-wider mt-0.5">
+                  {sections.length} {txt('help.next') === 'Siguiente' ? 'secciones' : 'sections'}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="btn-icon !p-2 bg-white/5 border-none">
+              <X size={18} />
+            </button>
           </div>
-          <button onClick={onClose} className="btn-icon !p-1.5 border-none bg-white/5">
-            <X size={18} />
-          </button>
         </div>
 
-        {/* CONTENIDO DINÁMICO */}
-        <div className="flex-1 flex flex-col items-center text-center justify-center space-y-6 px-2">
-          <div className={`w-24 h-24 rounded-[2rem] ${steps[currentStep].color} flex items-center justify-center mb-2 animate-in fade-in zoom-in duration-500`}>
-            {steps[currentStep].icon}
-          </div>
-          
-          <div className="space-y-3">
-            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                {steps[currentStep].title}
-            </h3>
-            <p className="text-xs font-bold text-brand-muted leading-relaxed uppercase opacity-80">
-                {steps[currentStep].desc}
+        {/* CONTENIDO SCROLLABLE */}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-3">
+          {sections.map((section, si) => (
+            <div key={si} className="card-glass !rounded-2xl !p-0 overflow-hidden border border-white/[0.04]">
+
+              {/* Título de sección */}
+              <div className={`flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.04] ${section.color}`}>
+                <div className={`${section.accent.split(' ')[0]}`}>
+                  {section.icon}
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                  {section.title}
+                </p>
+              </div>
+
+              {/* Tips */}
+              <div className="divide-y divide-white/[0.03]">
+                {section.tips.map((tip, ti) => (
+                  <div key={ti} className="px-4 py-3.5">
+                    <div className="flex items-start gap-2 mb-1.5">
+                      <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${section.accent.split(' ')[0].replace('text-', 'bg-')}`} />
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/90">
+                        {tip.label}
+                      </p>
+                    </div>
+                    <p className="text-[10px] font-semibold text-brand-muted leading-relaxed pl-3.5">
+                      {tip.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Tip especial del botón + */}
+          <div className="card-glass !rounded-2xl !p-4 border border-brand-primary/15 bg-brand-primary/5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-brand-primary rounded-xl flex items-center justify-center flex-shrink-0">
+                <Plus size={16} className="text-white" />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
+                {txt('help.tip_nav_plus_title')}
+              </p>
+            </div>
+            <p className="text-[10px] font-semibold text-brand-muted leading-relaxed">
+              {txt('help.tip_nav_plus')}
             </p>
           </div>
         </div>
 
-        {/* INDICADORES DE PASO (DOTS) */}
-        <div className="flex justify-center gap-2 mb-8">
-          {steps.map((_, i) => (
-            <div 
-              key={i} 
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === currentStep ? 'w-8 bg-brand-primary' : 'w-2 bg-white/10'
-              }`} 
-            />
-          ))}
-        </div>
-
-        {/* BOTONES DE NAVEGACIÓN */}
-        <div className="flex gap-3">
-          {currentStep > 0 && (
-            <button 
-              onClick={prev} 
-              className="btn-secondary !py-4 flex-1"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          )}
-          
-          <button 
-            onClick={next} 
-            className="btn-primary !py-4 flex-[2] shadow-xl"
-          >
-            <span>{currentStep === steps.length - 1 ? txt('help.finish') : txt('help.next')}</span>
-            {currentStep < steps.length - 1 && <ChevronRight size={18} />}
+        {/* FOOTER */}
+        <div className="flex-shrink-0 px-4 pb-8 pt-3">
+          <button onClick={onClose} className="btn-primary shadow-xl">
+            <Star size={14} />
+            <span>{txt('help.finish')}</span>
           </button>
         </div>
-
-        {/* DECORACIÓN DE FONDO */}
-        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
       </div>
     </div>
   );

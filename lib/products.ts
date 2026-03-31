@@ -23,14 +23,26 @@ export const searchLocalProducts = async (query: string) => {
 
   try {
     const { data, error } = await supabase.from('productos')
-      .select(`id, nombre_base`)
+      .select(`id, nombre_base, producto_detalles(ultimo_precio, ultimo_comercio, fecha_actualizacion)`)
       .or(`nombre_base.ilike.%${upperQuery}%, nombre_base.ilike.%${fuzzyQuery}%`)
       .limit(30);
 
     if (error) throw error;
 
-    // Ordenamos por longitud: "PIÑA" antes que "PIÑA NATURAL"
-    return (data || []).sort((a, b) => a.nombre_base.length - b.nombre_base.length);
+    const sorted = (data || []).sort((a, b) => a.nombre_base.length - b.nombre_base.length);
+
+    return sorted.map((item: any) => {
+      const detalles: any[] = item.producto_detalles || [];
+      const latest = detalles.sort((a: any, b: any) =>
+        new Date(b.fecha_actualizacion).getTime() - new Date(a.fecha_actualizacion).getTime()
+      )[0] || null;
+      return {
+        id: item.id,
+        nombre_base: item.nombre_base,
+        ultimo_precio: latest?.ultimo_precio ?? null,
+        ultimo_comercio: latest?.ultimo_comercio ?? null,
+      };
+    });
   } catch (e) {
     console.error("Error en búsqueda:", e);
     return [];

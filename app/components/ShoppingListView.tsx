@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Camera, Trash2, ListTodo, CheckCircle2, X, Check, Search, Loader2, Eraser, ChevronDown } from 'lucide-react';
+import { Plus, Camera, Trash2, CheckCircle2, X, Check, Search, Loader2, Eraser, ChevronDown } from 'lucide-react';
 import { searchLocalProducts } from '../../lib/products';
 import { supabase } from '../../lib/supabase';
 import ConfirmModal from './ConfirmModal';
+import HelpTooltip from './HelpTooltip';
 
 interface ShoppingListViewProps {
   db: { lista: any[] };
@@ -170,9 +171,22 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                 <button 
                   key={idx} 
                   onClick={() => addToList(s.nombre_base)} 
-                  className="w-full text-left p-4 hover:bg-brand-primary/10 rounded-xl text-[11px] font-black uppercase flex justify-between items-center transition-colors"
+                  className="w-full text-left px-4 py-3 hover:bg-brand-primary/10 rounded-xl transition-colors flex items-center justify-between gap-3"
                 >
-                  <span className="truncate">{s.nombre_base}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-black uppercase tracking-tight text-white truncate">{s.nombre_base}</p>
+                    {s.ultimo_precio != null && (
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[9px] font-black text-brand-success">{Number(s.ultimo_precio).toFixed(2)}€</span>
+                        {s.ultimo_comercio && (
+                          <>
+                            <span className="text-brand-muted/30 text-[8px]">·</span>
+                            <span className="text-[9px] font-bold text-brand-muted/60 uppercase truncate max-w-[100px]">{s.ultimo_comercio}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <Plus size={14} className="text-brand-primary opacity-40 shrink-0" />
                 </button>
               ))}
@@ -191,6 +205,11 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           <button onClick={() => setPurchaseMode('super')} className="btn-primary flex-[2.5] !py-4 shadow-lg !text-[11px] tracking-[0.2em] gap-2">
             <Camera size={18}/> {txt('list.scan_btn')}
           </button>
+          <HelpTooltip
+            title={txt('help.tip_list_scan_title')}
+            content={txt('help.tip_list_scan')}
+            align="right"
+          />
           
           {pendingItems.length > 0 && (
             <button onClick={clearPending} className="btn-secondary flex-1 !p-0 bg-brand-primary/5 border-brand-primary/10 text-brand-primary active:scale-95 transition-all">
@@ -208,6 +227,10 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
       <section className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <h3 className="text-small-caps">{txt('list.pending')} <span className="text-brand-primary ml-1 opacity-100">[{pendingItems.length}]</span></h3>
+          <HelpTooltip
+            title={txt('help.tip_list_input_title')}
+            content={txt('help.tip_list_input')}
+          />
         </div>
 
         <div className="space-y-3">

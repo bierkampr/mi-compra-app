@@ -20,6 +20,7 @@ import SettingsView from './components/SettingsView';
 import ReviewModal from './components/ReviewModal';
 import DetailView from './components/DetailView';
 import HelpModal from './components/HelpModal';
+import PWAInstallBanner from './components/PWAInstallBanner';
 
 export default function Home() {
     // --- ESTADO GLOBAL ---
@@ -432,6 +433,8 @@ export default function Home() {
             )}
 
             <div className="hidden lg:block fixed inset-0 bg-black/40 -z-10 pointer-events-none" />
+
+            <PWAInstallBanner txt={txt} />
         </main>
     );
 }

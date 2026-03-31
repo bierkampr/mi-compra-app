@@ -22,7 +22,12 @@
     "no_records": "No records this month",
     "shop_breakdown": "Spending by Store",
     "category_breakdown": "Spending by Category",
-    "chart_title": "Expense Distribution"
+    "chart_title": "Expense Distribution",
+    "cat_super": "Supermarket",
+    "cat_mini": "Mini Market",
+    "cat_dining": "Bar / Restaurant",
+    "cat_health": "Pharmacy",
+    "cat_others": "Others"
   },
   "list": {
     "placeholder": "What do you need to buy?",
@@ -30,7 +35,8 @@
     "clear_all": "Clear All",
     "clear_pending": "Clear",
     "pending": "Pending",
-    "bought": "Bought"
+    "bought": "Bought",
+    "last_price_label": "Last:"
   },
   "scan": {
     "title": "Upload Receipt",
@@ -48,7 +54,7 @@
     "tip_desc": "If the receipt is long, take 2 or 3 close-up photos. The AI will merge them.",
     "take_photo": "Take Photo",
     "gallery": "Gallery",
-    "process": "PROCESS PURCHASE ⚡",
+    "process": "PROCESS PURCHASE ",
     "cancel": "cancel upload",
     "custom_cat_placeholder": "New category...",
     "add_custom": "Add Category",
@@ -81,7 +87,7 @@
     "title": "REVIEW PURCHASE",
     "label_shop": "Store",
     "label_date": "Date",
-    "label_total": "Total (€)",
+    "label_total": "Total ()",
     "products_title": "Products",
     "add_btn": "Add",
     "close_btn": "Close",
@@ -133,6 +139,7 @@
     "next": "Next",
     "finish": "Start!",
     "skip": "Skip",
+    "close": "Close",
     "home_title": "Dashboard",
     "home_desc": "Here you can see how much you've spent this month. Tap the spend card to see a breakdown by category.",
     "nav_title": "Navigation",
@@ -142,6 +149,40 @@
     "list_title": "Shopping List",
     "list_desc": "Note down what you need. When scanning a receipt, the app will automatically check off what it finds.",
     "settings_title": "Settings",
-    "settings_desc": "In the top gear icon, you can export your expenses to Excel or watch this tutorial again."
+    "settings_desc": "In the top gear icon, you can export your expenses to Excel or watch this tutorial again.",
+    "tip_spend_card_title": "Total Spend Card",
+    "tip_spend_card": "Tap this card to see the category breakdown for the month. Use the ← → arrows to navigate between previous months.",
+    "tip_records_title": "Records List",
+    "tip_records": "Tap any record to see the full detail: products, prices and the receipt photos saved in your Drive.",
+    "tip_list_input_title": "Search & Add Products",
+    "tip_list_input": "Type the product name. The app searches the shared catalog and shows suggestions with the last price you paid and where.",
+    "tip_list_scan_title": "Scan with Active List",
+    "tip_list_scan": "If you have products in your list, tap this button to upload the receipt. The AI will cross-check and mark items automatically.",
+    "tip_scan_type_title": "Store Type",
+    "tip_scan_type": "Choose the store type before uploading the receipt. This classifies the expense into the dashboard categories.",
+    "tip_scan_photos_title": "How to Photograph Receipts",
+    "tip_scan_photos": "Short receipt: one centered photo. Long receipt: 2-3 photos in sections (top, middle, bottom). The AI merges them automatically.",
+    "tip_review_title": "Purchase Review",
+    "tip_review": "Review the AI-extracted data before saving. You can edit the store name, date, products and prices. The magnifier button shows price history.",
+    "tip_settings_export_title": "Export to CSV",
+    "tip_settings_export": "Download all your expenses as a CSV file to open in Excel, Google Sheets or any spreadsheet app.",
+    "tip_nav_plus_title": "Main (+) Button",
+    "tip_nav_plus": "This is the central button. It takes you to the receipt upload module. Choose the store type and upload the photo."
+  },
+  "pwa": {
+    "banner_title": "INSTALL THE APP",
+    "banner_desc": "Quick access from your home screen, without opening the browser",
+    "install_btn": "INSTALL",
+    "ios_btn": "SEE HOW",
+    "ios_tutorial_label": "STEP",
+    "ios_step1_title": "TAP THE SHARE BUTTON",
+    "ios_step1_desc": "In Safari, tap the share icon ↑ that appears in the bottom toolbar of the browser.",
+    "ios_step2_title": "TAP 'MORE'",
+    "ios_step2_desc": "Scroll up in the menu or tap the 'More' button to see all available options.",
+    "ios_step3_title": "ADD TO HOME SCREEN",
+    "ios_step3_desc": "Find and tap the 'Add to Home Screen' option in the action menu list.",
+    "ios_step4_title": "CONFIRM INSTALLATION",
+    "ios_step4_desc": "Verify that 'Open as web app' is enabled and tap the 'Add' button to complete the installation.",
+    "ios_done": "DONE, APP INSTALLED!"
   }
 }

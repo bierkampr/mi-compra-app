@@ -13,6 +13,7 @@ import {
   Tag,
   PieChart as PieIcon
 } from 'lucide-react';
+import HelpTooltip from './HelpTooltip';
 
 interface DashboardViewProps {
   stats: {
@@ -58,17 +59,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const getCategoryStyles = (category: string) => {
     switch (category) {
       case 'dining':
-        return { icon: <Utensils size={18} />, color: 'text-orange-400', bg: 'bg-orange-400/10', hex: '#FB923C' };
+        return { icon: <Utensils size={18} />, color: 'text-orange-400', bg: 'bg-orange-400/10', hex: '#FB923C', label: txt('home.cat_dining') };
       case 'health':
-        return { icon: <Pill size={18} />, color: 'text-emerald-400', bg: 'bg-emerald-400/10', hex: '#34D399' };
+        return { icon: <Pill size={18} />, color: 'text-emerald-400', bg: 'bg-emerald-400/10', hex: '#34D399', label: txt('home.cat_health') };
       case 'mini':
-        return { icon: <Store size={18} />, color: 'text-brand-accent', bg: 'bg-brand-accent/10', hex: '#00FAD9' };
+        return { icon: <Store size={18} />, color: 'text-brand-accent', bg: 'bg-brand-accent/10', hex: '#00FAD9', label: txt('home.cat_mini') };
       case 'super':
-        return { icon: <ShoppingCart size={18} />, color: 'text-brand-primary', bg: 'bg-brand-primary/10', hex: '#5D2EEF' };
+        return { icon: <ShoppingCart size={18} />, color: 'text-brand-primary', bg: 'bg-brand-primary/10', hex: '#5D2EEF', label: txt('home.cat_super') };
       case 'others':
-        return { icon: <LayoutGrid size={18} />, color: 'text-brand-muted', bg: 'bg-white/5', hex: '#8E94AF' };
+        return { icon: <LayoutGrid size={18} />, color: 'text-brand-muted', bg: 'bg-white/5', hex: '#8E94AF', label: txt('home.cat_others') };
       default:
-        return { icon: <Tag size={18} />, color: 'text-indigo-400', bg: 'bg-indigo-400/10', hex: '#818CF8' };
+        return { icon: <Tag size={18} />, color: 'text-indigo-400', bg: 'bg-indigo-400/10', hex: '#818CF8', label: (category || 'otros').toUpperCase() };
     }
   };
 
@@ -180,7 +181,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     <div key={i} className="flex justify-between items-center text-[10px] font-black uppercase">
                         <span className="flex items-center gap-2">
                             <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: styles.hex}}/> 
-                            {cat}
+                            {styles.label}
                         </span>
                         <span className="text-white/70">{val.toFixed(2)}€</span>
                     </div>
@@ -193,7 +194,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       {/* COLUMNA DERECHA: REGISTROS */}
       <div className="lg:col-span-7 space-y-4">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-small-caps">{txt('home.records')}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-small-caps">{txt('home.records')}</h3>
+            <HelpTooltip
+              title={txt('help.tip_records_title')}
+              content={txt('help.tip_records')}
+              align="right"
+            />
+          </div>
         </div>
         
         <div className="space-y-3">
@@ -201,12 +209,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="animate-in zoom-in-95 duration-300 py-4 lg:hidden">
                {renderDonutChart("w-48 h-48")}
                <div className="mt-8 space-y-2">
-                  {statsPorCategoria.map(([cat, val], i) => (
-                    <div key={i} className="row-clickable">
-                        <span className="text-[10px] font-black uppercase">{cat}</span>
-                        <span className="text-[11px] font-black text-brand-success">{val.toFixed(2)}€</span>
-                    </div>
-                  ))}
+                  {statsPorCategoria.map(([cat, val], i) => {
+                    const styles = getCategoryStyles(cat);
+                    return (
+                      <div key={i} className="row-clickable">
+                          <span className="text-[10px] font-black uppercase">{styles.label}</span>
+                          <span className="text-[11px] font-black text-brand-success">{val.toFixed(2)}€</span>
+                      </div>
+                    );
+                  })}
                </div>
             </div>
           ) : (

@@ -22,7 +22,12 @@
     "no_records": "Sin registros este mes",
     "shop_breakdown": "Gasto por comercio",
     "category_breakdown": "Gasto por categoría",
-    "chart_title": "Distribución de Gastos"
+    "chart_title": "Distribución de Gastos",
+    "cat_super": "Supermercado",
+    "cat_mini": "Tienda / Mini",
+    "cat_dining": "Bar / Restaurante",
+    "cat_health": "Farmacia",
+    "cat_others": "Otros"
   },
   "list": {
     "placeholder": "¿QUÉ NECESITAS COMPRAR?",
@@ -30,7 +35,8 @@
     "clear_all": "Limpiar Todo",
     "clear_pending": "Limpiar",
     "pending": "Pendientes",
-    "bought": "Comprado"
+    "bought": "Comprado",
+    "last_price_label": "Último:"
   },
   "scan": {
     "title": "Cargar Ticket",
@@ -146,6 +152,7 @@
     "next": "Siguiente",
     "finish": "¡Empezar!",
     "skip": "Saltar",
+    "close": "Cerrar",
     "home_title": "Panel de Inicio",
     "home_desc": "Aquí ves cuánto llevas gastado este mes. Si tocas la tarjeta de gasto, verás un gráfico con la distribución por categorías.",
     "nav_title": "Navegación",
@@ -155,6 +162,40 @@
     "list_title": "Lista de Compras",
     "list_desc": "Anota lo que necesites. Al escanear un ticket, la app marcará automáticamente lo que hayas encontrado.",
     "settings_title": "Configuración",
-    "settings_desc": "En el engranaje superior puedes exportar tus gastos a Excel o ver este tutorial de nuevo."
+    "settings_desc": "En el engranaje superior puedes exportar tus gastos a Excel o ver este tutorial de nuevo.",
+    "tip_spend_card_title": "Tarjeta de Gasto Total",
+    "tip_spend_card": "Toca esta tarjeta para ver el desglose por categoría del mes. Usa las flechas ← → para navegar entre meses anteriores.",
+    "tip_records_title": "Lista de Registros",
+    "tip_records": "Toca cualquier registro para ver el detalle completo: productos, precios y las fotos del ticket guardadas en tu Drive.",
+    "tip_list_input_title": "Buscar y Añadir Productos",
+    "tip_list_input": "Escribe el nombre del producto. La app buscará en el catálogo compartido y te mostrará sugerencias con el último precio que pagaste y en qué tienda.",
+    "tip_list_scan_title": "Escanear con Lista Activa",
+    "tip_list_scan": "Si tienes productos en la lista, toca este botón para subir el ticket. La IA cruzará lo que compres con tu lista y lo marcará automáticamente.",
+    "tip_scan_type_title": "Tipo de Establecimiento",
+    "tip_scan_type": "Elige el tipo de tienda antes de cargar el ticket. Esto clasifica el gasto en las categorías del panel de inicio.",
+    "tip_scan_photos_title": "Cómo Fotografiar el Ticket",
+    "tip_scan_photos": "Ticket pequeño: una sola foto centrada. Ticket largo: 2-3 fotos por secciones (arriba, medio, abajo). La IA las une automáticamente en un solo análisis.",
+    "tip_review_title": "Revisión de la Compra",
+    "tip_review": "Revisa los datos que extrajo la IA antes de guardarlos. Puedes editar el nombre del comercio, la fecha, los productos y los precios. El botón de lupa te muestra el historial de precios.",
+    "tip_settings_export_title": "Exportar a CSV",
+    "tip_settings_export": "Descarga todos tus gastos en formato CSV para abrirlos en Excel, Google Sheets o cualquier app de hoja de cálculo.",
+    "tip_nav_plus_title": "Botón Principal (+)",
+    "tip_nav_plus": "Este es el botón central. Te lleva al módulo de carga de tickets. Elige el tipo de tienda y sube la foto del ticket."
+  },
+  "pwa": {
+    "banner_title": "INSTALA LA APP",
+    "banner_desc": "Acceso rápido desde tu pantalla de inicio, sin abrir el navegador",
+    "install_btn": "INSTALAR",
+    "ios_btn": "VER CÓMO",
+    "ios_tutorial_label": "PASO",
+    "ios_step1_title": "TOCA EL BOTÓN COMPARTIR",
+    "ios_step1_desc": "En Safari, toca el ícono de compartir ↑ que aparece en la barra inferior del navegador.",
+    "ios_step2_title": "TOCA «VER MÁS»",
+    "ios_step2_desc": "Desliza hacia arriba en el menú o toca el botón «Más» para ver todas las opciones disponibles.",
+    "ios_step3_title": "AÑADIR A PANTALLA DE INICIO",
+    "ios_step3_desc": "Busca y toca la opción «Añadir a la pantalla de inicio» en la lista de acciones del menú.",
+    "ios_step4_title": "CONFIRMAR INSTALACIÓN",
+    "ios_step4_desc": "Verifica que aparece «Abrir como app web» activado y toca el botón «Añadir» para completar la instalación.",
+    "ios_done": "¡LISTO, YA ESTÁ INSTALADO!"
   }
 }
