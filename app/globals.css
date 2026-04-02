@@ -10,16 +10,29 @@
 }
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+
   body {
     @apply bg-brand-bg text-white antialiased overflow-x-hidden select-none;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-tap-highlight-color: transparent;
     background: radial-gradient(circle at 50% 0%, #1a1d2e, #0D0F1A 85%);
     overscroll-behavior: none;
+    touch-action: manipulation;
   }
-  
+
   input, select, textarea {
     font-size: 16px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  button {
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
@@ -27,6 +40,7 @@
   /* Estructura Principal */
   .app-layout {
     @apply max-w-md lg:max-w-6xl mx-auto h-full flex flex-col relative bg-transparent px-[5vw] lg:px-8 transition-all duration-300;
+    padding-top: env(safe-area-inset-top);
   }
 
   /* SISTEMA DE TARJETAS UNIFICADO */
@@ -132,6 +146,8 @@ html, body {
   overflow: hidden;
   width: 100%;
   height: 100%;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
 }
 
 main {

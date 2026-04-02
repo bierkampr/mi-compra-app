@@ -10,8 +10,10 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [showIOSTutorial, setShowIOSTutorial] = useState(false);
+  const [showFirefoxTip, setShowFirefoxTip] = useState(false);
   const [iosStep, setIosStep] = useState(0);
   const [isIOS, setIsIOS] = useState(false);
+  const [isFirefox, setIsFirefox] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('pwa_banner_dismissed')) return;
@@ -22,9 +24,11 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
     if (standalone) return;
 
     const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const firefox = /Firefox/i.test(navigator.userAgent) && !ios;
     setIsIOS(ios);
+    setIsFirefox(firefox);
 
-    if (ios) {
+    if (ios || firefox) {
       setShowBanner(true);
       return;
     }
@@ -51,6 +55,7 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
   const handleDismiss = () => {
     setShowBanner(false);
     setShowIOSTutorial(false);
+    setShowFirefoxTip(false);
     localStorage.setItem('pwa_banner_dismissed', 'true');
   };
 
@@ -90,7 +95,7 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
           <div className="relative bg-gradient-to-r from-[#3d1fc8] via-brand-primary to-[#4318BB] shadow-[0_8px_32px_rgba(93,46,239,0.5)]">
             {/* BOTÓN PRINCIPAL — toda la barra excepto la X */}
             <button
-              onClick={isIOS ? () => setShowIOSTutorial(true) : handleInstall}
+              onClick={isIOS ? () => setShowIOSTutorial(true) : isFirefox ? () => setShowFirefoxTip(true) : handleInstall}
               className="w-full flex items-center gap-3 px-5 py-3.5 pr-14 text-left active:opacity-80 transition-opacity"
             >
               <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -106,7 +111,7 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
               </div>
               <div className="flex-shrink-0 flex items-center gap-1.5 bg-white/15 rounded-xl px-3 py-1.5">
                 <span className="text-[10px] font-black text-white uppercase tracking-wider">
-                  {isIOS ? txt('pwa.ios_btn') : txt('pwa.install_btn')}
+                  {isIOS || isFirefox ? txt('pwa.ios_btn') : txt('pwa.install_btn')}
                 </span>
                 <ChevronRight size={13} className="text-white/80" />
               </div>
@@ -119,6 +124,44 @@ const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ txt }) => {
               aria-label="Cerrar"
             >
               <X size={20} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TOOLTIP FIREFOX — instrucciones manuales */}
+      {showFirefoxTip && (
+        <div className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-md flex items-end justify-center animate-in fade-in duration-300 p-4 pb-8">
+          <div className="w-full max-w-sm bg-brand-card border border-white/10 rounded-[2rem] p-6 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-4 duration-400">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-400/15 rounded-xl text-orange-400">
+                  <Smartphone size={18} />
+                </div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+                  {txt('pwa.firefox_title')}
+                </p>
+              </div>
+              <button onClick={handleDismiss} className="btn-icon !p-2 border-none bg-white/5">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 bg-white/[0.03] rounded-2xl border border-white/5">
+                <span className="w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center text-[11px] font-black text-brand-bg flex-shrink-0 mt-0.5">1</span>
+                <p className="text-[11px] font-bold text-white/80 leading-relaxed">{txt('pwa.firefox_step1')}</p>
+              </div>
+              <div className="flex items-start gap-3 p-3 bg-white/[0.03] rounded-2xl border border-white/5">
+                <span className="w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center text-[11px] font-black text-brand-bg flex-shrink-0 mt-0.5">2</span>
+                <p className="text-[11px] font-bold text-white/80 leading-relaxed">{txt('pwa.firefox_step2')}</p>
+              </div>
+              <div className="flex items-start gap-3 p-3 bg-white/[0.03] rounded-2xl border border-white/5">
+                <span className="w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center text-[11px] font-black text-brand-bg flex-shrink-0 mt-0.5">3</span>
+                <p className="text-[11px] font-bold text-white/80 leading-relaxed">{txt('pwa.firefox_step3')}</p>
+              </div>
+            </div>
+            <button onClick={handleDismiss} className="btn-secondary w-full mt-5 !py-3">
+              {txt('help.close')}
             </button>
           </div>
         </div>

@@ -13,11 +13,13 @@ if (typeof window !== 'undefined') {
 export function usePWAInstall() {
   const [installPrompt, setInstallPrompt] = useState<any>(_prompt);
   const [isIOS, setIsIOS] = useState(false);
+  const [isFirefox, setIsFirefox] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     const ua = navigator.userAgent;
     setIsIOS(/iPhone|iPad|iPod/.test(ua) && !(window as any).MSStream);
+    setIsFirefox(/Firefox/i.test(ua) && !(/iPhone|iPad|iPod/.test(ua)));
     setIsInstalled(window.matchMedia('(display-mode: standalone)').matches);
 
     if (_prompt) setInstallPrompt(_prompt);
@@ -42,5 +44,5 @@ export function usePWAInstall() {
     return outcome === 'accepted';
   };
 
-  return { canInstall: !!installPrompt || isIOS, installPrompt, isIOS, isInstalled, handleInstall };
+  return { canInstall: !!installPrompt || isIOS || isFirefox, installPrompt, isIOS, isFirefox, isInstalled, handleInstall };
 }

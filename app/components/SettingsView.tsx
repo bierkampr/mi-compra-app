@@ -15,7 +15,8 @@ interface SettingsViewProps {
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt, onShowHelp }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
-  const { canInstall, isIOS, isInstalled, handleInstall } = usePWAInstall();
+  const { canInstall, isIOS, isFirefox, isInstalled, handleInstall } = usePWAInstall();
+  const [showInstallHint, setShowInstallHint] = React.useState(false);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -83,25 +84,36 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, db, setActiveTab, txt
         
         {/* Instalar APP */}
         {canInstall && !isInstalled && (
-          <button
-            onClick={isIOS ? undefined : handleInstall}
-            className="w-full flex items-center justify-between p-5 card-premium bg-brand-primary/8 hover:bg-brand-primary/15 transition-colors border-brand-primary/25"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-brand-primary/20 rounded-xl text-brand-primary">
-                <Smartphone size={20} />
+          <>
+            <button
+              onClick={isIOS || isFirefox ? () => setShowInstallHint(h => !h) : handleInstall}
+              className="w-full flex items-center justify-between p-5 card-premium bg-brand-primary/8 hover:bg-brand-primary/15 transition-colors border-brand-primary/25"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-brand-primary/20 rounded-xl text-brand-primary">
+                  <Smartphone size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-[11px] font-black uppercase text-white leading-tight">
+                    {txt('pwa.banner_title')}
+                  </p>
+                  <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">
+                    {isIOS ? txt('pwa.ios_hint') : isFirefox ? txt('pwa.firefox_hint') : txt('pwa.banner_desc')}
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-[11px] font-black uppercase text-white leading-tight">
-                  {txt('pwa.banner_title')}
-                </p>
-                <p className="text-[9px] font-bold text-brand-muted uppercase mt-0.5">
-                  {isIOS ? 'Compartir → Añadir a inicio' : txt('pwa.banner_desc')}
+              <ChevronLeft size={16} className="rotate-180 text-brand-primary/60" />
+            </button>
+            {showInstallHint && (isIOS || isFirefox) && (
+              <div className="card-glass rounded-2xl p-4 border-brand-primary/20 animate-in slide-in-from-top-2 duration-300">
+                <p className="text-[10px] font-bold text-white/70 leading-relaxed text-center">
+                  {isIOS
+                    ? `${txt('pwa.ios_step1_desc')} ${txt('pwa.ios_step3_desc')}`
+                    : `${txt('pwa.firefox_step1')} → ${txt('pwa.firefox_step2')}`}
                 </p>
               </div>
-            </div>
-            <ChevronLeft size={16} className="rotate-180 text-brand-primary/60" />
-          </button>
+            )}
+          </>
         )}
 
         {/* Exportar CSV */}

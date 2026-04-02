@@ -198,6 +198,12 @@
     "ios_step3_desc": "Busca y toca la opción «Añadir a la pantalla de inicio» en la lista de acciones del menú.",
     "ios_step4_title": "CONFIRMAR INSTALACIÓN",
     "ios_step4_desc": "Verifica que aparece «Abrir como app web» activado y toca el botón «Añadir» para completar la instalación.",
-    "ios_done": "¡LISTO, YA ESTÁ INSTALADO!"
+    "ios_done": "¡LISTO, YA ESTÁ INSTALADO!",
+    "ios_hint": "Compartir → Añadir a inicio",
+    "firefox_title": "INSTALAR EN FIREFOX",
+    "firefox_hint": "Menú → Instalar",
+    "firefox_step1": "Toca el menú del navegador (⋮ o ≡) en la esquina superior derecha.",
+    "firefox_step2": "Selecciona «Instalar» o «Añadir a la pantalla de inicio».",
+    "firefox_step3": "Confirma tocando «Añadir» en el diálogo que aparece."
   }
 }

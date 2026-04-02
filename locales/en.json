@@ -185,6 +185,12 @@
     "ios_step3_desc": "Find and tap the 'Add to Home Screen' option in the action menu list.",
     "ios_step4_title": "CONFIRM INSTALLATION",
     "ios_step4_desc": "Verify that 'Open as web app' is enabled and tap the 'Add' button to complete the installation.",
-    "ios_done": "DONE, APP INSTALLED!"
+    "ios_done": "DONE, APP INSTALLED!",
+    "ios_hint": "Share → Add to Home Screen",
+    "firefox_title": "INSTALL ON FIREFOX",
+    "firefox_hint": "Menu → Install",
+    "firefox_step1": "Tap the browser menu (⋮ or ≡) in the top right corner.",
+    "firefox_step2": "Select «Install» or «Add to Home Screen».",
+    "firefox_step3": "Confirm by tapping «Add» in the dialog that appears."
   }
 }
