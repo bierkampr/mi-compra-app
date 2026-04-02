@@ -4,6 +4,32 @@
 
 ---
 
+## [v3.1] — 2026-04-02 — Cross-Browser, Zoom Lock & PWA Universal
+
+**Fijado bloqueo de zoom absoluto (triple capa), homologación cross-browser y botón instalar universal.**
+
+### Zoom Lock
+- `layout.tsx`: viewport `user-scalable=no, maximum-scale=1.0`
+- `globals.css`: `touch-action: manipulation` + `-webkit-text-size-adjust: 100%` en `html, body`
+- `globals.css`: `-webkit-appearance: none; appearance: none` en `button, input, select, textarea`
+
+### Layout Fix
+- `.app-layout`: `min-h-screen` → `h-full`, eliminado `pb-44` (movido a scroll container como `pb-[200px]`)
+- `.app-layout`: `padding-top: env(safe-area-inset-top)` restaurado
+- `ScannerView.tsx`: `space-y-6` → `h-full flex flex-col gap-6` (sin scroll, ocupa pantalla completa)
+
+### PWA Install Universal
+- `usePWAInstall.ts`: `isFirefox` detectado, incluido en `canInstall`
+- `PWAInstallBanner.tsx`: modal Firefox de 3 pasos de texto
+- `SettingsView.tsx`: `onClick` corregido para iOS/Firefox (antes era `undefined`, ahora muestra hint inline)
+- `locales/es.json` + `locales/en.json`: 5 claves nuevas `pwa.firefox_*` + `pwa.ios_hint`
+
+### Documentación
+- `Docs_Actualizadas/agent-skills.md`: Skills 1-6 del agente IA documentadas con historial de decisiones
+- `INDEX.md`: entrada añadida para `agent-skills.md`
+
+---
+
 ## [v3.0] — 2026-04-02 — Auditoría Estructural
 
 **Auditoría completa del proyecto. Limpieza de raíz, scripts y documentación.**

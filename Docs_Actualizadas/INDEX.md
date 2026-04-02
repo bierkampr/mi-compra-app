@@ -24,6 +24,7 @@
 | Sistema i18n (español/inglés) | [ui/i18n.md](./ui/i18n.md) |
 | Scripts de desarrollo (qué hace cada uno) | [dev-tools/scripts.md](./dev-tools/scripts.md) |
 | Historial de cambios | [CHANGELOG.md](./CHANGELOG.md) |
+| **Reglas del Agente IA (Skills)** | [**agent-skills.md**](./agent-skills.md) |
 
 ---
 
