@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp aud.js scripts/dev-tools/generate-context.js)",
+      "Bash(cp auditor.js scripts/dev-tools/generate-digest.js)",
+      "Bash(cp generar_memoria.js scripts/dev-tools/generate-docs.js)",
+      "Bash(cp ia_sync.js scripts/git/ia-sync.js)",
+      "Bash(cp subir.js scripts/git/push.js)",
+      "Bash(mv design-preview.html scripts/design/design-preview.html)",
+      "Bash(mv design_framework.html scripts/design/design-framework.html)",
+      "Bash(mv design-system-report.md scripts/design/design-system-report.md)",
+      "Bash(rm -rf docs/ Auditoria_Proyecto_Consolidado/)",
+      "Bash(rm -f IA_INSTRUCTIONS.md)",
+      "Bash(ls *.md *.ts *.mjs *.js *.json)",
+      "Bash(node scripts/git/push.js)"
+    ]
+  }
+}

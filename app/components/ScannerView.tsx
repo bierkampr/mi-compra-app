@@ -33,7 +33,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
   };
 
   return (
-    <div className="space-y-6 py-4 animate-in slide-in-from-bottom-8 duration-500 no-scrollbar max-w-2xl mx-auto">
+    <div className="h-full flex flex-col gap-6 py-4 animate-in slide-in-from-bottom-8 duration-500 no-scrollbar max-w-2xl mx-auto">
       <div className="text-center px-1 lg:mb-6">
         <h2 className="heading-1 !text-3xl lg:!text-4xl uppercase font-black italic">{txt("scan.title")}</h2>
         <p className="text-[10px] font-bold text-brand-muted uppercase tracking-[0.3em]">{txt("scan.subtitle")}</p>

@@ -339,7 +339,7 @@ export default function Home() {
                 onShowHelp={() => setShowHelp(true)}
             />
 
-            <div className="flex-1 overflow-y-auto pt-4 no-scrollbar">
+            <div className="flex-1 overflow-y-auto pt-4 pb-[200px] no-scrollbar">
                 {activeTab === 'home' && !purchaseMode && (
                     <DashboardView 
                         stats={stats} 
