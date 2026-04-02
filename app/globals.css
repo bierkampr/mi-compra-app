@@ -40,7 +40,7 @@
   /* Estructura Principal */
   .app-layout {
     @apply max-w-md lg:max-w-6xl mx-auto h-full flex flex-col relative bg-transparent px-[5vw] lg:px-8 transition-all duration-300;
-    padding-top: env(safe-area-inset-top);
+    padding-top: max(env(safe-area-inset-top), 1.5rem);
   }
 
   /* SISTEMA DE TARJETAS UNIFICADO */

@@ -26,6 +26,13 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#0D0F1A" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            function blockPinch(e) { if (e.touches.length > 1) e.preventDefault(); }
+            document.addEventListener('touchstart', blockPinch, { passive: false });
+            document.addEventListener('touchmove',  blockPinch, { passive: false });
+          })();
+        `}} />
       </head>
       <body className={`${inter.className} h-full antialiased text-slate-200`}>
         {children}

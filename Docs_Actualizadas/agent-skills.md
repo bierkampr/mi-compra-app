@@ -51,13 +51,24 @@
 
 **Regla:** Todo código visual debe ser "Pixel-Perfect" y homologado para Webkit (Safari), Blink (Chrome) y Gecko (Firefox).
 
-**Ejecución de Zoom:** Está estrictamente PROHIBIDO permitir zoom. Estrategia activa (triple capa):
+**Ejecución de Zoom:** Está estrictamente PROHIBIDO permitir zoom. Estrategia activa (cuádruple capa):
 1. `<meta name="viewport" content="..., maximum-scale=1.0, user-scalable=no">` en `layout.tsx`
 2. `touch-action: manipulation` y `-webkit-text-size-adjust: 100%` en `html, body` en `globals.css`
 3. `font-size: 16px !important` en todos los `input, select, textarea` en `globals.css`
+4. **Interceptor JS de pellizco** en `layout.tsx` `<head>` (inline IIFE — capa crítica para Safari):
+```js
+(function() {
+  function blockPinch(e) { if (e.touches.length > 1) e.preventDefault(); }
+  document.addEventListener('touchstart', blockPinch, { passive: false });
+  document.addEventListener('touchmove',  blockPinch, { passive: false });
+})();
+```
+> `passive: false` es obligatorio — sin él, `preventDefault()` es ignorado por el browser.
+> Intercepta el gesto de dos dedos ANTES de que el motor lo procese como zoom.
 
 **Ejecución de Safe Areas:** Todo el layout principal DEBE respetar notches usando `env(safe-area-inset-*)`:
-- `padding-top: env(safe-area-inset-top)` → `.app-layout` en `globals.css`
+- `padding-top: max(env(safe-area-inset-top), 1.5rem)` → `.app-layout` en `globals.css`
+  - `max()` garantiza mínimo 24px en dispositivos sin notch. Sin este fallback, el contenido queda pegado al borde superior en Android sin cámara tipo isla.
 - `bottom: calc(...+ env(safe-area-inset-bottom))` → `.nav-bottom` en `globals.css`
 - `paddingTop: 'env(safe-area-inset-top)'` → `PWAInstallBanner.tsx` (banner fijo)
 
@@ -118,6 +129,14 @@ setIsFirefox(/Firefox/i.test(ua) && !(/iPhone|iPad|iPod/.test(ua)));
 ---
 
 ## Historial / Deprecated
+
+### [2026-04-02] Intento 2 — padding-top solo con env(safe-area-inset-top)
+
+`.app-layout` usaba `padding-top: env(safe-area-inset-top)`. Problema: en dispositivos Android sin notch, `env(safe-area-inset-top)` devuelve `0px`, dejando el contenido pegado al borde superior de la pantalla.
+
+**Reemplazado por:** `padding-top: max(env(safe-area-inset-top), 1.5rem)`. Con `max()`, el sistema elige el valor mayor: la altura real del notch (si existe) o 1.5rem de mínimo (si no hay notch). Funciona en iOS, Android y desktop sin condiciones.
+
+---
 
 ### [2026-04-02] Intento 1 — .app-layout con min-h-screen y padding fijo
 
