@@ -1,10 +1,16 @@
 /* --- ARCHIVO: lib/ai-client.ts --- */
 
 /**
- * v2.0: Se elimina la dependencia de OCR local.
- * Envía las imágenes capturadas directamente al pipeline distribuido del servidor.
+ * v3.0: Pipeline Gemini — usa el token OAuth2 del usuario para la IA.
+ * Ya no depende de API Keys del servidor.
+ * El token se envía como Bearer en el header Authorization.
  */
-export const analyzeReceipt = async (images: string[], mode: string, customPrompt: string) => {
+export const analyzeReceipt = async (
+  images: string[],
+  mode: string,
+  customPrompt: string,
+  userToken: string
+) => {
   try {
     if (mode === 'manual') {
       return { 
@@ -15,17 +21,24 @@ export const analyzeReceipt = async (images: string[], mode: string, customPromp
       };
     }
 
-    console.log("[V2.0] Enviando imágenes al Pipeline de Servidor...", images);
+    console.log("[v3.0] Enviando imágenes al Pipeline Gemini...", images.length, "imagen(es)");
     
     if (!images || !Array.isArray(images) || images.length === 0) {
       throw new Error(`No hay imágenes válidas. Recibido: ${JSON.stringify(images)}`);
     }
 
+    if (!userToken) {
+      throw new Error("AI_PERMISSION_DENIED: No tienes la IA activada. Activa el permiso de Google para escanear tickets.");
+    }
+
     const response = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify({
-            images: images, // Array de base64
+            images: images,
             prompt: customPrompt,
             mode: mode
         })
@@ -52,7 +65,7 @@ export const analyzeReceipt = async (images: string[], mode: string, customPromp
     };
 
   } catch (error: any) {
-    console.error("Error en analyzeReceipt v2.0:", error);
-    throw new Error(error.message || "No se pudo procesar el ticket con la nueva IA.");
+    console.error("Error en analyzeReceipt v3.0:", error);
+    throw new Error(error.message || "No se pudo procesar el ticket con Gemini.");
   }
 };

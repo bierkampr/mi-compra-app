@@ -1,143 +1,33 @@
 import { NextResponse } from "next/server";
 
-// ─── UTILIDADES ────────────────────────────────────────────────────────────────
+// ─── PIPELINE v3.0: GEMINI VIA TOKEN DEL USUARIO ──────────────────────────────
+// Reemplaza el pipeline Mistral+Groq por una ÚNICA llamada a Gemini 2.0 Flash.
+// La cuota de IA se consume de la cuenta personal del usuario, no de API Keys propias.
+// ────────────────────────────────────────────────────────────────────────────────
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * Devuelve todas las claves de Mistral disponibles en orden.
- * Busca: MISTRAL_API_KEY, MISTRAL_API_KEY_1, MISTRAL_API_KEY_2 ... _5
- */
-const getAllMistralKeys = (): string[] => {
-  const keys: string[] = [];
-  if (process.env.MISTRAL_API_KEY) keys.push(process.env.MISTRAL_API_KEY);
-  for (let i = 1; i <= 5; i++) {
-    const k = process.env[`MISTRAL_API_KEY_${i}`];
-    if (k) keys.push(k);
-  }
-  return keys;
-};
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 /**
- * Devuelve todas las claves de Groq disponibles en orden.
- * Busca: GROQ_API_KEY, GROQ_API_KEY_1, GROQ_API_KEY_2 ... _5
+ * Construye el prompt del sistema para la extracción de datos del ticket.
  */
-const getAllGroqKeys = (): string[] => {
-  const keys: string[] = [];
-  if (process.env.GROQ_API_KEY) keys.push(process.env.GROQ_API_KEY);
-  for (let i = 1; i <= 5; i++) {
-    const k = process.env[`GROQ_API_KEY_${i}`];
-    if (k) keys.push(k);
-  }
-  return keys;
-};
+const buildSystemPrompt = (userPrompt: string): string => {
+  return `Eres un experto extractor de datos de tickets de compra.
 
-// ─── PASO A: VISIÓN (Mistral Pixtral) ─────────────────────────────────────────
-
-/**
- * Envía UNA imagen a Mistral con UNA clave específica y devuelve la transcripción.
- * Incluye reintento automático en caso de rate limit (429).
- */
-const transcribeImageWithMistral = async (
-  apiKey: string,
-  imageBase64: string,
-  imageIndex: number,
-  totalImages: number
-): Promise<string> => {
-  const imageUrl = imageBase64.startsWith("data:")
-    ? imageBase64
-    : `data:image/jpeg;base64,${imageBase64}`;
-
-  const instruction =
-    totalImages > 1
-      ? `Eres un experto en lectura de tickets de compra. Esta es la PARTE ${imageIndex + 1} de ${totalImages} de un mismo ticket largo fotografiado en secciones. Transcribe LITERALMENTE todo el texto que veas: nombre del comercio, productos, cantidades, precios unitarios y subtotales. Mantén cada producto en su propia línea con su precio al lado. Es muy importante capturar el TOTAL si aparece.`
-      : `Eres un experto en lectura de tickets de compra. Transcribe LITERALMENTE todo el texto de este ticket: nombre del comercio, fecha, todos los productos con sus cantidades, precios unitarios, subtotales y el TOTAL final.`;
-
-  let attempt = 0;
-  while (attempt < 3) {
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "pixtral-12b-2409",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: instruction },
-              { type: "image_url", image_url: { url: imageUrl } },
-            ],
-          },
-        ],
-        temperature: 0,
-        max_tokens: 2000,
-      }),
-    });
-
-    // Rate limit: esperar y reintentar
-    if (response.status === 429) {
-      const waitMs = attempt === 0 ? 5000 : 12000;
-      console.warn(`[Mistral] Rate limit en imagen ${imageIndex + 1}. Reintentando en ${waitMs / 1000}s...`);
-      await sleep(waitMs);
-      attempt++;
-      continue;
-    }
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Mistral error ${response.status} en imagen ${imageIndex + 1}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error(`Mistral devolvió respuesta vacía para imagen ${imageIndex + 1}`);
-
-    return content;
-  }
-
-  throw new Error(`Mistral agotó reintentos para imagen ${imageIndex + 1}`);
-};
-
-// ─── PASO B: SÍNTESIS JSON (Groq) ─────────────────────────────────────────────
-
-/**
- * Recibe las transcripciones de texto de Mistral y las convierte en el JSON
- * estructurado que necesita la app. Intenta con todas las claves de Groq disponibles.
- */
-const synthesizeWithGroq = async (
-  transcriptions: string[],
-  userPrompt: string
-): Promise<any> => {
-  const groqKeys = getAllGroqKeys();
-  if (groqKeys.length === 0) {
-    throw new Error("No hay claves de Groq configuradas (GROQ_API_KEY o GROQ_API_KEY_1).");
-  }
-
-  const combinedText = transcriptions
-    .map((t, i) =>
-      transcriptions.length > 1
-        ? `--- PARTE ${i + 1} DEL TICKET ---\n${t}`
-        : t
-    )
-    .join("\n\n");
-
-  const systemPrompt = `Eres un sintetizador de datos de tickets de compra.
-Recibirás una o varias transcripciones literales del mismo ticket (puede estar dividido en partes).
-Tu tarea es unificar toda la información y devolver UN ÚNICO objeto JSON válido.
+INSTRUCCIONES:
+- Si recibes MÚLTIPLES IMÁGENES, son partes de un MISMO Y ÚNICO TICKET fotografiado en secciones.
+- Une toda la información en un solo objeto JSON.
+- NO DUPLIQUES productos si aparecen en el solapamiento de las fotos.
 
 REGLAS CRÍTICAS:
-- "comercio": nombre comercial conocido en STRING (ej: "MERCADONA"). Nunca el nombre legal largo.
-- "fecha": formato "DD/MM/AAAA". Si no aparece, usa la fecha de hoy.
-- "total": número final pagado. Si hay varias partes, NO sumes los totales parciales, busca el TOTAL FINAL del ticket.
-- "productos": array con TODOS los productos, sin duplicar los que aparezcan en solapamientos entre partes.
-- Cada producto: { "cantidad": número, "nombre_ticket": "texto literal del ticket", "nombre_base": "nombre limpio", "subtotal": número }
-- Si no hay "nombre_base" claro, usa el mismo valor que "nombre_ticket".
-- Responde SOLO con el JSON. Sin texto adicional, sin bloques de código, sin explicaciones.
+1. "comercio": STRING con el nombre comercial conocido (ej: "MERCADONA"), NO el nombre legal largo.
+2. "fecha": formato "DD/MM/AAAA". Si no aparece, usa la fecha de hoy.
+3. "total": el número FINAL pagado. Si hay varias partes, busca el TOTAL FINAL.
+4. "productos": array con TODOS los productos, sin duplicar.
+5. Cada producto: { "cantidad": number, "nombre_ticket": "texto literal", "nombre_base": "nombre limpio", "subtotal": number }
+6. Responde SOLO con el JSON. Sin texto adicional, sin bloques de código, sin explicaciones.
 
-FORMATO EXACTO:
+FORMATO JSON ESTRICTO:
 {
   "comercio": "string",
   "fecha": "DD/MM/AAAA",
@@ -145,65 +35,112 @@ FORMATO EXACTO:
   "productos": [
     { "cantidad": number, "nombre_ticket": "string", "nombre_base": "string", "subtotal": number }
   ]
-}`;
+}
 
-  for (let i = 0; i < groqKeys.length; i++) {
-    try {
-      console.log(`[Groq] Intentando síntesis con clave ${i + 1}...`);
+${userPrompt}`;
+};
 
-      let attempt = 0;
-      while (attempt < 2) {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${groqKeys[i]}`,
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: systemPrompt },
-              {
-                role: "user",
-                content: `${userPrompt}\n\nTRANSCRIPCIÓN(ES) DEL TICKET:\n${combinedText}`,
-              },
-            ],
-            temperature: 0,
-            response_format: { type: "json_object" },
-            max_tokens: 2000,
-          }),
-        });
+/**
+ * Llama a Gemini 2.0 Flash con el token OAuth2 del usuario.
+ * Envía las imágenes inline como parts multimodales.
+ */
+const analyzeWithGemini = async (
+  userToken: string,
+  images: string[],
+  userPrompt: string
+): Promise<any> => {
+  // Construir las "parts" multimodales: texto + imágenes
+  const parts: any[] = [
+    { text: buildSystemPrompt(userPrompt) },
+  ];
 
-        if (response.status === 429) {
-          console.warn(`[Groq] Rate limit con clave ${i + 1}. Esperando 5s...`);
-          await sleep(5000);
-          attempt++;
-          continue;
-        }
+  // Añadir cada imagen como inline_data
+  for (const img of images) {
+    // Extraer el tipo MIME y los datos base64
+    let mimeType = "image/jpeg";
+    let base64Data = img;
 
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error?.message || `Groq error ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (!content) throw new Error("Groq devolvió respuesta vacía.");
-
-        return JSON.parse(content);
+    if (img.startsWith("data:")) {
+      const match = img.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (match) {
+        mimeType = match[1];
+        base64Data = match[2];
+      } else {
+        // Fallback: quitar el prefijo data: genérico
+        base64Data = img.split(",")[1] || img;
       }
-
-      throw new Error(`Groq agotó reintentos con clave ${i + 1}`);
-    } catch (err: any) {
-      console.error(`[Groq] Fallo con clave ${i + 1}: ${err.message}`);
-      if (i === groqKeys.length - 1) {
-        throw new Error("Todas las claves de Groq han fallado en la síntesis.");
-      }
-      // Intentar con la siguiente clave
     }
+
+    parts.push({
+      inlineData: {
+        mimeType,
+        data: base64Data,
+      },
+    });
   }
 
-  throw new Error("Síntesis fallida: sin claves disponibles.");
+  const requestBody = {
+    contents: [
+      {
+        parts,
+      },
+    ],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 4096,
+      responseMimeType: "application/json",
+    },
+  };
+
+  console.log(`[Gemini] Enviando ${images.length} imagen(es) con token del usuario...`);
+
+  const response = await fetch(GEMINI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${userToken}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData?.error?.message || `Error ${response.status}`;
+
+    // Error específico: falta de permiso de IA
+    if (response.status === 403) {
+      throw new Error("AI_PERMISSION_DENIED: El usuario no ha concedido el permiso de IA generativa. Debe reautorizarse.");
+    }
+
+    // Error de cuota del usuario
+    if (response.status === 429) {
+      throw new Error("AI_RATE_LIMIT: Has alcanzado el límite de uso de IA. Inténtalo de nuevo en unos minutos.");
+    }
+
+    // Token expirado
+    if (response.status === 401) {
+      throw new Error("AI_TOKEN_EXPIRED: Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.");
+    }
+
+    throw new Error(`Gemini error: ${errorMessage}`);
+  }
+
+  const data = await response.json();
+
+  // Extraer el contenido de la respuesta de Gemini
+  const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!textContent) {
+    throw new Error("Gemini devolvió una respuesta vacía. Intenta con una foto más nítida.");
+  }
+
+  // Parsear el JSON de la respuesta
+  try {
+    return JSON.parse(textContent);
+  } catch {
+    // Intentar limpiar la respuesta si tiene markdown
+    const cleaned = textContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    return JSON.parse(cleaned);
+  }
 };
 
 // ─── HANDLER PRINCIPAL ────────────────────────────────────────────────────────
@@ -230,54 +167,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Máximo 3 imágenes por análisis." }, { status: 400 });
     }
 
-    const mistralKeys = getAllMistralKeys();
-    if (mistralKeys.length === 0) {
+    // Extraer el token del usuario del header Authorization
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "No hay claves de Mistral configuradas en el servidor." },
-        { status: 500 }
+        { error: "AI_PERMISSION_DENIED: No se recibió token de autorización. Activa la IA de Google para escanear tickets." },
+        { status: 401 }
       );
     }
+    const userToken = authHeader.replace("Bearer ", "");
 
-    // ── PASO A: cada imagen → su propia clave Mistral en paralelo ──────────────
-    console.log(`[Pipeline] Paso A: ${images.length} imagen(es) → ${mistralKeys.length} clave(s) Mistral disponibles.`);
+    // ── LLAMADA ÚNICA A GEMINI ──────────────────────────────────────────────────
+    console.log(`[Pipeline v3.0] ${images.length} imagen(es) → Gemini 2.0 Flash (token usuario)`);
 
-    const visionPromises = images.map(async (img: string, index: number) => {
-      // Asignar clave rotando: imagen 0 → clave 0, imagen 1 → clave 1, etc.
-      // Si hay más imágenes que claves, se reutiliza por módulo (ej: 3 imgs, 2 claves → 0,1,0)
-      const keyIndex = index % mistralKeys.length;
-      const apiKey = mistralKeys[keyIndex];
-
-      console.log(`[Mistral] Imagen ${index + 1} → clave ${keyIndex + 1}`);
-
-      // Si la clave asignada falla, intentar con las demás
-      const keysToTry = [
-        apiKey,
-        ...mistralKeys.filter((_, i) => i !== keyIndex),
-      ];
-
-      for (const key of keysToTry) {
-        try {
-          return await transcribeImageWithMistral(key, img, index, images.length);
-        } catch (err: any) {
-          console.warn(`[Mistral] Clave falló para imagen ${index + 1}: ${err.message}`);
-        }
-      }
-
-      throw new Error(`No se pudo transcribir la imagen ${index + 1} con ninguna clave de Mistral.`);
-    });
-
-    const transcriptions = await Promise.all(visionPromises);
-    console.log(`[Pipeline] Paso A completado. ${transcriptions.length} transcripción(es) obtenidas.`);
-
-    // Verificar que las transcripciones tienen contenido real
-    const validTranscriptions = transcriptions.filter(t => t && t.trim().length > 10);
-    if (validTranscriptions.length === 0) {
-      throw new Error("Mistral no pudo extraer texto legible de las imágenes. Asegúrate de que las fotos sean nítidas.");
-    }
-
-    // ── PASO B: Groq sintetiza todas las transcripciones en JSON final ──────────
-    console.log(`[Pipeline] Paso B: Groq sintetizando ${validTranscriptions.length} transcripción(es)...`);
-    const result = await synthesizeWithGroq(validTranscriptions, prompt);
+    const result = await analyzeWithGemini(userToken, images, prompt || "");
 
     // ── Normalización defensiva del resultado ───────────────────────────────────
     let finalComercio = "SIN NOMBRE";
@@ -286,7 +189,7 @@ export async function POST(req: Request) {
         finalComercio = result.comercio;
       } else if (typeof result.comercio === "object") {
         const found = Object.values(result.comercio).find(
-          v => typeof v === "string" && (v as string).length > 0
+          (v) => typeof v === "string" && (v as string).length > 0
         );
         if (found) finalComercio = found as string;
       }
@@ -304,11 +207,24 @@ export async function POST(req: Request) {
       })),
     };
 
-    console.log(`[Pipeline] Completado. Comercio: ${finalResponse.comercio}, Productos: ${finalResponse.productos.length}, Total: ${finalResponse.total}`);
+    console.log(
+      `[Pipeline v3.0] Completado. Comercio: ${finalResponse.comercio}, Productos: ${finalResponse.productos.length}, Total: ${finalResponse.total}`
+    );
     return NextResponse.json(finalResponse);
-
   } catch (error: any) {
-    console.error("─── ERROR CRÍTICO EN /api/analyze ───", error.message);
+    console.error("─── ERROR EN /api/analyze (v3.0) ───", error.message);
+
+    // Propagar errores específicos con su código
+    if (error.message.startsWith("AI_PERMISSION_DENIED")) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    if (error.message.startsWith("AI_RATE_LIMIT")) {
+      return NextResponse.json({ error: error.message }, { status: 429 });
+    }
+    if (error.message.startsWith("AI_TOKEN_EXPIRED")) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: error.message || "Error interno al procesar el ticket." },
       { status: 500 }

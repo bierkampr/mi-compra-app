@@ -9,6 +9,7 @@
 const REFRESH_TOKEN_KEY = 'gdrive_refresh_token_enc';
 const ACCESS_TOKEN_KEY = 'gdrive_access_token';
 const USER_NAME_KEY = 'user_name';
+const AI_PERMISSION_KEY = 'mi_compra_ai_granted';
 
 /**
  * Encodes a string to Base64 (simple obfuscation for localStorage).
@@ -64,8 +65,19 @@ export const tokenStore = {
         sessionStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(USER_NAME_KEY);
+        localStorage.removeItem(AI_PERMISSION_KEY);
         // Clean up legacy keys
         localStorage.removeItem('gdrive_token');
         localStorage.removeItem('gdrive_refresh_token');
+    },
+
+    setAiPermission: (granted: boolean) => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(AI_PERMISSION_KEY, granted ? 'true' : 'false');
+    },
+
+    isAiPermissionGranted: () => {
+        if (typeof window === 'undefined') return false;
+        return localStorage.getItem(AI_PERMISSION_KEY) === 'true';
     }
 };

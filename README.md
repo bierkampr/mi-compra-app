@@ -1,4 +1,4 @@
-# 🛒 Mi Compra App (Reality Audit v2.0)
+# 🛒 Mi Compra App (Reality Audit v3.0)
 
 **Mi Compra App** is a high-performance, offline-first Next.js application designed to manage shopping lists and track shopping expenses using advanced AI for receipt analysis.
 
@@ -43,7 +43,7 @@
     ```
 
 3.  **Configure Environment Variables**:
-    Create a `.env.local` file in the root directory (see [ENVIRONMENT.md](docs/ENVIRONMENT.md) for details).
+    Create a `.env.local` file in the root directory (see [ENVIRONMENT.md](Docs_Actualizadas/environment.md) for details).
 
 4.  **Run Development Server**:
     ```bash
@@ -63,17 +63,17 @@
 -   `lib/`: Core logic, API clients, and utility functions.
 -   `locales/`: Internationalization JSON files.
 -   `public/`: Static assets (icons, manifest).
--   `docs/`: Comprehensive project documentation.
+-   `Docs_Actualizadas/`: Comprehensive, modular project documentation.
 
 ## 📄 Documentation
 
-For detailed technical information, please refer to the `docs/` directory:
--   [Architecture Overview](docs/ARCHITECTURE.md)
--   [Authentication Flow](docs/AUTH.md)
--   [API Reference](docs/API.md)
--   [Database Schema](docs/DATABASE.md)
--   [Component Library](docs/COMPONENTS.md)
--   [Environment Variables](docs/ENVIRONMENT.md)
+For detailed technical information, please refer to the **[Master Index](Docs_Actualizadas/INDEX.md)**:
+-   [Architecture Overview](Docs_Actualizadas/architecture.md)
+-   [Authentication Flow](Docs_Actualizadas/lib/auth.md)
+-   [API Reference](Docs_Actualizadas/backend/api-routes.md)
+-   [Database Schema](Docs_Actualizadas/lib/database.md)
+-   [Component Library](Docs_Actualizadas/frontend/components.md)
+-   [Environment Variables](Docs_Actualizadas/environment.md)
 
 ---
 Developed with ❤️ for efficient shopping management.

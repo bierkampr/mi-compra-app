@@ -2,11 +2,12 @@
 
 ## 1. FLUJO DE TRABAJO OBLIGATORIO
 Eres una IA de desarrollo ejecutándose en un entorno local. Para ahorrar memoria y contexto, NO intentes adivinar cómo funciona el proyecto.
-Antes de escribir o modificar código, DEBES usar la herramienta `read_file` para leer el archivo de documentación correspondiente en la carpeta `/docs/`.
-- Para entender el proyecto: lee `/docs/overview.md`
-- Para estructura y componentes: lee `/docs/architecture.md` y `/docs/modules/components.md`
-- Para base de datos: lee `/docs/database.md`
-- Para backend e IA: lee `/docs/api.md` y `/docs/modules/ai.md`
+Antes de escribir o modificar código, DEBES usar la herramienta `read_file` para leer el archivo de documentación correspondiente en la carpeta `/Docs_Actualizadas/`.
+- Para entender el proyecto: lee `/Docs_Actualizadas/INDEX.md` y `architecture.md`
+- Para estructura y componentes: lee `frontend/components.md` y `ui/design-system.md`
+- Para base de datos: lee `lib/database.md` y `lib/data-sync.md`
+- Para backend e IA: lee `backend/api-routes.md` y `backend/ai-pipeline.md`
+- Para reglas del agente: lee `agent-skills.md`
 
 ## 2. ARQUITECTURA Y ESTADO (OFFLINE-FIRST)
 - Framework: Next.js 15 (App Router) + React 19.
