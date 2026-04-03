@@ -17,6 +17,7 @@
 | PWA y manifest | [frontend/pwa.md](./frontend/pwa.md) |
 | Las 3 rutas API del servidor | [backend/api-routes.md](./backend/api-routes.md) |
 | Pipeline de IA (Mistral + Groq) | [backend/ai-pipeline.md](./backend/ai-pipeline.md) |
+| **⚠️ Por qué NO usar OAuth de Google para IA** | [**backend/gemini-byoi-postmortem.md**](./backend/gemini-byoi-postmortem.md) |
 | Sincronización de datos (Drive + localStorage) | [lib/data-sync.md](./lib/data-sync.md) |
 | Autenticación OAuth2 Google | [lib/auth.md](./lib/auth.md) |
 | Esquema Supabase y modelo de datos | [lib/database.md](./lib/database.md) |

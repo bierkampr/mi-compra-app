@@ -4,6 +4,24 @@
 
 ---
 
+## [v3.2] — 2026-04-03 — Revert: Pipeline IA vuelve a Mistral+Groq
+
+**Intento de migración BYOI (Bring Your Own Identity) con Google OAuth2 + Gemini cancelado por inviabilidad técnica.**
+
+### Problema
+Se intentó usar el token OAuth2 del usuario para llamar a la Gemini API (`generativelanguage.googleapis.com`) y así eliminar el costo de API Keys propias. Esto resultó inviable porque:
+- El endpoint gratuito de Gemini **solo acepta API Keys**, no tokens OAuth de usuario
+- Los scopes OAuth para Gemini (`generative-language`, `generative-language.peruserquota`) no autorizan llamadas al endpoint de generación
+- El endpoint OAuth de Google AI es Vertex AI, que requiere billing activado
+
+### Decisión
+Revertir al pipeline original Mistral Pixtral + Groq LLaMA que funcionaba correctamente.
+
+### Documentación del error
+Ver [backend/gemini-byoi-postmortem.md](./backend/gemini-byoi-postmortem.md) para el análisis completo y lecciones aprendidas.
+
+---
+
 ## [v3.1] — 2026-04-02 — Cross-Browser, Zoom Lock & PWA Universal
 
 **Fijado bloqueo de zoom absoluto (triple capa), homologación cross-browser y botón instalar universal.**
