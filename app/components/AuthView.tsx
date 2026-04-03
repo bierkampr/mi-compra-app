@@ -32,7 +32,7 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
     // @ts-ignore
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: CLIENT_ID,
-      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/generative-language",
+      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/generative-language.peruserquota",
       ux_mode: 'popup',
       select_account: true,
       callback: async (response: any) => {
@@ -60,7 +60,7 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
               
               // 1.2 Verificar si el permiso de IA fue concedido
               const grantedScopes = res.scope || "";
-              const hasAI = grantedScopes.includes("generative-language");
+              const hasAI = grantedScopes.includes("generative-language.peruserquota");
               tokenStore.setAiPermission(hasAI);
               console.log(hasAI ? "🧠 IA activada por el usuario" : "⚠️ IA no activada — escáner bloqueado");
 

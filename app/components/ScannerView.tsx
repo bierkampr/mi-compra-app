@@ -142,7 +142,7 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
     // @ts-ignore
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: clientId,
-      scope: "https://www.googleapis.com/auth/generative-language",
+      scope: "https://www.googleapis.com/auth/generative-language.peruserquota",
       include_granted_scopes: true,
       ux_mode: 'popup',
       callback: async (response: any) => {
