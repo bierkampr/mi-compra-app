@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Camera, ShoppingCart, Store, Utensils, Pill, LayoutGrid, Edit3, X, Loader2,
-  AlertTriangle, Image as ImageIcon, Sparkles, Plus, Tag,
+  AlertTriangle, Image as ImageIcon, Sparkles, CheckCircle2, Plus, Tag,
   ChevronRight, ChevronLeft, Info, Trash2, Zap, Brain
 } from "lucide-react";
 import { compressImage } from "../../lib/utils";
@@ -104,7 +104,7 @@ const ScannerView: React.FC<ScannerViewProps> & { Capture: React.FC<any> } = ({ 
 };
 
 // --- SUB-COMPONENTE: CAPTURA OPTIMIZADA ---
-ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, setShowListDialog, showListDialog, onCancel, txt, activeTab }) => {
+ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, setShowListDialog, showListDialog, onCancel, txt, activeTab, clientId }) => {
   const [showCamera, setShowCamera] = useState(false);
   const [capturedStream, setCapturedStream] = useState<MediaStream | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
@@ -112,10 +112,67 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
   const [ocrProgress, setOcrProgress] = useState(0);
   const [isOcrRunning, setIsOcrRunning] = useState(false);
   const [lastImageSent, setLastImageSent] = useState<string | undefined>(undefined);
-  
+
+  // ESTADO DE IA
+  const [isAiGranted, setIsAiGranted] = useState<boolean>(true);
+  const [isRequestingAi, setIsRequestingAi] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Comprobar permiso de IA al montar
+  useEffect(() => {
+    import('@/lib/tokenStore').then(({ tokenStore }) => {
+      setIsAiGranted(tokenStore.isAiPermissionGranted());
+    });
+  }, []);
+
+  // Solicitar autorización incremental de IA
+  const requestAiPermission = () => {
+    setIsRequestingAi(true);
+
+    // @ts-ignore
+    if (!window.google) {
+      alert("El SDK de Google no está cargado.");
+      setIsRequestingAi(false);
+      return;
+    }
+
+    // @ts-ignore
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: clientId,
+      scope: "https://www.googleapis.com/auth/generative-language",
+      include_granted_scopes: true,
+      ux_mode: 'popup',
+      callback: async (response: any) => {
+        if (response.code) {
+          try {
+            const tokenRes = await fetch('/api/auth/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: response.code })
+            });
+            if (!tokenRes.ok) throw new Error("Fallo al actualizar tokens");
+            const res = await tokenRes.json();
+            if (res.access_token) {
+              import('@/lib/tokenStore').then(({ tokenStore }) => {
+                tokenStore.setTokens(res.access_token, res.refresh_token || tokenStore.getRefreshToken() || undefined);
+                tokenStore.setAiPermission(true);
+                setIsAiGranted(true);
+              });
+            }
+          } catch (err: any) {
+            alert("Error al activar la IA: " + err.message);
+          }
+        }
+        setIsRequestingAi(false);
+      },
+      error_callback: () => { setIsRequestingAi(false); }
+    });
+
+    client.requestCode();
+  };
 
   // --- LÓGICA DE CÁMARA ---
   useEffect(() => {
@@ -263,6 +320,43 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
               </div>
           </div>
 
+          {!isAiGranted ? (
+            <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
+               <div className="w-24 h-24 bg-brand-accent/10 rounded-[2rem] flex items-center justify-center text-brand-accent rotate-12 mb-8 shadow-[0_0_50px_-10px_rgba(251,191,36,0.5)]">
+                  <Brain size={48} strokeWidth={2} />
+               </div>
+               <h3 className="text-2xl font-black uppercase tracking-tighter italic text-center mb-4">
+                 Escáner <span className="text-brand-accent">Bloqueado</span>
+               </h3>
+               <div className="text-center space-y-4 max-w-sm mb-12">
+                 <p className="text-sm font-bold text-brand-muted leading-relaxed">
+                   Para analizar tus tickets automáticamente, necesitas activar la <span className="text-white">Inteligencia Artificial de Google</span>.
+                 </p>
+                 <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-4 text-left">
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-white"><CheckCircle2 className="text-brand-primary" size={16}/> Gratis e ilimitada</li>
+                      <li className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-white"><CheckCircle2 className="text-brand-primary" size={16}/> Segura y privada</li>
+                      <li className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-white"><CheckCircle2 className="text-brand-primary" size={16}/> Activación en 1 click</li>
+                    </ul>
+                 </div>
+               </div>
+               <button
+                 onClick={requestAiPermission}
+                 disabled={isRequestingAi}
+                 className="btn-primary w-full max-w-xs flex items-center justify-center gap-3 !py-5 text-sm"
+               >
+                 {isRequestingAi ? (
+                    <><Loader2 className="animate-spin" size={20} /> ACTIVANDO...</>
+                 ) : (
+                    <><Zap className="fill-current" size={20} /> ACTIVAR IA DE GOOGLE</>
+                 )}
+               </button>
+               <button onClick={onCancel} className="mt-6 text-[10px] font-bold text-brand-muted uppercase tracking-widest hover:text-white transition-colors p-2">
+                 CONTINUAR SIN IA
+               </button>
+            </div>
+          ) : (
+            <>
           <div className="grid grid-cols-1 gap-3 mb-8 animate-in fade-in slide-in-from-bottom-4">
               <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 flex items-start gap-4">
                   <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary shrink-0"><Info size={20}/></div>
@@ -339,6 +433,8 @@ ScannerView.Capture = ({ tempPhotos, setTempPhotos, loading, startAnalysis, db, 
                   )}
               </button>
           </div>
+            </>
+          )}
         </div>
       )}
 
