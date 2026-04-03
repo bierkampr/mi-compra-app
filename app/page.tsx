@@ -191,17 +191,8 @@ export default function Home() {
 
             const res = await analyzeReceipt(images, purchaseMode || 'super', promptFinal, user.token);
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
-        } catch (err: any) { 
-            // Manejar error de permisos de forma específica
-            if (err.message.includes("AI_PERMISSION_DENIED")) {
-                import('@/lib/tokenStore').then(({ tokenStore }) => {
-                    tokenStore.setAiPermission(false);
-                    // Forzar reactividad o redirigir
-                    alert(txt('auth.ai_permission_error') || "Permiso de IA denegado. Por favor recarga o vuelve a iniciar sesión.");
-                });
-            } else {
-                alert(err.message); 
-            }
+        } catch (err: any) {
+            alert(err.message);
             setPurchaseMode(null);
         } finally { 
             setLoading(false); 
@@ -406,8 +397,7 @@ export default function Home() {
                         showListDialog={showListDialog} 
                         onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
                         txt={txt}
-                        activeTab={activeTab} 
-                        clientId={CLIENT_ID}
+                        activeTab={activeTab}
                     />
                 </div>
             )}

@@ -32,7 +32,7 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
     // @ts-ignore
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: CLIENT_ID,
-      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/generative-language",
+      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile",
       ux_mode: 'popup',
       select_account: true,
       callback: async (response: any) => {
@@ -58,12 +58,6 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
               // 1.1 Guardar tokens (síncrono, antes del reload)
               tokenStore.setTokens(res.access_token, res.refresh_token);
               
-              // 1.2 Verificar si el permiso de IA fue concedido
-              const grantedScopes = res.scope || "";
-              const hasAI = grantedScopes.includes("generative-language");
-              tokenStore.setAiPermission(hasAI);
-              console.log(hasAI ? "🧠 IA activada por el usuario" : "⚠️ IA no activada — escáner bloqueado");
-
               // 2. Obtener información del perfil
               const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { 
                 headers: { Authorization: `Bearer ${res.access_token}` } 
