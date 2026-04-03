@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from 'react';
 import { ShoppingCart, Loader2 } from 'lucide-react';
-import { tokenStore } from '@/lib/tokenStore';
 
 interface AuthViewProps {
   CLIENT_ID: string;
@@ -32,10 +31,11 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
     // @ts-ignore
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: CLIENT_ID,
-      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/generative-language.peruserquota",
+      scope: "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile",
       ux_mode: 'popup',
-      select_account: true,
+      select_account: true, // Obliga a mostrar el selector de cuentas (más compatible)
       callback: async (response: any) => {
+        // Limpiamos el timer de seguridad al recibir respuesta
         clearTimeout(safetyTimer);
 
         if (response.code) {
@@ -54,16 +54,11 @@ const AuthView: React.FC<AuthViewProps> = ({ CLIENT_ID, txt }) => {
 
             if (res.access_token) {
               console.log("✅ Tokens obtenidos. Guardando sesión...");
+              localStorage.setItem('gdrive_token', res.access_token);
+              if (res.refresh_token) {
+                localStorage.setItem('gdrive_refresh_token', res.refresh_token);
+              }
               
-              // 1.1 Guardar tokens (síncrono, antes del reload)
-              tokenStore.setTokens(res.access_token, res.refresh_token);
-              
-              // 1.2 Verificar si el permiso de IA fue concedido
-              const grantedScopes = res.scope || "";
-              const hasAI = grantedScopes.includes("generative-language.peruserquota");
-              tokenStore.setAiPermission(hasAI);
-              console.log(hasAI ? "🧠 IA activada por el usuario" : "⚠️ IA no activada — escáner bloqueado");
-
               // 2. Obtener información del perfil
               const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { 
                 headers: { Authorization: `Bearer ${res.access_token}` } 

@@ -189,17 +189,10 @@ export default function Home() {
                 .replace('{{lista}}', listItems.join(", "))
                 .replace('{{fecha}}', new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US'));
 
-            const res = await analyzeReceipt(images, purchaseMode || 'super', promptFinal, user.token);
+            const res = await analyzeReceipt(images, purchaseMode || 'super', promptFinal);
             setPendingGasto({ ...res, tempImages: tempPhotos, usedList: useList });
-        } catch (err: any) {
-            if (err.message.includes("AI_PERMISSION_DENIED")) {
-                import('@/lib/tokenStore').then(({ tokenStore }) => {
-                    tokenStore.setAiPermission(false);
-                    alert("Permiso de IA denegado. Recarga la página y activa la IA de Google.");
-                });
-            } else {
-                alert(err.message);
-            }
+        } catch (err: any) { 
+            alert(err.message); 
             setPurchaseMode(null);
         } finally { 
             setLoading(false); 
@@ -404,8 +397,7 @@ export default function Home() {
                         showListDialog={showListDialog} 
                         onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
                         txt={txt}
-                        activeTab={activeTab}
-                        clientId={CLIENT_ID}
+                        activeTab={activeTab} 
                     />
                 </div>
             )}

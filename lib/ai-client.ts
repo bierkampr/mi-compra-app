@@ -1,16 +1,10 @@
 /* --- ARCHIVO: lib/ai-client.ts --- */
 
 /**
- * v3.0: Pipeline Gemini — usa el token OAuth2 del usuario para la IA.
- * Ya no depende de API Keys del servidor.
- * El token se envía como Bearer en el header Authorization.
+ * v2.0: Se elimina la dependencia de OCR local.
+ * Envía las imágenes capturadas directamente al pipeline distribuido del servidor.
  */
-export const analyzeReceipt = async (
-  images: string[],
-  mode: string,
-  customPrompt: string,
-  userToken: string
-) => {
+export const analyzeReceipt = async (images: string[], mode: string, customPrompt: string) => {
   try {
     if (mode === 'manual') {
       return { 
@@ -21,24 +15,17 @@ export const analyzeReceipt = async (
       };
     }
 
-    console.log("[v3.0] Enviando imágenes al Pipeline Gemini...", images.length, "imagen(es)");
+    console.log("[V2.0] Enviando imágenes al Pipeline de Servidor...", images);
     
     if (!images || !Array.isArray(images) || images.length === 0) {
       throw new Error(`No hay imágenes válidas. Recibido: ${JSON.stringify(images)}`);
     }
 
-    if (!userToken) {
-      throw new Error("AI_PERMISSION_DENIED: No tienes la IA activada. Activa el permiso de Google para escanear tickets.");
-    }
-
     const response = await fetch("/api/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${userToken}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            images: images,
+            images: images, // Array de base64
             prompt: customPrompt,
             mode: mode
         })
@@ -65,7 +52,7 @@ export const analyzeReceipt = async (
     };
 
   } catch (error: any) {
-    console.error("Error en analyzeReceipt v3.0:", error);
-    throw new Error(error.message || "No se pudo procesar el ticket con Gemini.");
+    console.error("Error en analyzeReceipt v2.0:", error);
+    throw new Error(error.message || "No se pudo procesar el ticket con la nueva IA.");
   }
 };
