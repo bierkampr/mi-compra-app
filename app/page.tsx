@@ -314,7 +314,16 @@ export default function Home() {
             return d >= first && d <= last;
         });
         
+        const prevFirst = new Date(y, m - 1, 1);
+        const prevLast  = new Date(y, m, 0);
+        const prevGastos = (db.gastos || []).filter(g => {
+            const [dd, mm2, yy] = g.fecha.split('/');
+            const d = new Date(+yy, +mm2 - 1, +dd);
+            return d >= prevFirst && d <= prevLast;
+        });
+
         const total = currentGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
+        const prevMonthTotal = prevGastos.reduce((acc, g) => acc + (Number(g.total) || 0), 0);
         
         const porComercio = currentGastos.reduce((acc: Record<string, number>, g) => { 
             const nombreLimpio = normalizeStoreName(g.comercio);
@@ -322,7 +331,7 @@ export default function Home() {
             return acc; 
         }, {});
         
-        return { total, currentGastos, porComercio };
+        return { total, currentGastos, porComercio, prevMonthTotal };
     }, [db.gastos, currentViewDate]);
 
     if (!user.loggedIn) return <AuthView CLIENT_ID={CLIENT_ID} txt={txt} />;
@@ -347,6 +356,8 @@ export default function Home() {
                         setCurrentViewDate={setCurrentViewDate} 
                         setSelectedGasto={setSelectedGasto} 
                         setActiveTab={setActiveTab} 
+                        db={db}
+                        updateAndSync={updateAndSync}
                         txt={txt}
                         lang={lang}
                     />
