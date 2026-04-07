@@ -27,7 +27,11 @@
     "cat_mini": "Tienda / Mini",
     "cat_dining": "Bar / Restaurante",
     "cat_health": "Farmacia",
-    "cat_others": "Otros"
+    "cat_others": "Otros",
+    "vs_last_month": "vs mes pasado",
+    "set_budget": "Definir Presupuesto",
+    "budget_label": "Presupuesto",
+    "warranties": "Garantías"
   },
   "list": {
     "placeholder": "¿QUÉ NECESITAS COMPRAR?",
@@ -111,7 +115,8 @@
     "price_up": "Sube",
     "price_down": "Baja",
     "price_same": "Igual",
-    "no_history": "Sin historial"
+    "no_history": "Sin historial",
+    "warranty_label": "Guardar como ticket con Garantía"
   },
   "detail": {
     "no_photos": "Sin fotos",

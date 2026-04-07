@@ -14,10 +14,11 @@ import {
   Minus,
   History,
   Calendar,
-  ListTodo
+  ListTodo,
+  ShieldCheck
 } from 'lucide-react';
 
-import { calculateMatchScore, groupRepeatedProducts } from '../../lib/utils';
+import { calculateMatchScore, groupRepeatedProducts, cleanString } from '../../lib/utils';
 import { searchLocalProducts, getBatchPriceHistory, getLastPrice } from '../../lib/products';
 
 interface ReviewModalProps {
@@ -99,7 +100,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
   const setAlias = async (productIndex: number, cleanName: string) => {
     const newProds = [...pendingGasto.productos];
-    const upperClean = cleanName.toUpperCase().trim();
+    const upperClean = cleanString(cleanName);
     newProds[productIndex].nombre_base = upperClean;
     
     setPendingGasto({ ...pendingGasto, productos: newProds });
@@ -112,9 +113,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const addManualItem = () => {
     if (!manualProd.name) return;
     const p = parseFloat(manualProd.price) || 0;
+    const cleanBase = cleanString(manualProd.name);
     const newProduct = { 
       nombre_ticket: manualProd.name.toUpperCase().trim(), 
-      nombre_base: manualProd.name.toUpperCase().trim(), 
+      nombre_base: cleanBase, 
       cantidad: manualProd.qty, 
       subtotal: p * manualProd.qty 
     };
@@ -211,6 +213,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 <input type="number" value={pendingGasto.total} onChange={e => setPendingGasto({...pendingGasto, total: e.target.value})} className="input-premium !text-center !text-brand-success !pr-4" />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-success/40 font-black text-xs">€</span>
             </div>
+          </div>
+          <div className="col-span-12 mt-2">
+              <button onClick={() => setPendingGasto({...pendingGasto, hasWarranty: !pendingGasto.hasWarranty})} className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${pendingGasto.hasWarranty ? 'bg-brand-accent/10 border-brand-accent/30' : 'bg-white/[0.02] border-white/5'}`}>
+                  <div className="flex items-center gap-3">
+                      <ShieldCheck size={18} className={pendingGasto.hasWarranty ? 'text-brand-accent' : 'text-brand-muted/40'} />
+                      <span className={`text-[11px] font-black uppercase tracking-widest ${pendingGasto.hasWarranty ? 'text-brand-accent' : 'text-brand-muted'}`}>{txt('review.warranty_label')}</span>
+                  </div>
+                  <div className={`w-5 h-5 rounded flex items-center justify-center border ${pendingGasto.hasWarranty ? 'bg-brand-accent border-brand-accent' : 'border-white/20'}`}>{pendingGasto.hasWarranty && <Check size={12} className="text-white" />}</div>
+              </button>
           </div>
         </div>
 

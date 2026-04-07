@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { PriceCache } from '../../lib/gdrive';
 import ConfirmModal from './ConfirmModal';
 import HelpTooltip from './HelpTooltip';
+import { cleanString } from '../../lib/utils';
 
 interface ShoppingListViewProps {
   db: { lista: any[] };
@@ -45,7 +46,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   }, []);
 
   const handleSearch = async (val: string) => {
-    const upperVal = val.toUpperCase();
+    const upperVal = cleanString(val);
     setNewItemName(upperVal);
 
     if (val.length > 1) {
@@ -54,8 +55,8 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
         const res = await searchLocalProducts(upperVal);
         const sorted = [...res].sort((a, b) => a.nombre_base.length - b.nombre_base.length);
         const uniqueRes = Array.from(new Map(sorted.map(item => {
-            const fuzzyKey = item.nombre_base.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N");
-            return [fuzzyKey, item];
+            const fuzzyKey = cleanString(item.nombre_base);
+            return [fuzzyKey, { ...item, nombre_base: fuzzyKey }];
         })).values());
         setSuggestions(uniqueRes);
       } catch (e) {
@@ -69,7 +70,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
   };
 
   const addToList = async (name?: string, precio?: number | null, comercio?: string | null) => {
-    const val = (name || newItemName).toUpperCase().trim();
+    const val = cleanString(name || newItemName);
     if (!val) return;
 
     const newItem = {
@@ -91,11 +92,9 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     try {
         const esNombreLimpio = val.length < 30 && !/[0-9]{3,}/.test(val);
         if (esNombreLimpio) {
-            const fuzzyVal = val.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N");
             const { data: existentes } = await supabase.from('productos').select('id, nombre_base');
             const existeFuzzy = existentes?.some(p => {
-                const pFuzzy = p.nombre_base.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N");
-                return pFuzzy === fuzzyVal;
+                return cleanString(p.nombre_base) === val;
             });
             if (!existeFuzzy) {
                 await supabase.from('productos').insert([{ nombre_base: val, categoria: 'OTROS' }]);
@@ -143,7 +142,9 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
     });
   };
 
-  const pendingItems = db.lista.filter(li => !li.confirmed);
+  const pendingItems = db.lista
+    .filter(li => !li.confirmed)
+    .sort((a, b) => (a.checked === b.checked ? 0 : a.checked ? 1 : -1));
   const boughtItems = db.lista.filter(li => li.confirmed);
 
   return (

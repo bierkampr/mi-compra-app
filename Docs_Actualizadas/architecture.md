@@ -77,6 +77,7 @@ interface AppDB {
   gastos: Gasto[];       // Historial de compras
   lista: ListItem[];     // Lista de la compra actual
   customCategories: string[];
+  presupuestoMensual?: number;
 }
 ```
 

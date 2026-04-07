@@ -12,6 +12,18 @@ export const normalizeText = (text: string): string => {
 };
 
 /**
+ * Limpia texto para IDs visuales y de BD: Mayúsculas y sin acentos.
+ */
+export const cleanString = (text: string): string => {
+  if (!text) return "";
+  return text
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+};
+
+/**
  * Normaliza nombres de comercios para fusionarlos.
  */
 export const normalizeStoreName = (name: string): string => {

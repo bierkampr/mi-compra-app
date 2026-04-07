@@ -4,6 +4,32 @@
 
 ---
 
+## [v3.3] — 2026-04-04 — Ejecución de Fases (Insights, Presupuestos y Garantías)
+
+**Implementación P.E.S. Automática de Mejoras Financieras.**
+
+### 1. Insights Financieros (Comparativa Mes a Mes)
+- Implementada lógica exacta por día en `app/page.tsx` para una comparación justa (`prevMonthTotal`).
+- UI: Píldora de crecimiento/ahorro dinámico bajo el saldo total del mes.
+
+### 2. Sistema de Presupuestos
+- Ampliado `AppDB` con `presupuestoMensual`.
+- Integrada barra de progreso reactiva (verde < 75%, naranja < 90%, roja > 90%).
+- Formulario `inline` no invasivo en el Dashboard.
+
+### 3. Gestor de Garantías
+- Ampliado `Gasto` con `hasWarranty`.
+- Nuevo toggle selector prominente en `ReviewModal.tsx` al guardar tickets.
+- Filtro superior en la lista de registros del `DashboardView.tsx` para aislar tickets importantes.
+
+### 4. Core UX y Normalización
+**Resolución de fricciones del día a día (Acentos y Orden de la Lista)**
+- Implementada función `cleanString` para remover acentos de las vocales respetando la "Ñ".
+- El buscador de la lista de compras ahora filtra, normaliza y guarda los productos sin acentos, unificando historiales (ej. "JABÓN" y "JABON" ahora comparten el mismo ID).
+- La lista de compras ahora envía automáticamente los ítems tachados (`checked: true`) al fondo de la lista de pendientes, manteniendo arriba lo que falta por comprar.
+
+---
+
 ## [v3.2] — 2026-04-03 — Revert: Pipeline IA vuelve a Mistral+Groq
 
 **Intento de migración BYOI (Bring Your Own Identity) con Google OAuth2 + Gemini cancelado por inviabilidad técnica.**

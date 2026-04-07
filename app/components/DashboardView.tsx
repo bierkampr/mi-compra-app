@@ -11,7 +11,10 @@ import {
   LayoutGrid,
   ArrowUpRight,
   Tag,
-  PieChart as PieIcon
+  PieChart as PieIcon,
+  TrendingDown,
+  ShieldAlert,
+  Plus
 } from 'lucide-react';
 import HelpTooltip from './HelpTooltip';
 
@@ -20,11 +23,14 @@ interface DashboardViewProps {
     total: number;
     currentGastos: any[];
     porComercio: Record<string, number>;
+    prevMonthTotal: number;
   };
   currentViewDate: Date;
   setCurrentViewDate: (date: Date) => void;
   setSelectedGasto: (gasto: any) => void;
   setActiveTab: (tab: string) => void;
+  db: any;
+  updateAndSync: (newDb: any) => void;
   txt: (key: string) => string;
   lang: string;
 }
@@ -35,13 +41,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   setCurrentViewDate, 
   setSelectedGasto, 
   setActiveTab, 
+  db,
+  updateAndSync,
   txt, 
   lang 
 }) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showWarrantiesOnly, setShowWarrantiesOnly] = useState(false);
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
 
   const changeMonth = (offset: number) => {
     setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + offset, 1));
+  };
+
+  const saveBudget = () => {
+    const val = parseFloat(budgetInput);
+    if (!isNaN(val)) {
+      updateAndSync({ ...db, presupuestoMensual: val });
+    }
+    setIsEditingBudget(false);
   };
 
   const isCurrentMonth = currentViewDate.getMonth() === new Date().getMonth() && 
@@ -113,6 +132,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     );
   };
 
+  // Insights & Budget Math
+  const diff = stats.total - stats.prevMonthTotal;
+  const diffPercent = stats.prevMonthTotal > 0 ? (Math.abs(diff) / stats.prevMonthTotal) * 100 : 0;
+  const isBetter = diff <= 0;
+  
+  const budget = db.presupuestoMensual || 0;
+  const budgetPercent = budget > 0 ? Math.min((stats.total / budget) * 100, 100) : 0;
+  const barColor = budgetPercent < 75 ? 'bg-brand-success' : budgetPercent < 90 ? 'bg-orange-400' : 'bg-brand-danger';
+
   return (
     <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-10 lg:items-start animate-in fade-in duration-700 no-scrollbar">
       
@@ -155,16 +183,41 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </h2>
 
             {!showBreakdown && (
-              <div className="flex items-center gap-3 mt-10 animate-in fade-in duration-500">
-                <div className="px-3 py-1.5 bg-white/10 rounded-full border border-white/5">
-                  <span className="text-[9px] font-black uppercase tracking-tighter text-white">
-                    {stats.currentGastos.length} {txt('home.records')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 ml-auto text-[9px] font-black uppercase tracking-widest text-brand-accent lg:hidden">
-                  <PieIcon size={12} />
-                  {txt('home.analysis')}
-                </div>
+              <div className="mt-6 space-y-4 animate-in fade-in duration-500">
+                  {stats.prevMonthTotal > 0 && (
+                      <div className="flex items-center gap-2">
+                          <div className={`px-2.5 py-1 rounded-lg flex items-center gap-1 border ${isBetter ? 'bg-brand-success/10 text-brand-success border-brand-success/20' : 'bg-brand-danger/10 text-brand-danger border-brand-danger/20'}`}>
+                              {isBetter ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                              <span className="text-[10px] font-black">{diffPercent.toFixed(1)}%</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-white/50 uppercase">{txt('home.vs_last_month')}</span>
+                      </div>
+                  )}
+                  
+                  <div className="pt-3 border-t border-white/10">
+                      {budget > 0 ? (
+                          <div className="space-y-2">
+                              <div className="flex justify-between items-end">
+                                  <span className="text-[9px] font-black uppercase text-white/50">{txt('home.budget_label')}: {budget}€</span>
+                                  <button onClick={(e) => { e.stopPropagation(); setIsEditingBudget(true); }} className="text-[9px] font-bold text-brand-accent/70 hover:text-brand-accent relative z-20">EDITAR</button>
+                              </div>
+                              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                                  <div className={`h-full ${barColor} transition-all duration-700`} style={{ width: `${budgetPercent}%` }} />
+                              </div>
+                          </div>
+                      ) : (
+                          <button onClick={(e) => { e.stopPropagation(); setIsEditingBudget(true); }} className="text-[9px] font-black uppercase text-brand-accent/70 hover:text-brand-accent flex items-center gap-1 relative z-20">
+                              <Plus size={12} /> {txt('home.set_budget')}
+                          </button>
+                      )}
+
+                      {isEditingBudget && (
+                          <div className="flex gap-2 mt-3 relative z-20" onClick={e => e.stopPropagation()}>
+                              <input autoFocus type="number" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)} placeholder="Ej. 400" className="input-premium !py-2 !px-3 !text-xs w-24" />
+                              <button onClick={saveBudget} className="btn-primary !py-2 !px-4 !text-[10px] w-auto">OK</button>
+                          </div>
+                      )}
+                  </div>
               </div>
             )}
           </div>
@@ -202,6 +255,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               align="left"
             />
           </div>
+          <button onClick={() => setShowWarrantiesOnly(!showWarrantiesOnly)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase transition-all ${showWarrantiesOnly ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent' : 'bg-white/5 border-white/10 text-brand-muted hover:text-white'}`}>
+             <ShieldAlert size={12} /> {txt('home.warranties')}
+          </button>
         </div>
         
         <div className="space-y-3">
@@ -221,8 +277,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                </div>
             </div>
           ) : (
-            stats.currentGastos.length > 0 ? (
-              stats.currentGastos.map((g, i) => {
+            (showWarrantiesOnly ? stats.currentGastos.filter(g => g.hasWarranty) : stats.currentGastos).length > 0 ? (
+              (showWarrantiesOnly ? stats.currentGastos.filter(g => g.hasWarranty) : stats.currentGastos).map((g, i) => {
                 const styles = getCategoryStyles(g.category);
                 return (
                   <button key={i} onClick={() => setSelectedGasto(g)} className="row-clickable">
