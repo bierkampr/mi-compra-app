@@ -41,7 +41,8 @@ CREATE POLICY "anon_select" ON scan_logs
   FOR SELECT TO anon USING (true);
 
 -- ─── VISTA RÁPIDA DE ESTADO (opcional, útil en el dashboard) ─────────────────
-CREATE OR REPLACE VIEW scan_stats AS
+-- SECURITY INVOKER: la vista respeta los permisos del usuario que la consulta (no del creador)
+CREATE OR REPLACE VIEW scan_stats WITH (security_invoker = true) AS
 SELECT
   date_trunc('day', created_at) AS dia,
   COUNT(*)                       AS total_scans,
