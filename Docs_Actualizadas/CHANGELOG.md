@@ -4,6 +4,41 @@
 
 ---
 
+## [v3.4] — 2026-04-07 — Sistema de Logging IA + Ruleta Multi-Plataforma + Limpieza de Seguridad
+
+### 1. Sistema de Logs de Escaneo → Supabase
+- Creado `supabase/scan_logs.sql`: tabla `scan_logs` con campos de plataforma, rotación, ticket, duración y resultado. Incluye índices, RLS (anon insert/select) y vista `scan_stats` (agrupada por día).
+- Creado `lib/scan-logger.ts`: función `logScan()` fire-and-forget. Lee `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`; si no están configuradas, omite el log sin romper el pipeline.
+- Modificado `app/api/analyze/route.ts`: llama `void logScan({...})` al finalizar con éxito y también en el bloque de error, con todos los metadatos del pipeline.
+
+### 2. Ruleta de Visión Multi-Plataforma con Metadata
+- Modificado `lib/vision-roulette.ts`: la función `transcribeImagesWithRoulette` ya no devuelve solo `string[]` sino `RouletteResult { transcriptions, meta }`.
+- Nuevo tipo `RouletteMeta`: `platformsUsed`, `modelsUsed`, `blacklistedSlots`, `rotationCount`, `totalSlots`.
+- Plataformas activas validadas: **Groq** (Llama 4 Scout 17B), **Mistral** (Pixtral Large), **NVIDIA NIM** (Nemotron Nano 12B VL), **Scaleway** (Pixtral 12B).
+- Eliminadas plataformas no funcionales: OpenRouter (timeout), GitHub GPT-4.1 (subtotales incorrectos), Cloudflare, TogetherAI, Moondream, LLM7, Fireworks.
+
+### 3. Limpieza de Secretos (GitHub Push Protection)
+- Eliminadas todas las API keys hardcodeadas de `app/api/test-vision/route.ts`, `docs/VISION_AI_UPGRADE.md` y `TEST_VISION_TECHNICAL_REPORT.md`.
+- Sustituidas por `process.env.MISTRAL_API_KEY_1`, `process.env.SCALEWAY_API_KEY_1`, `process.env.NVIDIA_API_KEY_1`, etc.
+
+### 4. App de Pruebas excluida del repositorio
+- Añadido al `.gitignore`: `app/api/test-vision/`, `app/test-vision/`, `vision-test-*.txt`, `varaibles.txt`, `AI_MODELOS_VISION.md`, `TEST_VISION_TECHNICAL_REPORT.md`, `ia-disponibles.txt`.
+- Archivos eliminados del repositorio remoto (`git rm --cached`) — permanecen solo en local.
+
+### 5. Bugfix crítico: crash al iniciar la app
+- **Causa**: `DashboardView` usaba `db.presupuestoMensual` y `stats.prevMonthTotal` pero `app/page.tsx` no pasaba `db`/`updateAndSync` como props ni calculaba `prevMonthTotal` en el `useMemo`.
+- **Fix** en `app/page.tsx`: añadidos `db={db}` y `updateAndSync={updateAndSync}` al render de `DashboardView`, y añadido cálculo de `prevMonthTotal` a `stats`.
+
+### 6. Seguridad Supabase Advisor
+- Actualizado `supabase/scan_logs.sql`: vista `scan_stats` creada con `WITH (security_invoker = true)` para eliminar el warning "Security Definer View".
+- Para instalaciones existentes: ejecutar `ALTER VIEW scan_stats SET (security_invoker = true);` en el SQL Editor.
+- El warning "RLS Policy Always True" en `anon_insert` es intencional (logging anónimo del servidor).
+
+### Pendiente del usuario
+- Añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en **Vercel → Settings → Environment Variables** y hacer Redeploy para activar el logger en producción.
+
+---
+
 ## [v3.3] — 2026-04-04 — Ejecución de Fases (Insights, Presupuestos y Garantías)
 
 **Implementación P.E.S. Automática de Mejoras Financieras.**
