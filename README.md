@@ -1,4 +1,6 @@
-# 🛒 Mi Compra App (Reality Audit v3.0)
+# 🛒 Mi Compra App
+
+Deploy trigger: 2026-04-24 (Reality Audit v3.0)
 
 **Mi Compra App** is a high-performance, offline-first Next.js application designed to manage shopping lists and track shopping expenses using advanced AI for receipt analysis.
 
