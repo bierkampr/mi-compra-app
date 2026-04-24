@@ -247,10 +247,10 @@ export default function Home() {
 
             const updatedL = db.lista.map(li => {
                 if (!finalGasto.usedList) return li;
-                const matched = finalGasto.productos?.some((p: any) => 
+                const matchedProduct = finalGasto.productos?.find((p: any) => 
                     (p.nombre_base || "").toUpperCase() === li.name.toUpperCase()
                 );
-                return matched ? { ...li, confirmed: true, checked: true } : li;
+                return matchedProduct ? { ...li, confirmed: true, checked: true, nombre_ticket: matchedProduct.nombre_ticket, precio_actual: Number(matchedProduct.subtotal) / Number(matchedProduct.cantidad) } : li;
             });
 
             const record: Gasto = { 
@@ -422,6 +422,7 @@ export default function Home() {
                         onCancel={() => resetFlow(activeTab === 'list' ? 'list' : 'home')} 
                         loading={loading} 
                         db={db} 
+                        priceCache={priceCache}
                         txt={txt} 
                     />
                 </div>

@@ -1,7 +1,8 @@
 # Pipeline de Inteligencia Artificial
 
-> Fuente: `app/api/analyze/route.ts` (auditado 2026-04-02).
+> Fuente: `app/api/analyze/route.ts` (auditado 2026-04-24).
 > Para la función cliente que llama a este endpoint, ver `lib/ai-client.ts`.
+> Para el sistema de ruleta multi-plataforma, ver `lib/vision-roulette.ts`.
 
 ---
 
@@ -12,28 +13,40 @@ Elimina la necesidad de OCR local, que falla con cámaras de baja calidad y layo
 
 ---
 
-## Paso A — Vision (Mistral Pixtral)
+## Paso A — Vision (Ruleta Multi-Plataforma)
 
-**Modelo:** `pixtral-12b-2409`
-**API:** `https://api.mistral.ai/v1/chat/completions`
+**Implementación:** `lib/vision-roulette.ts` (`transcribeImagesWithRoulette`)
+**Arquitectura:** Ruleta de rotación automática entre múltiples proveedores de visión
+
+### Plataformas Soportadas
+
+| Plataforma | Modelo | API Key Prefix |
+|---|---|---|
+| GROQ_VISION | `meta-llama/llama-4-scout-17b-16e-instruct` | `GROQ_VISION_API_KEY*` |
+| MISTRAL | `pixtral-large-latest` | `MISTRAL_API_KEY*` |
+| NVIDIA | `nvidia/nemotron-nano-12b-v2-vl` | `NVIDIA_API_KEY*` |
+| SCALEWAY | `pixtral-12b-2409` | `SCALEWAY_API_KEY*` |
 
 ### Que hace
-Recibe una imagen en Base64 y la transcribe literalmente.
-Si el ticket es largo (hasta 3 partes), cada imagen se procesa en paralelo con `Promise.all`.
+Recibe 1-3 imágenes en Base64 y las transcribe literalmente.
+Cada imagen se procesa en paralelo con `Promise.all`.
+El sistema selecciona aleatoriamente un slot (plataforma + key) para cada imagen.
 
-### Estrategia de Rotacion de Claves
-- Imagen 0 → `MISTRAL_API_KEY` (o `MISTRAL_API_KEY_1`)
-- Imagen 1 → `MISTRAL_API_KEY_1` (o siguiente disponible)
-- Imagen 2 → `MISTRAL_API_KEY_2` (o siguiente disponible)
-- Si una clave falla, automáticamente intenta con las demás.
-
-### Rate Limit (429)
-- Reintento automático: espera 5s en el primer intento, 12s en el segundo.
-- Máximo 3 reintentos por imagen.
+### Estrategia de Rotación
+1. **Auto-descubrimiento:** Busca todas las API keys configuradas en Vercel:
+   - `{PREFIX}_API_KEY` (base)
+   - `{PREFIX}_API_KEY_1` ... `_9` (rotación)
+2. **Selección aleatoria:** Cada imagen pick un slot aleatorio de los disponibles
+3. **Blacklist automático:** Si un slot falla (429, 500+, timeout), se marca como blacklist y se vuelve a girar
+4. **Reintentos:** Sigue girando hasta obtener resultado o agotar todos los slots
 
 ### Prompt por Modo
-- **Ticket único:** "Transcribe LITERALMENTE todo el texto, nombre del comercio, fecha, productos, totales."
-- **Ticket en partes:** "Esta es la PARTE X de N. Transcribe LITERALMENTE..." (instrucción de continuidad).
+- **Ticket único:** "Analiza este ticket... devuelve JSON con comercio, fecha, total, productos"
+- **Ticket en partes:** "Esta es la PARTE X de N de un ticket... extrae productos visibles en esta parte"
+
+### Timeout y Rate Limit
+- Timeout por imagen: 30 segundos (configurable)
+- Rate limit (429): blacklist inmediato, no reintentos con espera (ruleta rápida)
 
 ---
 

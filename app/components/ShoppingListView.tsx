@@ -53,7 +53,32 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
       setIsSearching(true);
       try {
         const res = await searchLocalProducts(upperVal);
-        const sorted = [...res].sort((a, b) => a.nombre_base.length - b.nombre_base.length);
+        const listNames = new Set(db.lista.map(l => l.name.toUpperCase()));
+        
+        const sorted = [...res].sort((a, b) => {
+          const aUpper = a.nombre_base.toUpperCase();
+          const bUpper = b.nombre_base.toUpperCase();
+          const aStarts = aUpper.startsWith(upperVal);
+          const bStarts = bUpper.startsWith(upperVal);
+          const aInList = listNames.has(aUpper);
+          const bInList = listNames.has(bUpper);
+          
+          // Prioridad 1: En lista y comienza con búsqueda
+          if (aInList && aStarts && !(bInList && bStarts)) return -1;
+          if (!(aInList && aStarts) && (bInList && bStarts)) return 1;
+          
+          // Prioridad 2: Comienza con búsqueda (independientemente de lista)
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          
+          // Prioridad 3: En lista
+          if (aInList && !bInList) return -1;
+          if (!aInList && bInList) return 1;
+          
+          // Prioridad 4: Longitud (más corto primero)
+          return a.nombre_base.length - b.nombre_base.length;
+        });
+        
         const uniqueRes = Array.from(new Map(sorted.map(item => {
             const fuzzyKey = cleanString(item.nombre_base);
             return [fuzzyKey, { ...item, nombre_base: fuzzyKey }];
@@ -268,9 +293,9 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
                       const priceInfo = item.ultimo_precio != null
                         ? { precio: Number(item.ultimo_precio), comercio: item.ultimo_comercio ?? null }
                         : (priceCache[item.name] ?? null);
-                      return priceInfo?.precio != null && !item.checked ? (
+                      return priceInfo?.precio != null ? (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[9px] font-black text-brand-success">{Number(priceInfo.precio).toFixed(2)}€</span>
+                          <span className={`text-[9px] font-black ${item.checked ? 'text-brand-muted/60' : 'text-brand-success'}`}>{Number(priceInfo.precio).toFixed(2)}€</span>
                           {priceInfo.comercio && (
                             <>
                               <span className="text-brand-muted/30 text-[8px]">·</span>
@@ -306,9 +331,30 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ db, updateAndSync, 
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             {boughtItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-brand-success/[0.02] border border-brand-success/10 animate-in fade-in">
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-success/40" />
-                <span className="text-[10px] font-black uppercase tracking-tight text-brand-muted/60 truncate">{item.name}</span>
+              <div key={i} className="flex flex-col gap-1.5 p-3 rounded-2xl bg-brand-success/[0.02] border border-brand-success/10 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-success/40" />
+                  <span className="text-[10px] font-black uppercase tracking-tight text-brand-muted/60 truncate">{item.nombre_ticket || item.name}</span>
+                </div>
+                {(() => {
+                  const currentPrice = item.precio_actual;
+                  const oldPrice = item.ultimo_precio ?? (priceCache[item.name]?.precio);
+                  if (!currentPrice || !oldPrice) return null;
+                  
+                  const diff = currentPrice - oldPrice;
+                  const threshold = 0.01;
+                  
+                  return (
+                    <div className="flex items-center gap-1.5 pl-3.5">
+                      <span className="text-[8px] font-black text-brand-muted/40">{Number(currentPrice).toFixed(2)}€</span>
+                      {diff > threshold ? (
+                        <span className="text-[7px] font-bold text-brand-danger uppercase">+{(Number(diff).toFixed(2))}€</span>
+                      ) : diff < -threshold ? (
+                        <span className="text-[7px] font-bold text-brand-success uppercase">{(Number(diff).toFixed(2))}€</span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

@@ -1,6 +1,6 @@
 # INDICE MAESTRO — Mi Compra App
 
-> Versión: 3.0 | Auditado: 2026-04-02
+> Versión: 3.1 | Auditado: 2026-04-24
 > **Este archivo es el punto de entrada para toda IA o desarrollador.**
 > Antes de modificar cualquier cosa, consulta el módulo correspondiente aquí.
 
@@ -16,7 +16,8 @@
 | Flujo de pantallas y navegación | [frontend/navigation-flow.md](./frontend/navigation-flow.md) |
 | PWA y manifest | [frontend/pwa.md](./frontend/pwa.md) |
 | Las 3 rutas API del servidor | [backend/api-routes.md](./backend/api-routes.md) |
-| Pipeline de IA (Mistral + Groq) | [backend/ai-pipeline.md](./backend/ai-pipeline.md) |
+| Pipeline de IA (Ruleta Multi-Plataforma + Groq) | [backend/ai-pipeline.md](./backend/ai-pipeline.md) |
+| Ruleta Vision (lib/vision-roulette.ts) | [lib/vision-roulette.md](./lib/vision-roulette.md) |
 | **⚠️ Por qué NO usar OAuth de Google para IA** | [**backend/gemini-byoi-postmortem.md**](./backend/gemini-byoi-postmortem.md) |
 | Sincronización de datos (Drive + localStorage) | [lib/data-sync.md](./lib/data-sync.md) |
 | Autenticación OAuth2 Google | [lib/auth.md](./lib/auth.md) |
@@ -66,8 +67,9 @@ lib/
   supabase.ts           ← Cliente Supabase inicializado
   tokenStore.ts         ← Gestión tokens OAuth2 (sessionStorage + localStorage)
   types.ts              ← Interfaces TypeScript (Gasto, ListItem, AppDB...)
-  utils.ts              ← Funciones helpers
-  gemini.ts             ← [ARCHIVO CANDIDATO A ELIMINACION] Re-export de ai-client, no importado
+  utils.ts              ← Funciones helpers (compressImage, etc.)
+  vision-roulette.ts    ← Ruleta multi-plataforma para IA visión (GROQ_VISION, MISTRAL, NVIDIA, SCALEWAY)
+  scan-logger.ts        ← Logger de escaneos a Supabase (fire-and-forget)
 
 locales/
   es.json               ← Textos en español

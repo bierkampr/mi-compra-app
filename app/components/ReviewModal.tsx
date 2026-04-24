@@ -28,11 +28,12 @@ interface ReviewModalProps {
   onCancel: () => void;
   loading: boolean;
   db: { lista: any[], gastos: any[] };
+  priceCache?: Record<string, { precio: number; comercio: string }>;
   txt: (key: string) => string;
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({ 
-  pendingGasto, setPendingGasto, onSave, onCancel, loading, db, txt 
+  pendingGasto, setPendingGasto, onSave, onCancel, loading, db, priceCache = {}, txt 
 }) => {
   const [isManualExpanded, setIsManualExpanded] = useState(false);
   const [manualProd, setManualProd] = useState({ name: '', qty: 1, price: "" });
@@ -270,6 +271,21 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                       
                       <div className="flex items-center gap-3 mt-1 opacity-40">
                         <p className="text-[8px] font-bold text-brand-muted uppercase truncate max-w-[100px]">{p.nombre_ticket}</p>
+                        {(() => {
+                          const ticketUpper = p.nombre_ticket.toUpperCase();
+                          const priceInfo = priceCache[ticketUpper];
+                          return priceInfo?.precio != null ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-black text-brand-success">{Number(priceInfo.precio).toFixed(2)}€</span>
+                              {priceInfo.comercio && (
+                                <>
+                                  <span className="text-brand-muted/30 text-[8px]">·</span>
+                                  <span className="text-[9px] font-bold text-brand-muted/50 uppercase truncate max-w-[80px]">{priceInfo.comercio}</span>
+                                </>
+                              )}
+                            </div>
+                          ) : null;
+                        })()}
                         {renderPriceComparison(p.nombre_base, p.subtotal, p.cantidad)}
                       </div>
                     </div>

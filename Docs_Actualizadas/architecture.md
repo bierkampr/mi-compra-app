@@ -51,9 +51,12 @@ Cliente (ScannerView)
   ▼
 POST /api/analyze
   │
-  ├─ PASO A: Mistral Pixtral (Vision)
-  │   ├─ Cada imagen → su propia clave API (rotación)
+  ├─ PASO A: Vision (Ruleta Multi-Plataforma)
+  │   ├─ lib/vision-roulette.ts selecciona slot aleatorio
+  │   ├─ Plataformas: GROQ_VISION, MISTRAL, NVIDIA, SCALEWAY
+  │   ├─ Cada imagen → slot aleatorio (plataforma + key)
   │   ├─ Procesa en paralelo (Promise.all)
+  │   ├─ Si falla → blacklist → re-gira ruleta
   │   └─ Resultado: transcripciones literales de texto
   │
   └─ PASO B: Groq Llama 3.3 70B (Síntesis)

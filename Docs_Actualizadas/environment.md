@@ -23,18 +23,30 @@
 
 ### Pipeline de IA (solo servidor)
 
-El sistema soporta hasta 6 claves por servicio (rotación automática ante rate limits).
+El sistema usa una **ruleta multi-plataforma** para visión (Paso A) y rotación para síntesis (Paso B).
+
+#### Paso A: Visión (Ruleta Multi-Plataforma)
+Soporta hasta 10 claves por plataforma (base + _1 a _9). La ruleta selecciona automáticamente entre todas las plataformas disponibles.
 
 | Variable | Descripción |
 |---|---|
-| `MISTRAL_API_KEY` | Clave primaria Mistral (visión) |
-| `MISTRAL_API_KEY_1` … `MISTRAL_API_KEY_5` | Claves de rotación Mistral |
+| `GROQ_VISION_API_KEY` | Clave primaria Groq Vision |
+| `GROQ_VISION_API_KEY_1` … `GROQ_VISION_API_KEY_9` | Claves de rotación Groq Vision |
+| `MISTRAL_API_KEY` | Clave primaria Mistral |
+| `MISTRAL_API_KEY_1` … `MISTRAL_API_KEY_9` | Claves de rotación Mistral |
+| `NVIDIA_API_KEY` | Clave primaria NVIDIA |
+| `NVIDIA_API_KEY_1` … `NVIDIA_API_KEY_9` | Claves de rotación NVIDIA |
+| `SCALEWAY_API_KEY` | Clave primaria Scaleway |
+| `SCALEWAY_API_KEY_1` … `SCALEWAY_API_KEY_9` | Claves de rotación Scaleway |
+
+#### Paso B: Síntesis (Groq)
+| Variable | Descripción |
+|---|---|
 | `GROQ_API_KEY` | Clave primaria Groq (síntesis) |
 | `GROQ_API_KEY_1` … `GROQ_API_KEY_5` | Claves de rotación Groq |
-| `GEMINI_API_KEY` | Alternativa de visión (secundario) |
 
-> La lógica de rotación está en `app/api/analyze/route.ts` funciones
-> `getAllMistralKeys()` y `getAllGroqKeys()`.
+> La lógica de la ruleta está en `lib/vision-roulette.ts`.
+> La lógica de rotación de Groq está en `app/api/analyze/route.ts` función `getAllGroqKeys()`.
 
 ---
 
@@ -49,17 +61,21 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-# ── IA - MISTRAL (Vision) ─────────────────────
+# ── IA - VISION (Ruleta Multi-Plataforma) ────
+# Configura al menos una plataforma. La ruleta usará todas las disponibles.
+GROQ_VISION_API_KEY=tu_clave_primaria
+GROQ_VISION_API_KEY_1=clave_rotacion_1
+
 MISTRAL_API_KEY=tu_clave_primaria
 MISTRAL_API_KEY_1=clave_rotacion_1
-MISTRAL_API_KEY_2=clave_rotacion_2
+
+NVIDIA_API_KEY=tu_clave_primaria
+
+SCALEWAY_API_KEY=tu_clave_primaria
 
 # ── IA - GROQ (Sintesis) ──────────────────────
 GROQ_API_KEY=tu_clave_primaria
 GROQ_API_KEY_1=clave_rotacion_1
-
-# ── IA - GEMINI (Alternativo) ─────────────────
-GEMINI_API_KEY=AIzaSy...
 ```
 
 ---
